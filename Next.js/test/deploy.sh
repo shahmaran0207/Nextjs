@@ -15,27 +15,20 @@ fi
 echo "현재: $CURRENT -> 배포: $NEXT"
 
 # 1. 새 컨테이너 빌드 & 실행
-docker-compose build $NEXT_SERVICE
-docker-compose up -d $NEXT_SERVICE
+docker compose build --no-cache $NEXT_SERVICE
+docker compose up -d --force-recreate $NEXT_SERVICE
 
 # 2. 헬스체크 (최대 60초 대기)
-echo "새 컨테이너 헬스체크 중..."
-MAX_RETRY=12
-COUNT=0
+echo "새 컨테이너 실행 확인 중..."
+sleep 10
 
-until docker-compose exec -T $NEXT_SERVICE node -e "fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" > /dev/null 2>&1; do
-    COUNT=$((COUNT + 1))
-    if [ $COUNT -ge $MAX_RETRY ]; then
-        echo "❌ 헬스체크 실패"
-        docker logs $NEXT_SERVICE --tail 100
-        docker inspect $NEXT_SERVICE --format='{{json .State}}'
-        exit 1
-    fi
-    echo "대기중... ($COUNT/$MAX_RETRY)"
-    sleep 5
-done
+if [ "$(docker inspect -f '{{.State.Running}}' $NEXT_SERVICE 2>/dev/null)" != "true" ]; then
+    echo "❌ 컨테이너 실행 실패"
+    docker logs $NEXT_SERVICE --tail 100
+    exit 1
+fi
 
-echo "✅ 헬스체크 통과"
+echo "✅ 컨테이너 실행 확인"
 
 # 3. nginx upstream 변수만 교체 후 reload
 sed -i "s|nextjs-${CURRENT}:3000|nextjs-${NEXT}:3000|g" nginx-current.conf

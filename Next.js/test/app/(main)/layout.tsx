@@ -15,7 +15,7 @@ export default function MainLayout({
             <a href="/digitalTwin">디지털트윈</a>
             <a href="/index">todolist</a>
             <a href="/FCM">FCM</a>
-            {/* <a href="/chat">웹소켓 채팅</a> */}
+            <a href="/chat">웹소켓 채팅</a>
           </nav>
         </div>
       </header>

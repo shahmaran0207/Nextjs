@@ -19,22 +19,58 @@ export default function ChatPage() {
     const [ idError, setIdError ] = useState("");
     const socketRef = useRef<WebSocket | null>(null);
 
+    // const connectWebSocket = async () => {
+    //     await fetch('/api/ws');
+    //     const ws = new WebSocket(`wss://${window.location.host}/ws`);
+
+    //     ws.onopen = () => { console.log("WebSocket Connection established"); };
+    //     ws.onmessage = (event) => {
+    //         const data = JSON.parse(event.data);
+    //         if(data.type === "id") {
+    //             setUserId(data.id);
+    //             setMode('connected');
+    //         } else if(data.type === 'private' || data.type === 'broadcast') {
+    //             setMessages((prev) => [...prev, { text: data.message, isSent: false, from: data.from }]);
+    //         }
+    //     };
+    //     ws.onerror = (error) => { console.error('WebSocket error:', error); };
+    //     ws.onclose = () => { console.log("WebSocket connection closed"); };
+    //     socketRef.current = ws;
+    // };
+
     const connectWebSocket = async () => {
         await fetch('/api/ws');
-        const ws = new WebSocket(`wss://${window.location.host}/ws`);
 
-        ws.onopen = () => { console.log("WebSocket Connection established"); };
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const host = window.location.hostname;
+        const ws = new WebSocket(`${protocol}://${host}:3001`);
+
+        ws.onopen = () => {
+            console.log("WebSocket Connection established");
+        };
+
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
-            if(data.type === "id") {
+
+            if (data.type === "id") {
                 setUserId(data.id);
                 setMode('connected');
-            } else if(data.type === 'private' || data.type === 'broadcast') {
-                setMessages((prev) => [...prev, { text: data.message, isSent: false, from: data.from }]);
+            } else if (data.type === 'private' || data.type === 'broadcast') {
+                setMessages((prev) => [
+                    ...prev,
+                    { text: data.message, isSent: false, from: data.from }
+                ]);
             }
         };
-        ws.onerror = (error) => { console.error('WebSocket error:', error); };
-        ws.onclose = () => { console.log("WebSocket connection closed"); };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        ws.onclose = () => {
+            console.log("WebSocket connection closed");
+        };
+
         socketRef.current = ws;
     };
 
