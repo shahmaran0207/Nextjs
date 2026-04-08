@@ -16,6 +16,7 @@ export default function MainLayout({
             <a href="/index">todolist</a>
             <a href="/FCM">FCM</a>
             <a href="/chat">웹소켓 채팅</a>
+            <a href="/SeoulTod"> 서울 TOD</a>
           </nav>
         </div>
       </header>
