@@ -7,34 +7,59 @@ interface ChatMessage {
     isSent: boolean;
     from: string;
     to?: string;
+    imageUrl?:string;
 };
 
 export default function ChatPage() {
+    const [ chatRooms, setChatRooms ] = useState<string[]>([]);
     const [ message, setMessage ] = useState("");
     const [ messages, setMessages ] = useState<ChatMessage[]>([]);
     const [ userId, setUserId ] = useState<string | null>(null);
     const [ recepientId, setRecipientId ] = useState("");
-    const [ mode, setMode ] = useState<'select' | 'new' | 'existing' | 'connected'>('select');
+    const [ mode, setMode ] = useState<'select' | 'new' | 'existing' | 'connected' | 'roomList'>('select');
     const [ inputId, setInputId ] = useState("");
     const [ idError, setIdError ] = useState("");
+    const [ image, setImage] = useState<File | null>(null);
+    const [ recipientLocked, setRecipientLocked ] = useState(false);
     const socketRef = useRef<WebSocket | null>(null);
+
+    const handleImageChange = (e:React.ChangeEvent<HTMLInputElement>) => {
+        if(e.target.files?.[0]){
+            setImage(e.target.files[0]);
+        };
+    };
 
     // const connectWebSocket = async () => {
     //     await fetch('/api/ws');
     //     const ws = new WebSocket(`wss://${window.location.host}/ws`);
 
     //     ws.onopen = () => { console.log("WebSocket Connection established"); };
-    //     ws.onmessage = (event) => {
+    //         ws.onmessage = (event) => {
     //         const data = JSON.parse(event.data);
-    //         if(data.type === "id") {
+
+    //         if (data.type === "id") {
     //             setUserId(data.id);
     //             setMode('connected');
-    //         } else if(data.type === 'private' || data.type === 'broadcast') {
-    //             setMessages((prev) => [...prev, { text: data.message, isSent: false, from: data.from }]);
+    //         } else if (data.type === 'private' || data.type === 'broadcast') {
+    //             setMessages((prev) => [
+    //                 ...prev,
+    //                 { text: data.message, isSent: false, from: data.from, imageUrl: data.imageUrl }
+    //             ]);
+    //             if(data.type === 'private') {
+    //                 setRecipientId(data.from);
+    //                 setRecipientLocked(true);
+    //             };
     //         }
     //     };
-    //     ws.onerror = (error) => { console.error('WebSocket error:', error); };
-    //     ws.onclose = () => { console.log("WebSocket connection closed"); };
+
+    //     ws.onerror = (error) => {
+    //         console.error('WebSocket error:', error);
+    //     };
+
+    //     ws.onclose = () => {
+    //         console.log("WebSocket connection closed");
+    //     };
+
     //     socketRef.current = ws;
     // };
 
@@ -58,8 +83,12 @@ export default function ChatPage() {
             } else if (data.type === 'private' || data.type === 'broadcast') {
                 setMessages((prev) => [
                     ...prev,
-                    { text: data.message, isSent: false, from: data.from }
+                    { text: data.message, isSent: false, from: data.from, imageUrl: data.imageUrl }
                 ]);
+                if(data.type === 'private') {
+                    setRecipientId(data.from);
+                    setRecipientLocked(true);
+                };
             }
         };
 
@@ -83,35 +112,74 @@ export default function ChatPage() {
     const sendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        let imageUrl: string | undefined;
+
         try {
             const formData = new FormData();
             formData.append("recepientId", recepientId);
             formData.append("userId", userId || "");
             formData.append("message", message);
+            
+            if (image) formData.append("image", image);
 
-            await fetch("/api/Chat/addChat", {
+            const res = await fetch("/api/Chat/addChat", {
                 method: "POST",
                 body: formData,
             });
+
+            const data = await res.json();
+
+            console.log("addChat 응답:", data);
+
+            imageUrl = data.imageUrl;
+
+            setImage(null);
+
         } catch(err: any) {
             console.log("채팅 기록 저장 에러:::::::::", err);
         }
 
-        if(message && socketRef.current && userId) {
+        if((message || imageUrl) && socketRef.current && userId) {
+            if (recepientId) setRecipientLocked(true);
+
             const messageData = recepientId ?
-                { type: 'private', from: userId, to: recepientId, message } :
-                { type: 'broadcast', from: userId, message };
+                { type: 'private', from: userId, to: recepientId, message, imageUrl } :
+                { type: 'broadcast', from: userId, message, imageUrl };
 
             socketRef.current.send(JSON.stringify(messageData));
             setMessages((prevMessages) => [...prevMessages, {
                 text: message,
                 isSent: true,
                 from: userId,
-                to: recepientId || 'all'
+                to: recepientId || 'all',
+                imageUrl,
             }]);
             setMessage("");
         }
     };
+
+    const handleRoomSelect = async (targetId: string) => {
+        const res = await fetch(`/api/Chat/getChat/${userId}`);
+        const data = await res.json();
+        
+        const loadedMessages: ChatMessage[] = data
+            .filter((chat: any) => 
+                (chat.from === userId && chat.to === targetId) ||
+                (chat.from === targetId && chat.to === userId))
+            .map((chat: any) => ({
+                text: chat.message,
+                isSent: chat.from === userId,
+                from: chat.from,
+                to: chat.to,
+                imageUrl: chat.imageUrl
+            }));
+
+        setMessages(loadedMessages);
+        setRecipientId(targetId);
+        setRecipientLocked(true);
+        await connectWebSocket();
+        setMode('connected');
+    }
 
     const handleExistingUser = async () => {
         if(!inputId) return;
@@ -126,20 +194,48 @@ export default function ChatPage() {
 
             const data = await res.json();
 
-            const loadedMessages: ChatMessage[] = data.map((chat: any) => ({
-                text: chat.message,
-                isSent: chat.from === inputId,
-                from: chat.from,
-                to: chat.to
-            }));
+            const rooms = [...new Set(data.map((chat: any) => 
+                chat.from === inputId ? chat.to : chat.from
+            ))] as string[];
 
-            setMessages(loadedMessages);
             setUserId(inputId);
-            setMode('connected');
+            setChatRooms(rooms);
+            setMode('roomList');
+
+            setUserId(inputId);
         } catch(err) {
             setIdError("존재하지 않는 아이디입니다.");
         }
     };
+
+    if(mode === 'roomList') return (
+        <div className="flex flex-col items-center justify-center h-screen gap-4">
+            <h1 className="text-2xl font-bold">채팅방 목록</h1>
+            {chatRooms.length === 0 
+                ? <p className="text-gray-500">채팅 내역이 없습니다.</p>
+                : chatRooms.map((roomId) => (
+                    <button
+                        key={roomId}
+                        onClick={() => handleRoomSelect(roomId)}
+                        style={{color: "#000"}}
+                        className="bg-white border w-64 px-6 py-3 rounded-lg text-left hover:bg-gray-50">
+                        💬 {roomId}
+                    </button>
+                ))
+            }
+            <button
+                onClick={async () => {
+                    setRecipientLocked(false);
+                    setRecipientId("");
+                    setMessages([]);
+                    await connectWebSocket();
+                    setMode('connected');
+                }}
+                className="bg-blue-500 text-black-w-64 px-6 py-3 rounded-lg mt-2">
+                    ✏️ 새 채팅 시작
+                </button>
+        </div>
+    );
 
     if(mode === 'select') return (
         <div className="flex flex-col items-center justify-center h-screen gap-4">
@@ -193,6 +289,12 @@ export default function ChatPage() {
                             ${msg.isSent ? 'bg-blue-500 text-white self-end' : 'bg-white text-gray-800 self-start'}`}>
                         <div className="font-bold">{msg.isSent ? 'You' : msg.from}</div>
                         <div>{msg.text}</div>
+                        {msg.imageUrl && (
+                            <img
+                                src={msg.imageUrl}
+                                alt="첨부 이미지"
+                                className="mt-2 max-w-xs rounded-lg"/>
+                        )}
                         {msg.to && <div className="text-xs">{msg.isSent ? `To: ${msg.to}` : ''}</div>}
                     </div>
                 ))}
@@ -206,20 +308,70 @@ export default function ChatPage() {
                         value={recepientId}
                         onChange={(e) => setRecipientId(e.target.value)}
                         className="flex-1 border rounded-l px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Recipient Id (leave empty for broadcast)" />
+                        placeholder="Recipient Id (leave empty for broadcast)"
+                        disabled={recipientLocked} />
                 </div>
+                
+                <div style={{ marginBottom: "2rem" }}>
+                    <label style={{
+                        display: "block",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        color: "#868e96",
+                        marginBottom: "6px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                    }}>
+                    이미지
+                    </label>
+                    <label htmlFor="image" style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        padding: "10px 14px",
+                        border: "1.5px dashed #74c0fc",
+                        borderRadius: "10px",
+                        background: "#f0f8ff",
+                        color: "#4dabf7",
+                        fontSize: "14px",
+                        cursor: "pointer",
+                    }}>
+                    📎 {image ? image.name : "이미지를 선택하세요"}
+                    </label>
+                    {image && (
+                        <button
+                            type="button"
+                            onClick={() => setImage(null)}
+                            style={{ marginTop: "6px", fontSize: "12px", color: "#fa5252", cursor: "point", border: "none"}}>
+                                ❌ 취소
+                            </button>
+                    )}
+                    <input
+                        type="file"
+                        id="image"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        style={{ display: "none" }}
+                    />
+                </div>
+
                 <div className="flex">
                     <input
                         style={{color: "#000"}}
                         type="text"
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
-                        className="flex-1 border rounded-l px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 border rounded-l px-4 py-2 
+                        focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Type a message...." />
                     <button
+                        disabled={ recepientId === userId || (!message && !image)}
                         type="submit"
-                        className="bg-blue-500 text-white px-4 py-2 rounded-r hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        Send
+                        className="bg-blue-500 text-white px-4 py-2 rounded-r 
+                            hover:bg-blue-600 focus:outline-none focus:ring-2 
+                            focus:ring-blue-500
+                            disabled:bg-gray-300 disabled:cursor-not-allowed">
+                        보내기
                     </button>
                 </div>
             </form>

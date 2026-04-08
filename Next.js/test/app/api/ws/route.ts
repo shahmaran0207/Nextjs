@@ -30,7 +30,8 @@ export async function GET() {
                         recepient.ws.send(JSON.stringify({
                             type: 'private',
                             from: data.from,
-                            message: data.message
+                            message: data.message,
+                            imageUrl: data.imageUrl
                         }));
                     };
                 } else if(data.type === 'broadcast'){
@@ -39,7 +40,8 @@ export async function GET() {
                             client.ws.send(JSON.stringify({
                                 type: 'broadcast',
                                 from: data.from,
-                                message: data.message
+                                message: data.message,
+                                imageUrl: data.imageUrl
                             }));
                         };
                     });
