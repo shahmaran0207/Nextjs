@@ -19,10 +19,12 @@ export async function GET(request: Request) {
     url.searchParams.set("itstId", itstId);
 
     try {
-        const res = await fetch(url.toString());
+        const res = await fetch(url.toString(), { signal: AbortSignal.timeout(10000) });
         const data = await res.json();
 
         const item = data?.body?.items?.[0] ?? null;
+        console.log('signal API response for', itstId, ':', res.status, JSON.stringify(data).slice(0, 300));
+
         return Response.json({ item });
     } catch (err) {
         console.error("TOD Signal API error::::::", err);

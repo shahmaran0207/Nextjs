@@ -6,6 +6,7 @@ import Image from "next/image";
 
 export default function EditForm({ params }: { params: Promise<{ id: string }> }) {
   const [post, setPost] = useState<any>(null);
+  const [postId, setPostId] = useState<string>("");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -15,7 +16,8 @@ export default function EditForm({ params }: { params: Promise<{ id: string }> }
   useEffect(() => {
     const fetchPost = async () => {
       const { id } = await params;
-      const res = await fetch(`/api/getPostList/${id}`);
+      setPostId(id);
+      const res = await fetch(`/api/posts/getPostList/${id}`);
       const data = await res.json();
       setPost(data[0]);
     };
@@ -39,13 +41,13 @@ export default function EditForm({ params }: { params: Promise<{ id: string }> }
   };
 
   const handleSubmit = async () => {
-    const { id } = await params;
+    const id = postId;
     const formData = new FormData();
     formData.append("title", title || post.TITLE);
     formData.append("content", content || post.CONTENT);
     if (imageFile) formData.append("image", imageFile);
 
-    const submit = await fetch(`/api/updateBoard/${id}`, {
+    const submit = await fetch(`/api/posts/updatePost/${id}`, {
       method: "POST",
       body: formData,
     });

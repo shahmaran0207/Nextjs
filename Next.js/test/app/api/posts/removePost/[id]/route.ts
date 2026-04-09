@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getConnection } from "@/util/database";
-import oracledb from "oracledb";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

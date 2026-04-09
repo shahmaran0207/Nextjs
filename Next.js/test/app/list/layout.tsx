@@ -1,3 +1,5 @@
+import Providers from "../providers";
+
 export const metadata = {
   title: "Test Page",
 };
@@ -21,7 +23,9 @@ export default function TestLayout({
       </header>
 
       <main className="flex-1 max-w-4xl mx-auto w-full p-4">
-        {children}
+        <Providers>
+          {children}
+        </Providers>
       </main>
     </div>
   );

@@ -6,8 +6,8 @@ export default function Layout({
     children: React.ReactNode
 }) {
     return (
-        <html lang="ko">
-            <body>
+        <html lang="ko" suppressHydrationWarning>
+            <body suppressHydrationWarning >
                 <NextAuthProvider>{children}</NextAuthProvider>
             </body>
         </html>

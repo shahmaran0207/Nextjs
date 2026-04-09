@@ -2,10 +2,12 @@
 
 import { useEffect, useState, use, SyntheticEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = use(params);
   const [post, setPost] = useState<any>(null);
+  const [postLike, setPostLike] = useState<any>(null);
   const [comment, setComment] = useState<any[]>([]);
   const [commentTitle, setCommentTitle] = useState("");
   const [commentContent, setCommentContent] = useState("");
@@ -13,6 +15,8 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
   const itemPerPage = 10;
   const totalPages = Math.ceil(comment.length/itemPerPage);
   const pagedComments = comment.slice((currentPage -1)*itemPerPage, currentPage*itemPerPage);
+  const { data: session } = useSession();
+  const name = session?.user?.name || "";
 
   const router = useRouter();
 
@@ -39,11 +43,23 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
   };
 
   const handleDelete = async (postId: String) => {
+     const ok = window.confirm("정말 삭제하시겠습니까?");
+     if (!ok) return;
+
     try{ 
-      const del = await fetch( `/api/removeBoard/${postId}`, {
+      const deleteLike = await fetch(`/api/posts/Like/removeAllLike/${postId}`, {
         method: "POST"
       });
-      if(del.status ===200) {
+
+      const deleteComment = await fetch(`/api/Comment/removeAllComment/${postId}`, {
+        method: "POST"
+      });
+
+      const del = await fetch(`/api/posts/removePost/${postId}`, {
+        method: "POST"
+      });
+
+      if(deleteLike.status === 200 && del.status ===200) {
         alert("삭제 되었습니다.")
         router.push("/")
       }
@@ -55,20 +71,14 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
 
   const handleUpdate = async (postId: String) => {
     try{ 
-      const update = await fetch( `/api/updateBoard/${postId}`, {
-        method: "GET"
-      });
-
-      if(update.status ===200) {
-        router.push( `/updateBoard/${postId}`)
-      }
+        router.push( `/updatePost/${postId}`)
 
     } catch(err: any){
-      console.log("error:::::::::::::::::", err)
+      console.error("error:::::::::::::::::", err)
     }
   };
 
-  const handleSubmit = async (e: SyntheticEvent, postId: string) => {
+  const handleSubmit = async (e: SyntheticEvent, postId: string, name: string) => {
     e.preventDefault();
 
     const confirmed = confirm("댓글을 작성하시겠습니까?");
@@ -78,6 +88,7 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
       const formData = new FormData();
       formData.append("commentTitle", commentTitle);
       formData.append("commentContent", commentContent);
+      formData.append("writer", name);
 
       await fetch(`/api/Comment/addComment/${postId}`, {
         method: "POST",
@@ -92,16 +103,66 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
   };
 
   useEffect(() => {
+    const upCount = async() => {
+      try{
+        const res = await fetch(`/api/posts/addViewCount/${id}`, {
+          method: "POST"
+        });
+      } catch (err) {
+        console.log("View Count 증가 에러:::::::::::::::", err)
+      }
+    };
+
+    upCount();
+  }, []);
+
+  const handleLike = async(postId: String) => {
+    try {
+      const postLike = await fetch(`/api/posts/Like/getEachPostLike/${postId}?name=${name}`);
+      const data = await postLike.json();
+
+      if (data.length === 0) {
+        try{
+          const addLike = await fetch(`/api/posts/Like/addPostLike/${postId}?name=${name}`,{
+            method: "POST"
+          });
+          window.location.reload();
+        } catch(err: any) {
+          console.error("종아요 개수 추가 에러::::::::::", err);
+        }
+      } else {
+        try{
+          const removeLike = await fetch(`/api/posts/Like/removePostLike/${postId}?name=${name}`, {
+            method: "POST"
+          });
+          window.location.reload();
+
+        } catch(err: any) {
+          console.error("좋아요 개수 삭제 에러:::::::::", err)
+        }
+      }
+    } catch(err) {
+      console.error("좋아요 개수 수정 에러::::::::::", err);
+    }
+
+  };
+
+  useEffect(() => {
     const getPost = async () => {
       try {
-        const res = await fetch(`/api/getPostList/${id}`);
+        const res = await fetch(`/api/posts/getPostList/${id}`);
         const data = await res.json();
         setPost(data[0]);
 
-        const comment = await fetch(`/api/getEachComment/${id}`);
+        const comment = await fetch(`/api/Comment/getEachComment/${id}`);
         const commentData = await comment.json();
-        // console.log("commentData::::::::::::", commentData)
         setComment(commentData);
+
+        const postLike = await fetch(`/api/posts/Like/getPostLike/${id}`);
+        const text = await postLike.text();
+        const postLikeData = text ? JSON.parse(text) : null;
+        setPostLike(postLikeData?.length ?? 0);
+
       } catch (err: any) {
         console.log("error::::::::::::", err);
       }
@@ -179,6 +240,23 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
             {post.TITLE}
           </h1>
 
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "14px",
+              color: "#6c757d",
+              fontWeight: 500,
+            }}
+          >
+            <span style={{ fontSize: "15px" }}>👁️</span>
+            <span>조회수</span>
+            <span style={{ color: "#212529", fontWeight: 600 }}>
+              {post.POST_VIEW}
+            </span>
+          </div>
+
           <div style={{
             borderTop: "1px solid #f1f3f5",
             paddingTop: "1.5rem",
@@ -246,6 +324,25 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
         >
           수정
         </button>
+        <button
+          style={{
+            backgroundColor: "#e53e3e",
+            color: "#fff",
+            border: "none",
+            borderRadius: "6px",
+            padding: "8px 16px",
+            fontSize: "14px",
+            fontWeight: 500,
+            cursor: "pointer",
+          }}
+          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#c53030")}
+          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#e53e3e")}
+          onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
+          onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+          onClick={() => handleLike(post.ID)}
+        >
+          LIKE {postLike}
+        </button>
       </div>
 
       {comment.length === 0 ? (
@@ -260,7 +357,7 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
           }}>
             아직 작성된 댓글이 없어요
           </div>
-          <form onSubmit={(e) => handleSubmit(e, post.ID)} style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+          <form onSubmit={(e) => handleSubmit(e, post.ID, name)} style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
             <input
               type="text"
               id = "commentTitle"
@@ -329,7 +426,7 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
         
       ) : (
         <>
-         <form onSubmit={(e) => handleSubmit(e, post.ID)} style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+         <form onSubmit={(e) => handleSubmit(e, post.ID, name)} style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
             <input
               type="text"
               id = "commentTitle"
@@ -400,6 +497,7 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
                 <th style={{ padding: "10px 16px", textAlign: "center", width: "60px" }}>번호</th>
                 <th style={{ padding: "10px 16px", textAlign: "center", width: "30%" }}>제목</th>
                 <th style={{ padding: "10px 16px", textAlign: "center" }}>내용</th>
+                <th style={{ padding: "10px 16px", textAlign: "center" }}>작성자</th>
                 <th style={{ padding: "10px 16px", textAlign: "center" }}>삭제</th>
               </tr>
             </thead>
@@ -412,6 +510,7 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
                   <td style={{ padding: "10px 16px", textAlign: "center", color: "#bbb" }}>{comment.ID}</td>
                   <td style={{ padding: "10px 16px", fontWeight: 500, color: "#555", textAlign: "center" }}>{comment.COMMENTTITLE}</td>
                   <td style={{ padding: "10px 16px", color: "#555", textAlign: "center" }}>{comment.COMMENTCONTENT}</td>
+                  <td style={{ padding: "10px 16px", color: "#555", textAlign: "center" }}>{comment.COMMENTWRITER}</td>
                   <td style={{ padding: "10px 16px", color: "#555", textAlign: "center" }}>
                     <button onClick={() => removeComment(comment.ID)}>댓글 삭제</button>
                   </td>

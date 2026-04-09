@@ -44,51 +44,71 @@ export default function KakaoMap() {
   const mapRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<any[]>([]);
 
-  function getMarkerColor(signal: any) : string {
-    if(!signal) return "gray";
-     const val = signal.ntStsgStatNm || signal.stStsgStatNm || signal.etStsgStatNm;
-    if (val === '녹색') return 'green';
-    if (val === "적색") return 'red';
-    if (val === '황색') return 'yellow'
+  function getMarkerColor(signal: any): string {
+    if (!signal) return 'gray';
+    
+    const vals = [
+      signal.ntStsgStatNm, signal.stStsgStatNm,
+      signal.etStsgStatNm, signal.wtStsgStatNm,
+      signal.neStsgStatNm, signal.nwStsgStatNm,
+      signal.seStsgStatNm, signal.swStsgStatNm,
+    ].filter(Boolean);
+
+    if (vals.length === 0) return 'gray';
+
+    if (vals.some(v => v === 'protected-Movement-Allowed' || v === 'permissive-Movement-Allowed')) return 'green';
+    if (vals.some(v => v === 'protected-clearance')) return 'yellow';
+    if (vals.some(v => v === 'stop-And-Remain')) return 'red';
     return 'gray';
-  };
+  }
 
   function makeColorMarker(color: string) {
-    const colors: Record<string, string> = {
-      green: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
-      red: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-      yellow: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png',
-      gray: 'https://maps.google.com/mapfiles/ms/icons/grey.png',
+    const hex: Record<string, string> = {
+      green: '#22c55e',
+      red: '#ef4444',
+      yellow: '#eab308',
+      gray: '#9ca3af',
     };
-
-    const size = new window.kakao.maps.Size(32, 32);
-    return new window.kakao.maps.MarkerImage(colors[color] ?? colors.gray, size);
+    const fill = hex[color] ?? hex.gray;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="${fill}" stroke="white" stroke-width="2"/></svg>`;
+    const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    const size = new window.kakao.maps.Size(24, 24);
+    return new window.kakao.maps.MarkerImage(url, size);
   };
+
   
   const kakaoMapRef = useRef<any>(null);
 
   useEffect(() => {
-    if (!kakaoMapRef.current || crossRoads.length === 0) return;
-    
+    if (!kakaoMapRef.current) return;
+
     markersRef.current.forEach(m => m.setMap(null));
     markersRef.current = [];
 
-    crossRoads.forEach(async (road) => {
-      const res = await fetch(`/api/SeoulSignal?itstId=${road.itstId}`);
-      const data = await res.json();
-      const signal = data.item;
+    fetch('/api/SignalBatch')
+      .then(res => res.json())
+      .then(data => {
+        const signalMap = Object.fromEntries(
+          data.items.map((i: any) => [i.itstId, i])
+        );
 
-      const color = getMarkerColor(signal);
+        // crossRoads에서 신호 데이터 있는 것만 마커 표시
+        crossRoads.forEach((road) => {
+          const signal = signalMap[road.itstId];
+          if (!signal) return; // 신호 없는 교차로는 스킵
+          const color = getMarkerColor(signal);
 
-      const marker = new window.kakao.maps.Marker({
-        position: new window.kakao.maps.LatLng(road.mapCtptIntLat, road.mapCtptIntLot),
-        map: kakaoMapRef.current,
-        image: makeColorMarker(color),
+          const marker = new window.kakao.maps.Marker({
+            position: new window.kakao.maps.LatLng(road.mapCtptIntLat, road.mapCtptIntLot),
+            map: kakaoMapRef.current,
+            image: makeColorMarker(color),
+          });
+
+          markersRef.current.push(marker);
+        });
       });
-
-      markersRef.current.push(marker);
-    });
   }, [crossRoads, mapReady]);
+
 
   useEffect(() => {
     const init = async () => {

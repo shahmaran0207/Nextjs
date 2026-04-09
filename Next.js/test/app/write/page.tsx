@@ -9,6 +9,7 @@ const PostForm = () => {
   const [image, setImage] = useState<File | null>(null);
   const router = useRouter();
 
+
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);
   };
@@ -35,7 +36,7 @@ const PostForm = () => {
       formData.append("content", content);
       if (image) formData.append("image", image);
 
-      await fetch("/api/addPost", {
+      await fetch("/api/posts/addPost", {
         method: "POST",
         body: formData,
       });

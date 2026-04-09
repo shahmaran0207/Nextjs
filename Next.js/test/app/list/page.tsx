@@ -14,7 +14,7 @@ const PostList = () => {
   useEffect(() => {
     const getList = async () => {
       try {
-        const res = await fetch('/api/getPostList');
+        const res = await fetch('/api/posts/getPostList');
         const data = await res.json();
         console.log("res:::::::::::::::::", res)
         setPosts(data);

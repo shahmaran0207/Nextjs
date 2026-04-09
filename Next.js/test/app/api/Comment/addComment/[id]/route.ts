@@ -6,17 +6,19 @@ export async function POST(request: Request, { params }: {params: Promise<{id: s
     const formData = await request.formData();
     const title = formData.get("commentTitle") as string;
     const content = formData.get("commentContent") as string;
+    const commentWriter = formData.get("writer") as string;
 
     let conn;
     try {
         conn = await getConnection();
         await conn.execute(
-            `INSERT INTO POSTCOMMENT(POSTID, COMMENTTITLE, COMMENTCONTENT)
-            VALUES (:id, :title, :content)`, 
+            `INSERT INTO POSTCOMMENT(POSTID, COMMENTTITLE, COMMENTCONTENT, COMMENTWRITER)
+            VALUES (:id, :title, :content, :commentWriter)`, 
             {
                 id,
                 title,
-                content
+                content,
+                commentWriter
             },
             { autoCommit: true }
         );

@@ -8,7 +8,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   try {
     conn = await getConnection();
     const result = await conn.execute(
-      `SELECT ID, TITLE, CONTENT, CREATEDAT, PUBLISHED, IMAGE FROM TEST.POST WHERE ID = :id`,
+      `SELECT ID, TITLE, CONTENT, CREATEDAT, IMAGE FROM TEST.POST WHERE ID = :id`,
       { id },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
@@ -55,13 +55,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     if (imageBuffer) {
       await conn.execute(
-        `UPDATE TEST.POST SET TITLE = :title, CONTENT = :content, IMAGE = :image WHERE ID = :id`,
+        `UPDATE TEST.POST SET TITLE = :title, CONTENT = :content, IMAGE = :image, 
+          UPDATEDAT = SYSDATE WHERE ID = :id`,
         { title, content, image: imageBuffer, id },
         { autoCommit: true }
       );
     } else {
       await conn.execute(
-        `UPDATE TEST.POST SET TITLE = :title, CONTENT = :content WHERE ID = :id`,
+        `UPDATE TEST.POST SET TITLE = :title, UPDATEDAT =SYSDATE,  CONTENT = :content WHERE ID = :id`,
         { title, content, id },
         { autoCommit: true }
       );
