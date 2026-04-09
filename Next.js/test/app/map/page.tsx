@@ -43,7 +43,7 @@ export default function KakaoMap() {
     setSelectedLinks([]);
     setLinkData([]);
 
-    const traffic = await fetch("/api/busan-traffic");
+    const traffic = await fetch("/api/GIS/Busan/Traffic");
     const trafficData = await traffic.json();
 
     const trafficMap = new Map<string, number>();
@@ -160,17 +160,17 @@ export default function KakaoMap() {
     const init = async () => {
       if (!window.kakao) return;
 
-      const road = await fetch("/api/getRoadList");
+      const road = await fetch("/api/GIS/Busan/Road/getRoadList");
       setRoadData(await road.json());
 
-      const res = await fetch("/api/busan-bus");
+      const res = await fetch("/api/GIS/Busan/Bus");
       const data = await res.json();
 
-      const link = await fetch("/api/busan-link");
+      const link = await fetch("/api/GIS/Busan/Link/AllLink");
       const linkData = await link.json();
       setBusanLinkData(linkData);
 
-      const traffic = await fetch("/api/busan-traffic");
+      const traffic = await fetch("/api/GIS/Busan/Traffic");
       const trafficData = await traffic.json();
 
       const trafficMap = new Map<string, number>();

@@ -152,7 +152,7 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
       try {
         const res = await fetch(`/api/posts/getPostList/${id}`);
         const data = await res.json();
-        setPost(data[0]);
+        setPost(data);
 
         const comment = await fetch(`/api/Comment/getEachComment/${id}`);
         const commentData = await comment.json();
@@ -223,7 +223,7 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
             fontSize: "12px",
             color: "#adb5bd",
           }}>
-            {new Date(post.CREATEDAT).toLocaleDateString("ko-KR", {
+            {new Date(post.createdat).toLocaleDateString("ko-KR", {
               year: "numeric",
               month: "long",
               day: "numeric",
@@ -237,7 +237,7 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
             margin: "0.5rem 0 1.5rem",
             lineHeight: "1.4",
           }}>
-            {post.TITLE}
+            {post.title}
           </h1>
 
           <div
@@ -253,7 +253,7 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
             <span style={{ fontSize: "15px" }}>👁️</span>
             <span>조회수</span>
             <span style={{ color: "#212529", fontWeight: 600 }}>
-              {post.POST_VIEW}
+              {post.postview}
             </span>
           </div>
 
@@ -265,7 +265,7 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
             lineHeight: "1.8",
             whiteSpace: "pre-wrap",
           }}>
-            내용: {post.CONTENT}
+            내용: {post.content}
           </div>
           <div style={{
             borderTop: "1px solid #f1f3f5",
@@ -275,11 +275,11 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
             lineHeight: "1.8",
             whiteSpace: "pre-wrap",
           }}>
-            {post.IMAGE === null ? (
+            {post.image === null ? (
               <p>이미지 없음</p>
             ) : (
               <img 
-                src={`data:image/jpeg;base64,${post.IMAGE}`} 
+                src={`data:image/jpeg;base64,${post.image}`} 
                 alt="이미지"
                 style={{ width: "100%", borderRadius: "10px" }}
               />
@@ -301,7 +301,7 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
           onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#e53e3e")}
           onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
           onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-          onClick={() => handleDelete(post.ID)}
+          onClick={() => handleDelete(post.id)}
         >
           삭제
         </button>
@@ -320,7 +320,7 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
           onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#e53e3e")}
           onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
           onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-          onClick={() => handleUpdate(post.ID)}
+          onClick={() => handleUpdate(post.id)}
         >
           수정
         </button>
@@ -339,7 +339,7 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
           onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#e53e3e")}
           onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
           onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-          onClick={() => handleLike(post.ID)}
+          onClick={() => handleLike(post.id)}
         >
           LIKE {postLike}
         </button>
@@ -357,7 +357,7 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
           }}>
             아직 작성된 댓글이 없어요
           </div>
-          <form onSubmit={(e) => handleSubmit(e, post.ID, name)} style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+          <form onSubmit={(e) => handleSubmit(e, post.id, name)} style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
             <input
               type="text"
               id = "commentTitle"
@@ -426,7 +426,7 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
         
       ) : (
         <>
-         <form onSubmit={(e) => handleSubmit(e, post.ID, name)} style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+         <form onSubmit={(e) => handleSubmit(e, post.id, name)} style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
             <input
               type="text"
               id = "commentTitle"

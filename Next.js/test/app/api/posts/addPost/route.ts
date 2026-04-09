@@ -1,32 +1,31 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/util/database";
-import oracledb from "oracledb";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
-  const formData = await request.formData();
-  const title = formData.get("title") as string;
-  const content = formData.get("content") as string;
-  const image = formData.get("image") as File;
-  const imageBuffer = image ? Buffer.from(await image.arrayBuffer()) : null;
+  try{
+    const formData = await request.formData();
+    const title = formData.get("title") as string;
+    const content = formData.get("content") as string;
+    const imageFile = formData.get("image") as File;
 
-  let conn;
-  try {
-    conn = await getConnection();
-    await conn.execute(
-      `INSERT INTO POST (TITLE, CONTENT, CREATEDAT, IMAGE) 
-      VALUES (:title, :content, SYSDATE, :image)`,
-      { 
-        title, 
-        content, 
-        image: { val: imageBuffer, type: oracledb.BLOB }
+    let imageBuffer: Uint8Array<ArrayBuffer> | null = null;
+    if (imageFile) {
+      const arrayBuffer = await imageFile.arrayBuffer();
+      imageBuffer = new Uint8Array(arrayBuffer as ArrayBuffer);
+    }
+
+    await prisma.post.create({
+      data: {
+        title,
+        content,
+        createdat: new Date(),
+        ...(imageBuffer && { image: imageBuffer }),
       },
-      { autoCommit: true }
-    );
-    return NextResponse.json({ result: "ok" });
-  } catch (err: any) {
-    console.error("DB 에러:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  } finally {
-    if (conn) await conn.close();
+    });
+
+    return NextResponse.json({result: "ok"});
+  } catch(err: any) {
+    console.error("게시글 추가 API 에러:::::::::::::", err);
+    return NextResponse.json({error: err.message}, { status: 500});
   }
 }

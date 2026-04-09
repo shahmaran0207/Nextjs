@@ -1,77 +1,64 @@
 import { getConnection } from "@/util/database";
 import oracledb from "oracledb";
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  let conn;
+
   try {
-    conn = await getConnection();
-    const result = await conn.execute(
-      `SELECT ID, TITLE, CONTENT, CREATEDAT, IMAGE FROM TEST.POST WHERE ID = :id`,
-      { id },
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
-    );
+    const result = await prisma.post.findUnique({
+      where: { id: Number(id)},
+    });
 
-    const rows = result.rows as any[];
+    if (!result) {
+      return NextResponse.json({error: "Not fount"}, { status: 400});
+    };
 
-    const data = await Promise.all(rows.map(async (row) => {
-      if (row.IMAGE) {
-        const chunks: Buffer[] = [];
-        await new Promise((resolve, reject) => {
-          row.IMAGE.on("data", (chunk: Buffer) => chunks.push(chunk));
-          row.IMAGE.on("end", resolve);
-          row.IMAGE.on("error", reject);
-        });
-        row.IMAGE = Buffer.concat(chunks).toString("base64");
-      }
-      return row;
-    }));
+    const data = {
+      ...result,
+      image: result.image ? Buffer.from(result.image).toString("base64"):null,
+    };
 
     return NextResponse.json(data);
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  } finally {
-    if (conn) await conn.close();
+    return NextResponse.json({ error: err.message}, { status: 500});
   }
 }
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { id } = await params;
-  let conn;
+
   try {
     const formData = await request.formData();
     const title = formData.get("title") as string;
     const content = formData.get("content") as string;
     const imageFile = formData.get("image") as File | null;
 
-    let imageBuffer: Buffer | null = null;
+    // 이미지 파일이 있으면 Buffer로 변환 (PostgreSQL bytea 타입으로 저장)
+    let imageBuffer: Uint8Array<ArrayBuffer> | null = null;
     if (imageFile) {
       const arrayBuffer = await imageFile.arrayBuffer();
-      imageBuffer = Buffer.from(arrayBuffer);
+      imageBuffer = new Uint8Array(arrayBuffer as ArrayBuffer);
     }
 
-    conn = await getConnection();
-
-    if (imageBuffer) {
-      await conn.execute(
-        `UPDATE TEST.POST SET TITLE = :title, CONTENT = :content, IMAGE = :image, 
-          UPDATEDAT = SYSDATE WHERE ID = :id`,
-        { title, content, image: imageBuffer, id },
-        { autoCommit: true }
-      );
-    } else {
-      await conn.execute(
-        `UPDATE TEST.POST SET TITLE = :title, UPDATEDAT =SYSDATE,  CONTENT = :content WHERE ID = :id`,
-        { title, content, id },
-        { autoCommit: true }
-      );
-    }
+    // Oracle: 이미지 유무에 따라 UPDATE 쿼리를 2개 따로 작성해야 했음
+    // Prisma: ...(imageBuffer && { image: imageBuffer }) 로 조건부 필드 한 번에 처리
+    await prisma.post.update({
+      where: { id: Number(id) },
+      data: {
+        title,
+        content,
+        updatedat: new Date(), // Oracle SYSDATE → JS new Date()
+        ...(imageBuffer && { image: imageBuffer }), // 이미지 있을 때만 포함
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
-  } finally {
-    if (conn) await conn.close();
   }
 }

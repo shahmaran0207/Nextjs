@@ -1,29 +1,17 @@
-import { getConnection } from "@/util/database";
-import oracledb from "oracledb";
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+
   const { id } = await params;
-  let conn;
-  try {
-    conn = await getConnection();
-    const result = await conn.execute(
-      `SELECT ID, POSTID, COMMENTTITLE, COMMENTCONTENT, COMMENTWRITER FROM TEST.POSTCOMMENT WHERE POSTID = :id 
-        ORDER BY ID DESC`,
-      { id },
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
-    );
+  try{
+    const result = await prisma.postcomment.findMany({
+      where: {postid: Number(id)},
+      orderBy: { id: "desc"}
+    })
 
-    const rows = result.rows as any[];
-
-    const data = await Promise.all(rows.map(async (row) => {
-      return row;
-    }));
-
-    return NextResponse.json(data);
+    return NextResponse.json(result);
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  } finally {
-    if (conn) await conn.close();
+    return NextResponse.json({error: err.message}, { status: 500});
   }
 }

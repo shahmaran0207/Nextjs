@@ -5,18 +5,24 @@ export async function GET() {
 
     const firstRes = await fetch(`${baseUrl}&page=1`);
     const firstData = await firstRes.json();
-    const totalPages = parseInt(firstData.response.page.total);
+    const totalPages = parseInt(firstData.response?.page?.total ?? "1");
 
-    let allFeatures = [...firstData.response.result.featureCollection.features];
+    let allFeatures = [...(firstData.response?.result?.featureCollection?.features ?? [])];
 
+    const pagePromises = [];
     for (let page = 2; page <= totalPages; page++) {
-      const res = await fetch(`${baseUrl}&page=${page}`);
-      const data = await res.json();
-      allFeatures = [...allFeatures, ...data.response.result.featureCollection.features];
+      pagePromises.push(fetch(`${baseUrl}&page=${page}`).then(r => r.json()));
+    }
+
+    const results = await Promise.all(pagePromises);
+    for (const data of results) {
+      const features = data.response?.result?.featureCollection?.features ?? [];
+      allFeatures = [...allFeatures, ...features];
     }
 
     return Response.json({ features: allFeatures });
   } catch (err: any) {
+    console.error("vworld API 에러:", err.message);
     return Response.json({ error: err.message }, { status: 500 });
   }
 }

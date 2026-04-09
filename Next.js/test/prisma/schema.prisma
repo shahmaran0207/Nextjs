@@ -1,13 +1,66 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model chat {
+  id        Int     @id @default(autoincrement())
+  recepient String? @db.VarChar(1000)
+  sender    String? @db.VarChar(1000)
+  content   String? @db.VarChar(1000)
+  image     Bytes?
+}
+
+model link {
+  sectionid Int
+  linkid    String   @db.VarChar(100)
+  seq       Decimal? @db.Decimal
+
+  @@id([sectionid, linkid])
+}
+
+model post {
+  id        Int       @id @default(autoincrement())
+  title     String?   @db.VarChar(1000)
+  content   String?   @db.VarChar(1000)
+  createdat DateTime? @db.Timestamp(6)
+  updatedat DateTime? @db.Timestamp(6)
+  image     Bytes?
+  postview  Int?
+}
+
+model postcomment {
+  id             Int     @id @default(autoincrement())
+  postid         Int?
+  commenttitle   String? @db.VarChar(1000)
+  commentcontent String? @db.VarChar(1000)
+  commentwriter  String? @db.VarChar(100)
+}
+
+model postlike {
+  id     Int     @id @default(autoincrement())
+  postid Int?
+  userid String? @db.VarChar(1000)
+}
+
+model road {
+  id        Int     @id @default(autoincrement())
+  roadname  String? @db.VarChar(600)
+  sectionid String? @db.VarChar(4000)
+}
+
+model section {
+  id          Int     @id @default(autoincrement())
+  linkid      String? @db.VarChar(4000)
+  roadid      Int?
+  sectionname String? @db.VarChar(100)
+}
+
+model users {
+  id       Int     @id(map: "users_pkey1") @default(autoincrement())
+  name     String? @db.VarChar(100)
+  naver_id String? @db.VarChar(3000)
 }

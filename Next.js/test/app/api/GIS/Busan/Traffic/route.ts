@@ -4,8 +4,9 @@ export async function GET() {
     let pageNo = 1;
     const numOfRows = 100;
     const maxItems = 5000;
+    const maxPages = 10000; 
 
-    while (allItems.length < maxItems) {
+    while (allItems.length < maxItems && pageNo <= maxPages) {
       const url = `https://apis.data.go.kr/6260000/BusanITSLINKTraffic/LINKTrafficList?serviceKey=${process.env.BUSAN_TRAFFIC_KEY}&pageNo=${pageNo}&numOfRows=${numOfRows}`;
       const res = await fetch(url);
       const data = await res.json();

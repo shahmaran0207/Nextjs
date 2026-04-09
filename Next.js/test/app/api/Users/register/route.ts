@@ -1,7 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { auth } from "@/auth";
-import { getConnection } from "@/util/database";
-import oracledb from "oracledb";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
     const session = await auth();
@@ -10,25 +9,26 @@ export async function POST(request: NextRequest) {
     const naverId = (session?.user as any)?.naverid;
     if (!naverId) return NextResponse.json({ error: "인증 필요" }, { status: 401 });
 
-    const conn = await getConnection();
+    try {
+        const dupCheck = await prisma.users.findFirst({
+            where: { name: String(name)},
+        });
 
-    // 이름 중복 체크
-    const dupCheck = await conn.execute(
-        `SELECT 1 FROM TEST.USERS WHERE NAME = :name`,
-        { name },
-        { outFormat: oracledb.OUT_FORMAT_OBJECT }
-    );
-    if ((dupCheck.rows as any[]).length > 0) {
-        await conn.close();
-        return NextResponse.json({ error: "이미 사용 중인 닉네임" }, { status: 409 });
+        if(dupCheck) {
+            return NextResponse.json({error: "이미 사용중인 닉네임입니다."}, { status: 500});
+        };
+
+        await prisma.users.create({
+            data: {
+                naver_id: naverId,
+                name: String(name),
+            },
+        });
+
+        return NextResponse.json({ ok: true});
+    } catch(err: any) {
+        console.log("계정 등록 API 에러:::::::", err);
+        return NextResponse.json({ error: err.message}, { status: 500});
     }
-
-    await conn.execute(
-        `INSERT INTO TEST.USERS (NAVER_ID, NAME) VALUES (:naverId, :name)`,
-        { naverId, name },
-        { autoCommit: true }
-    );
-    await conn.close();
-
-    return NextResponse.json({ ok: true });
+    
 }

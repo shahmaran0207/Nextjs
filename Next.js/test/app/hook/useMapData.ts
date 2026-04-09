@@ -13,7 +13,7 @@ export function useMapData() {
 
   const handleRoad = async (roadID: number) => {
     try {
-      const getSection = await axios.get(`/api/getSectionList/${roadID}`);
+      const getSection = await axios.get(`/api/GIS/Busan/Section/getSectionList/${roadID}`);
       setSectionData(getSection.data);
     } catch (err: any) {
       console.log("RoadError::::::::::::::", err);
@@ -22,7 +22,7 @@ export function useMapData() {
 
   const handleSection = async (sectionId: number) => {
     try {
-      const getLinkList = await axios.get(`/api/getLinkList/${sectionId}`);
+      const getLinkList = await axios.get(`/api/GIS/Busan/Link/getLinkList/${sectionId}`);
       setLinkData(getLinkList.data);
     } catch (err: any) {
       console.log("SectionErr:::::::::::::", err);

@@ -9,7 +9,7 @@ export default function RoadTable({ showTrafficOnly, clearAllHighlights, roadDat
     const [roadName, setRoadName] = useState("");
 
     const handleSave = async() => {
-        await axios.post("/api/addRoad", {roadName});
+        await axios.post("/api/GIS/Busan/Road/addRoad", {roadName});
         setShowModal(false);
         setRoadName("");
         window.location.reload();

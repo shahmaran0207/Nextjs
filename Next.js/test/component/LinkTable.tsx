@@ -16,7 +16,7 @@ export default function LinkTable({ existingLinkIds, enterLinkSelectMode, linkDa
   
     const handleSave = async () => {
       const newLinks =selectedLinks.filter(l => !existingLinkIds.includes(l.linkId));
-      await axios.post("/api/addLink", { links: newLinks, sectionId: selectedSectionId });
+      await axios.post("/api/GIS/Busan/Link/addLink", { links: newLinks, sectionId: selectedSectionId });
       setIsLinkSelectMode(false);
       setSelectedLinks([])
       window.location.reload();

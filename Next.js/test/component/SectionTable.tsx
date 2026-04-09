@@ -11,7 +11,7 @@ export default function SectionTable({ setLinkData, setSelectedLinks, setIsLinkS
     const [sectionName, setSectionName] = useState("");
 
     const handleSave = async() => {
-      await axios.post("/api/addSection", {sectionName, roadId: selectedRoadId });
+      await axios.post("/api/GIS/Busan/Section/addSection", {sectionName, roadId: selectedRoadId });
       setShowModal(false);
       setSectionName("");
       window.location.reload();

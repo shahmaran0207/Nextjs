@@ -16,7 +16,6 @@ const PostList = () => {
       try {
         const res = await fetch('/api/posts/getPostList');
         const data = await res.json();
-        console.log("res:::::::::::::::::", res)
         setPosts(data);
       } catch (err: any) {
         console.log("error::::::::::::", err);
@@ -68,8 +67,8 @@ const PostList = () => {
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               {pagedPosts.map((post: any) => (
                 <div
-                  key={post.ID}
-                  onClick={() => router.push(`list/${post.ID}`)}
+                  key={post.id}
+                  onClick={() => router.push(`list/${post.id}`)}
                   style={{
                     background: "#ffffff",
                     borderRadius: "16px",
@@ -88,7 +87,7 @@ const PostList = () => {
                     color: "#212529",
                     margin: "0 0 8px",
                   }}>
-                    {post.TITLE}
+                    {post.title}
                   </h2>
                   <p style={{
                     fontSize: "14px",
@@ -100,13 +99,13 @@ const PostList = () => {
                     WebkitBoxOrient: "vertical",
                     overflow: "hidden",
                   }}>
-                    {post.CONTENT}
+                    {post.content}
                   </p>
                   <small style={{
                     fontSize: "12px",
                     color: "#ced4da",
                   }}>
-                    {new Date(post.CREATEDAT).toLocaleDateString("ko-KR", {
+                    {new Date(post.createdat).toLocaleDateString("ko-KR", {
                       year: "numeric",
                       month: "long",
                       day: "numeric",

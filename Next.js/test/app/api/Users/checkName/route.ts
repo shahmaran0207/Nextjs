@@ -1,18 +1,21 @@
 import { NextResponse, NextRequest } from "next/server";
-import { getConnection } from "@/util/database";
-import oracledb from "oracledb";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
     const name = request.nextUrl.searchParams.get("name");
-    if (!name) return NextResponse.json({ exists: false });
 
-    const conn = await getConnection();
-    const result = await conn.execute(
-        `SELECT 1 FROM TEST.USERS WHERE NAME = :name`,
-        { name },
-        { outFormat: oracledb.OUT_FORMAT_OBJECT }
-    );
-    await conn.close();
+    try {
+        const result = await prisma.users.findFirst({
+            where: { name: String(name)},
+        });
 
-    return NextResponse.json({ exists: (result.rows as any[]).length > 0 });
+        if(!result) {
+            return NextResponse.json({error: "Not fount"}, { status: 500})
+        };
+
+        return NextResponse.json({exists: !!result});
+    } catch(err: any) {
+        console.log("닉네임 중복 체크 API 에러:::::::::::", err);
+        return NextResponse.json({error: err.message}, { status: 500});
+    }
 }

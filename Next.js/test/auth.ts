@@ -1,7 +1,6 @@
 import NextAuth from "next-auth";
 import Naver from "next-auth/providers/naver";
-import { getConnection } from "./util/database";
-import oracledb from "oracledb";
+import { prisma } from "./lib/prisma";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
     providers: [
@@ -18,57 +17,45 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             (session.user as any).isNewUser = token.isNewUser;
             return session;
         },
+
         async jwt({ token, profile, trigger }) {
             if (!profile && trigger !== "update" && token.isNewUser && token.naverId) {
-                const conn = await getConnection();
-                const result = await conn.execute(
-                    `SELECT * FROM TEST.USERS WHERE NAVER_ID =:naverId`,
-                    { naverId: token.naverId },
-                    { outFormat: oracledb.OUT_FORMAT_OBJECT }
-                );
-
-                await conn.close();
-                const user = (result.rows as any[])[0];
+                //1. 로그인 후 토큰 갱신 -> DB에서 유저 정보 재조회
+                const user = await prisma.users.findFirst({
+                    where: {naver_id: String(token.naverId)},
+                });
 
                 if(user) {
-                    token.name = user.NAME;
+                    token.name = user.name ?? "";
                     token.isNewUser = false;
                 };
-            };
+            }; 
 
+            //2. 최초 로그인 시 profile이 있을 때 -> 네이버 프로필로 DB에서 유저 조회
             if (profile) {
                 const naverId = (profile as any).response.id;
                 token.naverId = naverId;
 
-                const conn = await getConnection();
-                const result = await conn.execute(
-                    `SELECT * FROM TEST.USERS WHERE NAVER_ID =:naverId`,
-                    { naverId },
-                    { outFormat: oracledb.OUT_FORMAT_OBJECT }
-                );
+                const user = await prisma.users.findFirst({     //findUniqe는 uniqe키 걸려 있어야 가능함
+                    where: { naver_id: naverId },
+                })
 
-                await conn.close();
-                const user = (result.rows as any[])[0];
                 if(user) {
-                    token.name = user.NAME;
+                    token.name = user.name ?? "";
                     token.isNewUser = false;
                 } else {
                     token.isNewUser = true;
                 }
             }
 
+            //3. 세션 업데이트 시 최신 유저 정보 반영
             if(trigger ==="update" && token.naverId) {
-                const conn = await getConnection();
-                const result = await conn.execute(
-                    `SELECT * FROM TEST.USERS WHERE NAVER_ID = :naverId`, 
-                    { naverId: token.naverId },
-                    { outFormat: oracledb.OUT_FORMAT_OBJECT }
-                );
-
-                await conn.close();
-                const user = (result.rows as any[])[0];
+                const user = await prisma.users.findFirst({
+                    where: { naver_id: String(token.naverId)},
+                });
+               
                 if(user){
-                    token.name = user.NAME;
+                    token.name = user.name ?? "";
                     token.isNewUser = false;
                 }
             }

@@ -19,7 +19,8 @@ export default function EditForm({ params }: { params: Promise<{ id: string }> }
       setPostId(id);
       const res = await fetch(`/api/posts/getPostList/${id}`);
       const data = await res.json();
-      setPost(data[0]);
+      console.log("data::::::::::", data);
+      setPost(data);
     };
     fetchPost();
   }, []);
@@ -43,8 +44,8 @@ export default function EditForm({ params }: { params: Promise<{ id: string }> }
   const handleSubmit = async () => {
     const id = postId;
     const formData = new FormData();
-    formData.append("title", title || post.TITLE);
-    formData.append("content", content || post.CONTENT);
+    formData.append("title", title || post.title);
+    formData.append("content", content || post.content);
     if (imageFile) formData.append("image", imageFile);
 
     const submit = await fetch(`/api/posts/updatePost/${id}`, {
@@ -76,7 +77,7 @@ export default function EditForm({ params }: { params: Promise<{ id: string }> }
             <label className="text-sm font-medium text-gray-600">제목</label>
             <input
               type="text"
-              placeholder={post.TITLE}
+              placeholder={post.title}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
@@ -87,7 +88,7 @@ export default function EditForm({ params }: { params: Promise<{ id: string }> }
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-gray-600">내용</label>
             <textarea
-              placeholder={post.CONTENT}
+              placeholder={post.content}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={6}
@@ -97,9 +98,9 @@ export default function EditForm({ params }: { params: Promise<{ id: string }> }
 
           {/* 이미지 */}
           <div className="w-full h-60 rounded-xl overflow-hidden border border-gray-200 relative bg-gray-50">
-            {previewImage || post.IMAGE ? (
+            {previewImage || post.image ? (
               <Image
-                src={previewImage ?? `data:image/jpeg;base64,${post.IMAGE}`}
+                src={previewImage ?? `data:image/jpeg;base64,${post.image}`}
                 alt="preview"
                 fill
                 className="object-cover"
