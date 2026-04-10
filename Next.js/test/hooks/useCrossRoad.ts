@@ -46,7 +46,7 @@ export function useCrossRoad() {
 
         try {
             const res = await fetch(
-                `/api/CrossRoads?lat=${lat}&lng=${lng}&radius=${FETCH_RADIUS_METERS}`
+                `/api/GIS/Seoul/CrossRoad/CrossRoads?lat=${lat}&lng=${lng}&radius=${FETCH_RADIUS_METERS}`
             );
 
             const data = await res.json();

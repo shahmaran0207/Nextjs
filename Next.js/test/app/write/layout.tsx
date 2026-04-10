@@ -1,31 +1,30 @@
 export const metadata = {
-  title: "Test Page",
+  title: "글 작성",
 };
 
-export default function TestLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function WriteLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-full flex flex-col">
-      {/* 🔹 /test 전용 헤더 */}
-      <header className="bg-blue-700 text-white p-4">
-        <div className="max-w-4xl mx-auto flex justify-between">
-          <h1 className="font-bold">Test Zone</h1>
-          <nav className="space-x-4">
-            <a href="/">홈으로</a>
+    <div style={{ minHeight: "100vh", background: "#0f1117", display: "flex", flexDirection: "column" }}>
+      <header style={{
+        background: "#1a1d27",
+        borderBottom: "1px solid #2e3247",
+        padding: "0.875rem 1.5rem",
+        position: "sticky",
+        top: 0,
+        zIndex: 100,
+      }}>
+        <div style={{ maxWidth: "760px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "15px", fontWeight: 600, color: "#e8eaf0" }}>글 작성</span>
+          <nav style={{ display: "flex", gap: "1.25rem" }}>
+            <a href="/" style={{ fontSize: "13px", color: "#8b90a7", textDecoration: "none" }}>홈으로</a>
+            <a href="/list" style={{ fontSize: "13px", color: "#8b90a7", textDecoration: "none" }}>목록</a>
           </nav>
         </div>
       </header>
 
-      <main className="flex-1 max-w-4xl mx-auto w-full p-4">
+      <main style={{ flex: 1 }}>
         {children}
       </main>
-
-      <footer className="bg-blue-100 p-4 text-center text-sm">
-        Test Layout Footer
-      </footer>
     </div>
   );
 }

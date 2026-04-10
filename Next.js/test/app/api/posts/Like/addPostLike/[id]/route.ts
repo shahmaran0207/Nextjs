@@ -6,7 +6,7 @@ export async function POST(request: Request, { params }:{ params: Promise<{id: s
     const name = new URL(request.url).searchParams.get("name");
 
     try {
-        const reuslt = await prisma.postlike.create({
+        await prisma.postlike.create({
             data: {
                 postid: Number(id),
                 userid: name

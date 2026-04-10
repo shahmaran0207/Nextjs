@@ -1,15 +1,22 @@
+export const revalidate = 600; // 10분 캐시
+
 export async function GET() {
   try {
     const allItems: any[] = [];
     let pageNo = 1;
     const numOfRows = 100;
-    const maxItems = 5000;
-    const maxPages = 10000; 
+    const maxItems = 50;
+    const maxPages = 100000; 
 
     while (allItems.length < maxItems && pageNo <= maxPages) {
       const url = `https://apis.data.go.kr/6260000/BusanITSLINKTraffic/LINKTrafficList?serviceKey=${process.env.BUSAN_TRAFFIC_KEY}&pageNo=${pageNo}&numOfRows=${numOfRows}`;
       const res = await fetch(url);
-      const data = await res.json();
+      const text = await res.text();
+      let data: any;
+      try { data = JSON.parse(text); } catch {
+        console.error("JSON 파싱 실패:", text.slice(0, 200));
+        break;
+      }
       console.log(`페이지 ${pageNo} 응답:`, data.resultCode, data.content?.items?.length);
 
       const items = data.content?.items;

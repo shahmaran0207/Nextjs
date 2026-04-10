@@ -1,33 +1,35 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/util/database";
-import oracledb from "oracledb"; 
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
-    const formData = await request.formData();
-    const recepientId = formData.get("recepientId") as string;
-    const userId = formData.get("userId") as string;
-    const message = formData.get("message") as string;
-    const image = formData.get("image") as File;
-    const iamgeBuffer = image ? Buffer.from(await image.arrayBuffer()): null;
-    const imageUrl = iamgeBuffer ? `data:image/jpeg;base64,${iamgeBuffer.toString("base64")}`:null;
-
-    let conn;
     try{
-        conn = await getConnection();
-        await conn.execute(
-            `INSERT INTO TEST.CHAT(RECEPIENT, SENDER, CONTENT, IMAGE)
-            VALUES (:recepientId, :userId, :message, :image)`,
-            {
-                recepientId, userId, message, 
-                image: { val: iamgeBuffer, type: oracledb.BLOB}
+        const formData = await request.formData();
+        const recepientId = formData.get("recepientId") as string;
+        const userId = formData.get("userId") as string;
+        const message = formData.get("message") as string;
+        const image = formData.get("image") as File;
+
+        let imageBuffer: Buffer | null = null;
+        let imageUrl: string | null = null;
+
+        if (image) {
+            const arrayBuffer = await image.arrayBuffer();
+            imageBuffer = Buffer.from(arrayBuffer);
+            imageUrl = `data:image/jpeg;base64,${imageBuffer.toString("base64")}`;
+        }
+
+        await prisma.chat.create({
+            data: {
+                recepient: recepientId,
+                sender: userId,
+                content: message,
+                ...(imageBuffer && { image: imageBuffer as any }),
             },
-            { autoCommit: true}
-        );
-        return NextResponse.json({ result: "ok", imageUrl});
+        });
+
+        return NextResponse.json({ result: "ok", imageUrl });
     } catch (err: any) {
         console.error("채팅 기록 API 에러::::::", err);
         return NextResponse.json({error: err.message}, {status: 500});
-    } finally {
-        if (conn) await conn.close();
-    }
+    } 
 }

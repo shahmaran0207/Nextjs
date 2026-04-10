@@ -1,22 +1,22 @@
-import { getConnection } from "@/util/database";
-import oracledb from "oracledb";
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request, {params}: {params: Promise<{roadId: string}> }) {
     const { roadId } = await params;
-    let conn;
+
     try {
-        conn = await getConnection();
-        const result = await conn.execute(
-            `SELECT ID, LINKID, ROADID, SECTIONNAME
-             FROM TEST.SECTION WHERE ROADID = :roadId ORDER BY ID DESC`,
-            {roadId},
-            { outFormat: oracledb.OUT_FORMAT_OBJECT }
-        );
-        return NextResponse.json(result.rows);
+        const result = await prisma.section.findMany({
+            where: { roadid: Number(roadId)},
+            orderBy: { id: "desc"}
+        });
+
+        if(!result) {
+            return NextResponse.json({error: "Not found"}, { status: 400});
+        }
+
+        return NextResponse.json(result);
     } catch (err: any) {
+        console.log("구역 리스트 - 도로 리스트 조회 API 에러::::::", err)
         return NextResponse.json({ error: err.message }, { status: 500 });
-    } finally {
-        if (conn) await conn.close();
-    }
+    } 
 }

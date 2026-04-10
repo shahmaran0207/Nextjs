@@ -1,580 +1,282 @@
-"use client"
+"use client";
 
 import { useEffect, useState, use, SyntheticEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { dark } from "./_components/darkTheme";
+import PostCard from "./_components/PostCard";
+import CommentForm from "./_components/CommentForm";
+import CommentTable from "./_components/CommentTable";
 
 const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = use(params);
   const [post, setPost] = useState<any>(null);
-  const [postLike, setPostLike] = useState<any>(null);
+  const [postLike, setPostLike] = useState(0);
+  const [postHate, setPostHate] = useState(0);
+  const [commentLikeCounts, setCommentLikeCounts] = useState<{ [key: number]: number }>({});
+  const [commentHateCounts, setCommentHateCounts] = useState<{ [key: number]: number }>({});
   const [comment, setComment] = useState<any[]>([]);
+  const [downComments, setDownComments] = useState<any[]>([]);
   const [commentTitle, setCommentTitle] = useState("");
   const [commentContent, setCommentContent] = useState("");
-  const [ currentPage, setCurrentPage] = useState(1);
+  const [downCommentTitle, setDownCommentTitle] = useState("");
+  const [downCommentContent, setDownCommentContent] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const itemPerPage = 10;
-  const totalPages = Math.ceil(comment.length/itemPerPage);
-  const pagedComments = comment.slice((currentPage -1)*itemPerPage, currentPage*itemPerPage);
+  const totalPages = Math.ceil(comment.length / itemPerPage);
+  const pagedComments = comment.slice((currentPage - 1) * itemPerPage, currentPage * itemPerPage);
   const { data: session } = useSession();
   const name = session?.user?.name || "";
-
   const router = useRouter();
 
-  const handleCommentTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCommentTitle(e.target.value);
+  const reloadPostLikeAndHate = async (postId: string) => {
+    const likeText = await fetch(`/api/posts/Like/getPostLike/${postId}`).then(r => r.text());
+    setPostLike(likeText ? JSON.parse(likeText)?.length ?? 0 : 0);
+    const hateText = await fetch(`/api/posts/Hate/getPostHate/${postId}`).then(r => r.text());
+    setPostHate(hateText ? JSON.parse(hateText)?.length ?? 0 : 0);
   };
 
-  const handleCommentContentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCommentContent(e.target.value);
+  const reloadComment = async (postId: string) => {
+    const commentData = await fetch(`/api/Comment/getEachComment/${postId}`).then(r => r.json());
+    setComment(commentData);
+    const downCommentData = await fetch(`/api/Comment/DownComment/getEachComment/${postId}`).then(r => r.json());
+    setDownComments(Array.isArray(downCommentData) ? downCommentData : []);
   };
 
-  const removeComment = async(commentId: String) => {
-    try {
-      const deleteComment = await fetch(`/api/Comment/removeComment/${commentId}`, {
-        method: "POST"
-      });
-      if(deleteComment.status === 200){
-        alert("댓글 삭제 되었습니다.");
-        window.location.reload();
-      }
-    } catch(err: any){
-      console.log("remove Comment Error:::::::::::::::::", err)
-    }
-  };
+  const reloadCommentLikeAndHate = async (postId: string) => {
+    const commentData = await fetch(`/api/Comment/getEachComment/${postId}`).then(r => r.json());
+    setComment(commentData);
+    const commentLikes = await Promise.all(
+      commentData.map((c: any) => fetch(`/api/Comment/Like/getCommentLike/${c.id}`).then(r => r.json()))
+    );
+    const likeCounts: { [key: number]: number } = {};
+    commentData.forEach((c: any, i: number) => { likeCounts[c.id] = commentLikes[i]?.length ?? 0; });
+    setCommentLikeCounts(likeCounts);
 
-  const handleDelete = async (postId: String) => {
-     const ok = window.confirm("정말 삭제하시겠습니까?");
-     if (!ok) return;
-
-    try{ 
-      const deleteLike = await fetch(`/api/posts/Like/removeAllLike/${postId}`, {
-        method: "POST"
-      });
-
-      const deleteComment = await fetch(`/api/Comment/removeAllComment/${postId}`, {
-        method: "POST"
-      });
-
-      const del = await fetch(`/api/posts/removePost/${postId}`, {
-        method: "POST"
-      });
-
-      if(deleteLike.status === 200 && del.status ===200) {
-        alert("삭제 되었습니다.")
-        router.push("/")
-      }
-
-    } catch(err: any){
-      console.log("error:::::::::::::::::", err)
-    }
-  };
-
-  const handleUpdate = async (postId: String) => {
-    try{ 
-        router.push( `/updatePost/${postId}`)
-
-    } catch(err: any){
-      console.error("error:::::::::::::::::", err)
-    }
-  };
-
-  const handleSubmit = async (e: SyntheticEvent, postId: string, name: string) => {
-    e.preventDefault();
-
-    const confirmed = confirm("댓글을 작성하시겠습니까?");
-    if(!confirmed) return;
-
-    try{
-      const formData = new FormData();
-      formData.append("commentTitle", commentTitle);
-      formData.append("commentContent", commentContent);
-      formData.append("writer", name);
-
-      await fetch(`/api/Comment/addComment/${postId}`, {
-        method: "POST",
-        body: formData,
-      });
-      setCommentTitle("");
-      setCommentContent("");
-      window.location.reload();
-    } catch(err){
-      console.log("CommentAddError::::::::::::::::", err)
-    }
+    const commentHates = await Promise.all(
+      commentData.map((c: any) => fetch(`/api/Comment/Hate/getCommentHate/${c.id}`).then(r => r.json()))
+    );
+    const hateCounts: { [key: number]: number } = {};
+    commentData.forEach((c: any, i: number) => { hateCounts[c.id] = commentHates[i]?.length ?? 0; });
+    setCommentHateCounts(hateCounts);
   };
 
   useEffect(() => {
-    const upCount = async() => {
-      try{
-        const res = await fetch(`/api/posts/addViewCount/${id}`, {
-          method: "POST"
-        });
-      } catch (err) {
-        console.log("View Count 증가 에러:::::::::::::::", err)
-      }
-    };
-
-    upCount();
+    fetch(`/api/posts/addViewCount/${id}`, { method: "POST" }).catch(err => console.log("View Count 에러:", err));
   }, []);
-
-  const handleLike = async(postId: String) => {
-    try {
-      const postLike = await fetch(`/api/posts/Like/getEachPostLike/${postId}?name=${name}`);
-      const data = await postLike.json();
-
-      if (data.length === 0) {
-        try{
-          const addLike = await fetch(`/api/posts/Like/addPostLike/${postId}?name=${name}`,{
-            method: "POST"
-          });
-          window.location.reload();
-        } catch(err: any) {
-          console.error("종아요 개수 추가 에러::::::::::", err);
-        }
-      } else {
-        try{
-          const removeLike = await fetch(`/api/posts/Like/removePostLike/${postId}?name=${name}`, {
-            method: "POST"
-          });
-          window.location.reload();
-
-        } catch(err: any) {
-          console.error("좋아요 개수 삭제 에러:::::::::", err)
-        }
-      }
-    } catch(err) {
-      console.error("좋아요 개수 수정 에러::::::::::", err);
-    }
-
-  };
 
   useEffect(() => {
     const getPost = async () => {
       try {
-        const res = await fetch(`/api/posts/getPostList/${id}`);
-        const data = await res.json();
-        setPost(data);
-
-        const comment = await fetch(`/api/Comment/getEachComment/${id}`);
-        const commentData = await comment.json();
+        const [downCommentData, postData, commentData, likeText, hateText] = await Promise.all([
+          fetch(`/api/Comment/DownComment/getEachComment/${id}`).then(r => r.json()),
+          fetch(`/api/posts/getPostList/${id}`).then(r => r.json()),
+          fetch(`/api/Comment/getEachComment/${id}`).then(r => r.json()),
+          fetch(`/api/posts/Like/getPostLike/${id}`).then(r => r.text()),
+          fetch(`/api/posts/Hate/getPostHate/${id}`).then(r => r.text()),
+        ]);
+        setDownComments(Array.isArray(downCommentData) ? downCommentData : []);
+        setPost(postData);
         setComment(commentData);
+        setPostLike(likeText ? JSON.parse(likeText)?.length ?? 0 : 0);
+        setPostHate(hateText ? JSON.parse(hateText)?.length ?? 0 : 0);
 
-        const postLike = await fetch(`/api/posts/Like/getPostLike/${id}`);
-        const text = await postLike.text();
-        const postLikeData = text ? JSON.parse(text) : null;
-        setPostLike(postLikeData?.length ?? 0);
+        const commentLikes = await Promise.all(
+          commentData.map((c: any) => fetch(`/api/Comment/Like/getCommentLike/${c.id}`).then(r => r.json()))
+        );
+        const likeCounts: { [key: number]: number } = {};
+        commentData.forEach((c: any, i: number) => { likeCounts[c.id] = commentLikes[i]?.length ?? 0; });
+        setCommentLikeCounts(likeCounts);
 
-      } catch (err: any) {
-        console.log("error::::::::::::", err);
+        const commentHates = await Promise.all(
+          commentData.map((c: any) => fetch(`/api/Comment/Hate/getCommentHate/${c.id}`).then(r => r.json()))
+        );
+        const hateCounts: { [key: number]: number } = {};
+        commentData.forEach((c: any, i: number) => { hateCounts[c.id] = commentHates[i]?.length ?? 0; });
+        setCommentHateCounts(hateCounts);
+      } catch (err) {
+        console.error("error:", err);
       }
     };
     getPost();
   }, [id]);
 
+  const handleDelete = async () => {
+    if (!window.confirm("정말 삭제하시겠습니까?")) return;
+    try {
+      const results = await Promise.all([
+        fetch(`/api/Comment/Hate/removeAllCommentHate/${post.id}`, { method: "POST" }),
+        fetch(`/api/Comment/Like/removeAllCommentLike/${post.id}`, { method: "POST" }),
+        fetch(`/api/Comment/removeAllComment/${post.id}`, { method: "POST" }),
+        fetch(`/api/posts/Hate/removeAllHate/${post.id}`, { method: "POST" }),
+        fetch(`/api/posts/Like/removeAllLike/${post.id}`, { method: "POST" }),
+        fetch(`/api/posts/removePost/${post.id}`, { method: "POST" }),
+      ]);
+      if (results.every(r => r.status === 200)) {
+        alert("삭제 되었습니다.");
+        router.push("/");
+      }
+    } catch (err) {
+      console.error("error:", err);
+    }
+  };
+
+  const handleSubmit = async (e: SyntheticEvent) => {
+    e.preventDefault();
+    if (!confirm("댓글을 작성하시겠습니까?")) return;
+    try {
+      const formData = new FormData();
+      formData.append("commentTitle", commentTitle);
+      formData.append("commentContent", commentContent);
+      formData.append("writer", name);
+      await fetch(`/api/Comment/addComment/${post.id}`, { method: "POST", body: formData });
+      setCommentTitle("");
+      setCommentContent("");
+      reloadComment(post.id);
+    } catch (err) {
+      console.error("CommentAddError:", err);
+    }
+  };
+
+  const removeComment = async (commentId: string) => {
+    try {
+      const [likeRes, hateRes, deleteRes] = await Promise.all([
+        fetch(`/api/Comment/Like/removeCommentLike/${commentId}`, { method: "POST" }),
+        fetch(`/api/Comment/Hate/removeCommentHate/${commentId}`, { method: "POST" }),
+        fetch(`/api/Comment/removeComment/${commentId}`, { method: "POST" }),
+      ]);
+      if (likeRes.status === 200 && hateRes.status === 200 && deleteRes.status === 200) {
+        alert("댓글 삭제 되었습니다.");
+        reloadComment(post.id);
+      }
+    } catch (err) {
+      console.error("remove Comment Error:", err);
+    }
+  };
+
+  const handleRemoveReply = async (downCommentId: number) => {
+    try {
+      const res = await fetch(`/api/Comment/DownComment/removeComment/${downCommentId}`, { method: "POST" });
+      if (res.status === 200) reloadComment(post.id);
+    } catch (err) {
+      console.error("대댓글 삭제 에러:", err);
+    }
+  };
+
+  const handleAddReply = async (upperCommentId: number, title: string, content: string) => {
+    // TODO: 대댓글 추가 API 호출
+    reloadComment(post.id);
+  };
+
+  const handleCommentLike = async (commentId: string) => {
+    try {
+      const data = await fetch(`/api/Comment/Like/getEachCommentLike/${commentId}?name=${name}`).then(r => r.json());
+      if (data.length === 0) {
+        await fetch(`/api/Comment/Like/addCommentLike/${commentId}?name=${name}&postId=${post.id}`, { method: "POST" });
+      } else {
+        await fetch(`/api/Comment/Like/removeEachCommentLike/${commentId}?name=${name}`, { method: "POST" });
+      }
+      reloadCommentLikeAndHate(post.id);
+    } catch (err) {
+      console.error("댓글 좋아요 에러:", err);
+    }
+  };
+
+  const handleCommentHate = async (commentId: string) => {
+    try {
+      const data = await fetch(`/api/Comment/Hate/getEachCommentHate/${commentId}?name=${name}`).then(r => r.json());
+      if (data.length === 0) {
+        await fetch(`/api/Comment/Hate/addCommentHate/${commentId}?name=${name}&postId=${post.id}`, { method: "POST" });
+      } else {
+        await fetch(`/api/Comment/Hate/removeEachCommentHate/${commentId}?name=${name}`, { method: "POST" });
+      }
+      reloadCommentLikeAndHate(post.id);
+    } catch (err) {
+      console.error("댓글 싫어요 에러:", err);
+    }
+  };
+
+  const handleLike = async () => {
+    try {
+      const data = await fetch(`/api/posts/Like/getEachPostLike/${post.id}?name=${name}`).then(r => r.json());
+      if (data.length === 0) {
+        await fetch(`/api/posts/Like/addPostLike/${post.id}?name=${name}`, { method: "POST" });
+      } else {
+        await fetch(`/api/posts/Like/removePostLike/${post.id}?name=${name}`, { method: "POST" });
+      }
+      reloadPostLikeAndHate(post.id);
+    } catch (err) {
+      console.error("좋아요 에러:", err);
+    }
+  };
+
+  const handleHate = async () => {
+    try {
+      const data = await fetch(`/api/posts/Hate/getEachPostHate?id=${post.id}&name=${name}`, { method: "POST" }).then(r => r.json());
+      if (data.length === 0) {
+        await fetch(`/api/posts/Hate/addPostHate/${post.id}?name=${name}`, { method: "POST" });
+      } else {
+        await fetch(`/api/posts/Hate/removePostHate/${post.id}?name=${name}`, { method: "POST" });
+      }
+      reloadPostLikeAndHate(post.id);
+    } catch (err) {
+      console.error("싫어요 에러:", err);
+    }
+  };
+
   if (!post) return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#f0f4ff",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      color: "#adb5bd",
-      fontSize: "15px",
-    }}>
+    <div style={{ minHeight: "100vh", background: dark.bg, display: "flex", alignItems: "center", justifyContent: "center", color: dark.textMuted, fontSize: "15px" }}>
       로딩 중...
     </div>
   );
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#f0f4ff",
-      padding: "2rem",
-    }}>
-      <div style={{
-        maxWidth: "700px",
-        margin: "0 auto",
-      }}>
-        <button
-          onClick={() => router.back()}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            fontSize: "13px",
-            color: "#868e96",
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            marginBottom: "1.5rem",
-            padding: 0,
-          }}
-        >
+    <div style={{ minHeight: "100vh", background: dark.bg, padding: "2rem 1rem" }}>
+      <div style={{ maxWidth: "760px", margin: "0 auto" }}>
+        <button onClick={() => router.back()} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "13px", color: dark.textMuted, background: "transparent", border: "none", cursor: "pointer", marginBottom: "1.5rem", padding: "6px 10px", borderRadius: "8px" }}>
           ← 목록으로
         </button>
 
-        <div style={{
-          background: "#ffffff",
-          borderRadius: "16px",
-          padding: "2.5rem",
-          boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
-          borderTop: "4px solid #74c0fc",
-        }}>
-          <small style={{
-            fontSize: "12px",
-            color: "#adb5bd",
-          }}>
-            {new Date(post.createdat).toLocaleDateString("ko-KR", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </small>
+        <PostCard
+          post={post}
+          postLike={postLike}
+          postHate={postHate}
+          commentCount={comment.length}
+          onDelete={handleDelete}
+          onUpdate={() => router.push(`/updatePost/${post.id}`)}
+          onLike={handleLike}
+          onHate={handleHate}
+        />
 
-          <h1 style={{
-            fontSize: "24px",
-            fontWeight: 600,
-            color: "#212529",
-            margin: "0.5rem 0 1.5rem",
-            lineHeight: "1.4",
-          }}>
-            {post.title}
-          </h1>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              fontSize: "14px",
-              color: "#6c757d",
-              fontWeight: 500,
-            }}
-          >
-            <span style={{ fontSize: "15px" }}>👁️</span>
-            <span>조회수</span>
-            <span style={{ color: "#212529", fontWeight: 600 }}>
-              {post.postview}
-            </span>
-          </div>
-
-          <div style={{
-            borderTop: "1px solid #f1f3f5",
-            paddingTop: "1.5rem",
-            fontSize: "15px",
-            color: "#495057",
-            lineHeight: "1.8",
-            whiteSpace: "pre-wrap",
-          }}>
-            내용: {post.content}
-          </div>
-          <div style={{
-            borderTop: "1px solid #f1f3f5",
-            paddingTop: "1.5rem",
-            fontSize: "15px",
-            color: "#495057",
-            lineHeight: "1.8",
-            whiteSpace: "pre-wrap",
-          }}>
-            {post.image === null ? (
-              <p>이미지 없음</p>
-            ) : (
-              <img 
-                src={`data:image/jpeg;base64,${post.image}`} 
-                alt="이미지"
-                style={{ width: "100%", borderRadius: "10px" }}
-              />
-            )}
-          </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "1rem" }}>
+          <span style={{ fontSize: "15px", fontWeight: 600, color: dark.textPrimary }}>댓글</span>
+          <span style={{ fontSize: "12px", padding: "2px 8px", borderRadius: "20px", background: dark.surface2, color: dark.textSecondary }}>{comment.length}</span>
         </div>
-        <button
-          style={{
-            backgroundColor: "#e53e3e",
-            color: "#fff",
-            border: "none",
-            borderRadius: "6px",
-            padding: "8px 16px",
-            fontSize: "14px",
-            fontWeight: 500,
-            cursor: "pointer",
-          }}
-          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#c53030")}
-          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#e53e3e")}
-          onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
-          onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-          onClick={() => handleDelete(post.id)}
-        >
-          삭제
-        </button>
-        <button
-          style={{
-            backgroundColor: "#0633f8ff",
-            color: "#fff",
-            border: "none",
-            borderRadius: "6px",
-            padding: "8px 16px",
-            fontSize: "14px",
-            fontWeight: 500,
-            cursor: "pointer",
-          }}
-          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#c53030")}
-          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#e53e3e")}
-          onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
-          onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-          onClick={() => handleUpdate(post.id)}
-        >
-          수정
-        </button>
-        <button
-          style={{
-            backgroundColor: "#e53e3e",
-            color: "#fff",
-            border: "none",
-            borderRadius: "6px",
-            padding: "8px 16px",
-            fontSize: "14px",
-            fontWeight: 500,
-            cursor: "pointer",
-          }}
-          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#c53030")}
-          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#e53e3e")}
-          onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
-          onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-          onClick={() => handleLike(post.id)}
-        >
-          LIKE {postLike}
-        </button>
+
+        <CommentForm
+          commentTitle={commentTitle}
+          commentContent={commentContent}
+          onTitleChange={e => setCommentTitle(e.target.value)}
+          onContentChange={e => setCommentContent(e.target.value)}
+          onSubmit={handleSubmit}
+          onCancel={() => { setCommentTitle(""); setCommentContent(""); }}
+        />
+
+        <CommentTable
+          comments={pagedComments}
+          downComments={downComments}
+          commentLikeCounts={commentLikeCounts}
+          commentHateCounts={commentHateCounts}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          onCommentLike={handleCommentLike}
+          onCommentHate={handleCommentHate}
+          onRemoveComment={removeComment}
+          onRemoveReply={handleRemoveReply}
+          onAddReply={handleAddReply}
+        />
       </div>
-
-      {comment.length === 0 ? (
-        <>
-          <div style={{
-            textAlign: "center",
-            padding: "32px",
-            color: "#aaa",
-            fontSize: "14px",
-            border: "1px dashed #e0e0e0",
-            borderRadius: "8px"
-          }}>
-            아직 작성된 댓글이 없어요
-          </div>
-          <form onSubmit={(e) => handleSubmit(e, post.id, name)} style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
-            <input
-              type="text"
-              id = "commentTitle"
-              name = "commentTitle"
-              placeholder="제목"
-              onChange={handleCommentTitleChange}
-              style={{
-                flex: "0 0 30%",
-                padding: "8px 12px",
-                border: "1px solid #e0e0e0",
-                borderRadius: "6px",
-                fontSize: "14px",
-                color: "#000",
-                outline: "none",
-              }}
-            />
-            <input
-              type="text"
-              placeholder="내용"
-              id = "commentContent"
-              name = "commentContent"
-              onChange = {handleCommentContentChange}
-              style={{
-                flex: 1,
-                padding: "8px 12px",
-                border: "1px solid #e0e0e0",
-                borderRadius: "6px",
-                fontSize: "14px",
-                color: "#000",
-                outline: "none",
-              }}
-            />
-            <button
-              style={{
-                padding: "8px 16px",
-                backgroundColor: "#3b82f6",
-                color: "#fff",
-                border: "none",
-                borderRadius: "6px",
-                fontSize: "14px",
-                cursor: "pointer",
-              }}
-            >
-              등록
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const confirmed = confirm("작성 중인 내용은 저장되지 않습니다. 그래도 취소하시겠습니까?");
-                if (confirmed) window.location.reload();
-              }}
-              style={{
-                padding: "10px 20px",
-                fontSize: "14px",
-                borderRadius: "10px",
-                border: "1.5px solid #dee2e6",
-                background: "transparent",
-                color: "#868e96",
-                cursor: "pointer",
-              }}
-            >
-              취소하기
-            </button>
-          </form>
-        </>
-        
-      ) : (
-        <>
-         <form onSubmit={(e) => handleSubmit(e, post.id, name)} style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
-            <input
-              type="text"
-              id = "commentTitle"
-              name = "commentTitle"
-              placeholder="제목"
-              onChange={handleCommentTitleChange}
-              style={{
-                flex: "0 0 30%",
-                padding: "8px 12px",
-                border: "1px solid #e0e0e0",
-                borderRadius: "6px",
-                fontSize: "14px",
-                color: "#000",
-                outline: "none",
-              }}
-            />
-            <input
-              type="text"
-              placeholder="내용"
-              id = "commentContent"
-              name = "commentContent"
-              onChange = {handleCommentContentChange}
-              style={{
-                flex: 1,
-                padding: "8px 12px",
-                border: "1px solid #e0e0e0",
-                borderRadius: "6px",
-                fontSize: "14px",
-                color: "#000",
-                outline: "none",
-              }}
-            />
-            <button
-              style={{
-                padding: "8px 16px",
-                backgroundColor: "#3b82f6",
-                color: "#fff",
-                border: "none",
-                borderRadius: "6px",
-                fontSize: "14px",
-                cursor: "pointer",
-              }}
-            >
-              등록
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const confirmed = confirm("작성 중인 내용은 저장되지 않습니다. 그래도 취소하시겠습니까?");
-                if (confirmed) window.location.reload();
-              }}
-              style={{
-                padding: "10px 20px",
-                fontSize: "14px",
-                borderRadius: "10px",
-                border: "1.5px solid #dee2e6",
-                background: "transparent",
-                color: "#868e96",
-                cursor: "pointer",
-              }}
-            >
-              취소하기
-            </button>
-          </form>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px", color: "#000" }}>
-            <thead>
-              <tr style={{ backgroundColor: "#f5f5f5", borderBottom: "2px solid #e0e0e0" }}>
-                <th style={{ padding: "10px 16px", textAlign: "center", width: "60px" }}>번호</th>
-                <th style={{ padding: "10px 16px", textAlign: "center", width: "30%" }}>제목</th>
-                <th style={{ padding: "10px 16px", textAlign: "center" }}>내용</th>
-                <th style={{ padding: "10px 16px", textAlign: "center" }}>작성자</th>
-                <th style={{ padding: "10px 16px", textAlign: "center" }}>삭제</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pagedComments.map((comment: any) =>(
-                <tr key={comment.ID} style={{ borderBottom: "1px solid #f0f0f0", cursor: "pointer" }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = "#fafafa")}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-                >
-                  <td style={{ padding: "10px 16px", textAlign: "center", color: "#bbb" }}>{comment.ID}</td>
-                  <td style={{ padding: "10px 16px", fontWeight: 500, color: "#555", textAlign: "center" }}>{comment.COMMENTTITLE}</td>
-                  <td style={{ padding: "10px 16px", color: "#555", textAlign: "center" }}>{comment.COMMENTCONTENT}</td>
-                  <td style={{ padding: "10px 16px", color: "#555", textAlign: "center" }}>{comment.COMMENTWRITER}</td>
-                  <td style={{ padding: "10px 16px", color: "#555", textAlign: "center" }}>
-                    <button onClick={() => removeComment(comment.ID)}>댓글 삭제</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {totalPages > 1 && (
-            <div style={{ display: "flex", justifyContent: "center", gap: "6px", marginTop: "16px" }}>
-              <button
-                onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-                disabled={currentPage === 1}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid #e0e0e0",
-                  background: currentPage === 1 ? "#f5f5f5" : "#fff",
-                  color: currentPage === 1 ? "#ccc" : "#333",
-                  cursor: currentPage === 1 ? "not-allowed" : "pointer",
-                  fontSize: "13px",
-                }}
-              >
-                이전
-              </button>
-
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: "6px",
-                    border: "1px solid #e0e0e0",
-                    background: currentPage === page ? "#3b82f6" : "#fff",
-                    color: currentPage === page ? "#fff" : "#333",
-                    cursor: "pointer",
-                    fontSize: "13px",
-                    fontWeight: currentPage === page ? 600 : 400,
-                  }}
-                >
-                  {page}
-                </button>
-              ))}
-
-              <button
-                onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid #e0e0e0",
-                  background: currentPage === totalPages ? "#f5f5f5" : "#fff",
-                  color: currentPage === totalPages ? "#ccc" : "#333",
-                  cursor: currentPage === totalPages ? "not-allowed" : "pointer",
-                  fontSize: "13px",
-                }}
-              >
-                다음
-              </button>
-            </div>
-          )}
-        </>
-      )}
     </div>
   );
 };

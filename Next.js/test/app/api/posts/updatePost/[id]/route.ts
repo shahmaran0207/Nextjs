@@ -1,5 +1,3 @@
-import { getConnection } from "@/util/database";
-import oracledb from "oracledb";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -38,21 +36,19 @@ export async function POST(
     const content = formData.get("content") as string;
     const imageFile = formData.get("image") as File | null;
 
-    // 이미지 파일이 있으면 Buffer로 변환 (PostgreSQL bytea 타입으로 저장)
     let imageBuffer: Uint8Array<ArrayBuffer> | null = null;
     if (imageFile) {
       const arrayBuffer = await imageFile.arrayBuffer();
       imageBuffer = new Uint8Array(arrayBuffer as ArrayBuffer);
     }
 
-    // Oracle: 이미지 유무에 따라 UPDATE 쿼리를 2개 따로 작성해야 했음
     // Prisma: ...(imageBuffer && { image: imageBuffer }) 로 조건부 필드 한 번에 처리
     await prisma.post.update({
       where: { id: Number(id) },
       data: {
         title,
         content,
-        updatedat: new Date(), // Oracle SYSDATE → JS new Date()
+        updatedat: new Date(),
         ...(imageBuffer && { image: imageBuffer }), // 이미지 있을 때만 포함
       },
     });

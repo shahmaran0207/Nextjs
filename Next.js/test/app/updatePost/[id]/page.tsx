@@ -4,6 +4,18 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 
+const dark = {
+  bg: "#0f1117",
+  surface: "#1a1d27",
+  surface2: "#22263a",
+  border: "#2e3247",
+  textPrimary: "#e8eaf0",
+  textSecondary: "#8b90a7",
+  textMuted: "#545874",
+  accent: "#7c6af7",
+  accentDim: "#2d2850",
+};
+
 export default function EditForm({ params }: { params: Promise<{ id: string }> }) {
   const [post, setPost] = useState<any>(null);
   const [postId, setPostId] = useState<string>("");
@@ -19,18 +31,14 @@ export default function EditForm({ params }: { params: Promise<{ id: string }> }
       setPostId(id);
       const res = await fetch(`/api/posts/getPostList/${id}`);
       const data = await res.json();
-      console.log("data::::::::::", data);
       setPost(data);
     };
     fetchPost();
   }, []);
 
   if (!post) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-4 border-blue-400 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-gray-400">불러오는 중...</p>
-      </div>
+    <div style={{ minHeight: "100vh", background: dark.bg, display: "flex", alignItems: "center", justifyContent: "center", color: dark.textMuted, fontSize: "15px" }}>
+      로딩 중...
     </div>
   );
 
@@ -42,109 +50,149 @@ export default function EditForm({ params }: { params: Promise<{ id: string }> }
   };
 
   const handleSubmit = async () => {
-    const id = postId;
     const formData = new FormData();
     formData.append("title", title || post.title);
     formData.append("content", content || post.content);
     if (imageFile) formData.append("image", imageFile);
 
-    const submit = await fetch(`/api/posts/updatePost/${id}`, {
-      method: "POST",
-      body: formData,
-    });
-
-    if(submit.status === 200){
+    const submit = await fetch(`/api/posts/updatePost/${postId}`, { method: "POST", body: formData });
+    if (submit.status === 200) {
       alert("수정되었습니다.");
-      router.push("/list")
+      router.push("/list");
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-2xl mx-auto">
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "10px 14px",
+    fontSize: "14px",
+    border: `1.5px solid ${dark.border}`,
+    borderRadius: "10px",
+    background: dark.surface2,
+    color: dark.textPrimary,
+    outline: "none",
+    boxSizing: "border-box",
+    transition: "border-color 0.2s",
+    fontFamily: "inherit",
+  };
 
-        {/* 헤더 */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-800">게시글 수정</h1>
-          <p className="text-sm text-gray-400 mt-1">내용을 수정한 후 저장 버튼을 눌러주세요.</p>
+  const labelStyle: React.CSSProperties = {
+    display: "block",
+    fontSize: "11px",
+    fontWeight: 600,
+    color: dark.textMuted,
+    marginBottom: "6px",
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: dark.bg, padding: "2rem 1rem" }}>
+      <div style={{ maxWidth: "760px", margin: "0 auto" }}>
+
+        <div style={{ marginBottom: "2rem" }}>
+          <p style={{ fontSize: "12px", color: dark.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "4px" }}>
+            게시글
+          </p>
+          <h1 style={{ fontSize: "24px", fontWeight: 600, color: dark.textPrimary, margin: 0 }}>
+            수정하기
+          </h1>
         </div>
 
-        {/* 카드 */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col gap-6">
+        <div style={{ background: dark.surface, borderRadius: "16px", border: `1px solid ${dark.border}`, overflow: "hidden" }}>
+          <div style={{ height: "4px", background: `linear-gradient(90deg, ${dark.accent}, #a78bfa)` }} />
+          <div style={{ padding: "2rem", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
 
-          {/* 제목 */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-600">제목</label>
-            <input
-              type="text"
-              placeholder={post.title}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
-            />
-          </div>
-
-          {/* 내용 */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-600">내용</label>
-            <textarea
-              placeholder={post.content}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={6}
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition resize-none"
-            />
-          </div>
-
-          {/* 이미지 */}
-          <div className="w-full h-60 rounded-xl overflow-hidden border border-gray-200 relative bg-gray-50">
-            {previewImage || post.image ? (
-              <Image
-                src={previewImage ?? `data:image/jpeg;base64,${post.image}`}
-                alt="preview"
-                fill
-                className="object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-300">
-                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <path d="M21 15l-5-5L5 21" />
-                </svg>
-                <p className="text-sm">사진 없음</p>
-              </div>
-            )}
-            {/* 오버레이 */}
-            <label className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition cursor-pointer">
-              <span className="text-white text-sm font-medium bg-black/50 px-4 py-2 rounded-full">
-                사진 변경
-              </span>
+            {/* 제목 */}
+            <div>
+              <label style={labelStyle}>제목</label>
               <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
+                type="text"
+                placeholder={post.title}
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = dark.accent}
+                onBlur={e => e.target.style.borderColor = dark.border}
               />
-            </label>
-          </div>
+            </div>
 
-          {/* 버튼 */}
-          <div className="flex gap-3 pt-2">
-            <button
-              onClick={() => history.back()}
-              className="flex-1 border border-gray-200 text-gray-500 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50 active:scale-95 transition-all"
-            >
-              취소
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="flex-1 bg-blue-500 hover:bg-blue-600 active:scale-95 text-white text-sm font-medium py-2.5 rounded-xl transition-all"
-            >
-              저장
-            </button>
-          </div>
+            {/* 내용 */}
+            <div>
+              <label style={labelStyle}>내용</label>
+              <textarea
+                placeholder={post.content}
+                value={content}
+                onChange={e => setContent(e.target.value)}
+                rows={10}
+                style={{ ...inputStyle, resize: "vertical", lineHeight: "1.7" }}
+                onFocus={e => e.target.style.borderColor = dark.accent}
+                onBlur={e => e.target.style.borderColor = dark.border}
+              />
+            </div>
 
+            {/* 이미지 */}
+            <div>
+              <label style={labelStyle}>이미지</label>
+              <div style={{ width: "100%", height: "240px", borderRadius: "12px", overflow: "hidden", border: `1px solid ${dark.border}`, position: "relative", background: dark.surface2 }}>
+                {previewImage || post.image ? (
+                  <Image
+                    src={previewImage ?? `data:image/jpeg;base64,${post.image}`}
+                    alt="preview"
+                    fill
+                    style={{ objectFit: "cover" }}
+                  />
+                ) : (
+                  <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "8px", color: dark.textMuted }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <path d="M21 15l-5-5L5 21" />
+                    </svg>
+                    <p style={{ fontSize: "13px" }}>사진 없음</p>
+                  </div>
+                )}
+                <label style={{
+                  position: "absolute", inset: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: "rgba(0,0,0,0.45)", opacity: 0, transition: "opacity 0.2s", cursor: "pointer",
+                }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = "1")}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = "0")}
+                >
+                  <span style={{ color: "#fff", fontSize: "13px", fontWeight: 500, background: "rgba(0,0,0,0.5)", padding: "6px 16px", borderRadius: "20px" }}>
+                    사진 변경
+                  </span>
+                  <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: "none" }} />
+                </label>
+              </div>
+            </div>
+
+            {/* 버튼 */}
+            <div style={{ display: "flex", gap: "10px", borderTop: `1px solid ${dark.border}`, paddingTop: "1.5rem" }}>
+              <button
+                onClick={() => history.back()}
+                style={{
+                  flex: 1, padding: "10px", fontSize: "13px", borderRadius: "8px",
+                  border: `1px solid ${dark.border}`, background: "transparent",
+                  color: dark.textSecondary, cursor: "pointer",
+                }}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSubmit}
+                style={{
+                  flex: 1, padding: "10px", fontSize: "13px", fontWeight: 600,
+                  borderRadius: "8px", border: "none",
+                  background: dark.accent, color: "#fff", cursor: "pointer",
+                }}
+              >
+                저장
+              </button>
+            </div>
+
+          </div>
         </div>
       </div>
     </div>

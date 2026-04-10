@@ -1,26 +1,20 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/util/database";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request:Request) {
-
-    let conn;
-    
     try{
         const { sectionName, roadId } = await request.json();
 
-        conn = await getConnection();
-        await conn.execute(
-            `INSERT INTO TEST.SECTION (ROADID, SECTIONNAME)
-            VALUES(:roadId, :sectionName)`,
-            {
-                roadId, sectionName
+        await prisma.section.create({
+            data: {
+                roadid: roadId,
+                sectionname: sectionName
             },
-            { autoCommit: true }
-        );
+        });
+
         return NextResponse.json({result: "ok"});
     } catch(err: any) {
-        console.error("DB 에러::::", err);
-    } finally {
-        if (conn) await conn.close();
+        console.error("구역 리스트 조회 API 에러::::::::::::", err);
+        return NextResponse.json({error: err.message}, { status: 500});
     }
 }

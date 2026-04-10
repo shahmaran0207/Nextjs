@@ -3,13 +3,27 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+const dark = {
+  bg: "#0f1117",
+  surface: "#1a1d27",
+  surface2: "#22263a",
+  border: "#2e3247",
+  textPrimary: "#e8eaf0",
+  textSecondary: "#8b90a7",
+  textMuted: "#545874",
+  accent: "#7c6af7",
+  accentDim: "#2d2850",
+  blue: "#60a5fa",
+  blueDim: "#0d1f3c",
+};
+
 const PostList = () => {
   const [posts, setPosts] = useState<any[]>([]);
   const router = useRouter();
-  const [currentpage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
   const itemPerPage = 5;
-  const totalPages = Math.ceil(posts.length/itemPerPage);
-  const pagedPosts = posts.slice((currentpage -1)*itemPerPage, currentpage*itemPerPage)
+  const totalPages = Math.ceil(posts.length / itemPerPage);
+  const pagedPosts = posts.slice((currentPage - 1) * itemPerPage, currentPage * itemPerPage);
 
   useEffect(() => {
     const getList = async () => {
@@ -25,148 +39,126 @@ const PostList = () => {
   }, []);
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#f0f4ff",
-      padding: "2rem",
-    }}>
-      <div style={{
-        maxWidth: "700px",
-        margin: "0 auto",
-      }}>
+    <div style={{ minHeight: "100vh", background: dark.bg, padding: "2rem 1rem" }}>
+      <div style={{ maxWidth: "760px", margin: "0 auto" }}>
+
+        {/* 헤더 */}
         <div style={{ marginBottom: "2rem" }}>
-          <p style={{
-            fontSize: "13px",
-            color: "#adb5bd",
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-            marginBottom: "4px",
-          }}>게시글</p>
-          <h1 style={{
-            fontSize: "24px",
-            fontWeight: 600,
-            color: "#3b5bdb",
-            margin: 0,
-          }}>목록</h1>
+          <p style={{ fontSize: "12px", color: dark.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "4px" }}>
+            게시글
+          </p>
+          <h1 style={{ fontSize: "24px", fontWeight: 600, color: dark.textPrimary, margin: 0 }}>
+            목록
+          </h1>
         </div>
 
         {posts.length === 0 ? (
           <div style={{
-            textAlign: "center",
-            padding: "4rem",
-            color: "#adb5bd",
-            fontSize: "15px",
-            background: "#ffffff",
-            borderRadius: "16px",
-            border: "1px dashed #dee2e6",
+            textAlign: "center", padding: "4rem",
+            color: dark.textMuted, fontSize: "15px",
+            background: dark.surface, borderRadius: "16px",
+            border: `1px dashed ${dark.border}`,
           }}>
+            <div style={{ fontSize: "32px", marginBottom: "12px" }}>📄</div>
             아직 작성된 글이 없어요
           </div>
         ) : (
           <>
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               {pagedPosts.map((post: any) => (
                 <div
                   key={post.id}
                   onClick={() => router.push(`list/${post.id}`)}
                   style={{
-                    background: "#ffffff",
-                    borderRadius: "16px",
-                    padding: "1.5rem 2rem",
-                    boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
-                    borderLeft: "4px solid #74c0fc",
+                    background: dark.surface,
+                    borderRadius: "14px",
+                    padding: "1.25rem 1.5rem",
+                    border: `1px solid ${dark.border}`,
+                    borderLeft: `4px solid ${dark.accent}`,
                     cursor: "pointer",
-                    transition: "transform 0.15s",
+                    transition: "background 0.15s, transform 0.15s",
                   }}
-                  onMouseOver={e => (e.currentTarget.style.transform = "translateY(-2px)")}
-                  onMouseOut={e => (e.currentTarget.style.transform = "translateY(0)")}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = dark.surface2;
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = dark.surface;
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}
                 >
-                  <h2 style={{
-                    fontSize: "17px",
-                    fontWeight: 600,
-                    color: "#212529",
-                    margin: "0 0 8px",
-                  }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "20px", background: dark.accentDim, color: "#a78bfa", fontWeight: 500 }}>
+                      게시글
+                    </span>
+                    <span style={{ fontSize: "12px", color: dark.textMuted }}>
+                      {new Date(post.createdat).toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" })}
+                    </span>
+                    {post.writer && (
+                      <span style={{ fontSize: "12px", color: dark.textMuted }}>✍ {post.writer}</span>
+                    )}
+                  </div>
+                  <h2 style={{ fontSize: "16px", fontWeight: 600, color: dark.textPrimary, margin: "0 0 6px" }}>
                     {post.title}
                   </h2>
                   <p style={{
-                    fontSize: "14px",
-                    color: "#868e96",
-                    margin: "0 0 12px",
-                    lineHeight: "1.6",
-                    display: "-webkit-box",
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
+                    fontSize: "13px", color: dark.textSecondary, margin: 0, lineHeight: "1.6",
+                    display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
                   }}>
                     {post.content}
                   </p>
-                  <small style={{
-                    fontSize: "12px",
-                    color: "#ced4da",
-                  }}>
-                    {new Date(post.createdat).toLocaleDateString("ko-KR", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </small>
+                  {(post.postview !== undefined || post.likecount !== undefined) && (
+                    <div style={{ display: "flex", gap: "12px", marginTop: "10px", fontSize: "12px", color: dark.textMuted }}>
+                      {post.postview !== undefined && <span>👁 {post.postview}</span>}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
-            {totalPages > 1 && (
-              <div style={{ display: "flex", justifyContent: "center", gap: "6px", marginTop: "16px" }}>
-              <button
-                onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-                disabled={currentpage === 1}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid #e0e0e0",
-                  background: currentpage === 1 ? "#f5f5f5" : "#fff",
-                  color: currentpage === 1 ? "#ccc" : "#333",
-                  cursor: currentpage === 1 ? "not-allowed" : "pointer",
-                  fontSize: "13px",
-                }}
-              >
-                이전
-              </button>
 
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            {totalPages > 1 && (
+              <div style={{ display: "flex", justifyContent: "center", gap: "6px", marginTop: "1.5rem" }}>
                 <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
+                  onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                  disabled={currentPage === 1}
                   style={{
-                    padding: "6px 12px",
-                    borderRadius: "6px",
-                    border: "1px solid #e0e0e0",
-                    background: currentpage === page ? "#3b82f6" : "#fff",
-                    color: currentpage === page ? "#fff" : "#333",
-                    cursor: "pointer",
-                    fontSize: "13px",
-                    fontWeight: currentpage === page ? 600 : 400,
+                    padding: "6px 12px", borderRadius: "8px",
+                    border: `1px solid ${dark.border}`, background: dark.surface,
+                    color: currentPage === 1 ? dark.textMuted : dark.textPrimary,
+                    cursor: currentPage === 1 ? "not-allowed" : "pointer", fontSize: "13px",
                   }}
                 >
-                  {page}
+                  이전
                 </button>
-              ))}
-
-              <button
-                onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-                disabled={currentpage === totalPages}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid #e0e0e0",
-                  background: currentpage === totalPages ? "#f5f5f5" : "#fff",
-                  color: currentpage === totalPages ? "#ccc" : "#333",
-                  cursor: currentpage === totalPages ? "not-allowed" : "pointer",
-                  fontSize: "13px",
-                }}
-              >
-                다음
-              </button>
-            </div>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    style={{
+                      padding: "6px 12px", borderRadius: "8px",
+                      border: `1px solid ${currentPage === page ? dark.accent : dark.border}`,
+                      background: currentPage === page ? dark.accent : dark.surface,
+                      color: currentPage === page ? "#fff" : dark.textSecondary,
+                      cursor: "pointer", fontSize: "13px",
+                      fontWeight: currentPage === page ? 600 : 400,
+                    }}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    padding: "6px 12px", borderRadius: "8px",
+                    border: `1px solid ${dark.border}`, background: dark.surface,
+                    color: currentPage === totalPages ? dark.textMuted : dark.textPrimary,
+                    cursor: currentPage === totalPages ? "not-allowed" : "pointer", fontSize: "13px",
+                  }}
+                >
+                  다음
+                </button>
+              </div>
             )}
           </>
         )}

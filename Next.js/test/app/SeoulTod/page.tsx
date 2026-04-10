@@ -85,7 +85,7 @@ export default function KakaoMap() {
     markersRef.current.forEach(m => m.setMap(null));
     markersRef.current = [];
 
-    fetch('/api/SignalBatch')
+    fetch('/api/GIS/Seoul/Signal/SignalBatch')
       .then(res => res.json())
       .then(data => {
         const signalMap = Object.fromEntries(
@@ -138,36 +138,47 @@ export default function KakaoMap() {
   }, []);
 
   return (
-    <div className="relative w-full h-screen">
-      <div ref={mapRef} className="w-full h-screen" />
+    <div style={{ position: "relative", width: "100%", flex: 1, minHeight: 0 }}>
+      <div ref={mapRef} style={{ width: "100%", height: "100vh" }} />
 
       {signal && (
-        <div className="absolute top-4 right-4 bg-white rounded-xl shadow-lg p-4 w-72 z-10 overflow-y-auto max-h-[80vh]">
-          <div className="flex justify-between items-center mb-2">
-            <span className="font-bold text-sm">{signal.itstId}</span>
-            <span className="text-xs text-gray-400">{formatTime(signal.trsmTm)}</span>
+        <div style={{
+          position: "absolute", top: "1rem", right: "1rem",
+          background: "#1a1d27", border: "1px solid #2e3247",
+          borderRadius: "14px", padding: "1rem", width: "280px",
+          zIndex: 10, overflowY: "auto", maxHeight: "80vh",
+          boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+            <span style={{ fontWeight: 600, fontSize: "13px", color: "#e8eaf0" }}>{signal.itstId}</span>
+            <span style={{ fontSize: "11px", color: "#545874" }}>{formatTime(signal.trsmTm)}</span>
           </div>
 
-          {DIRECTIONS.map(({label, key})  => {
+          {DIRECTIONS.map(({ label, key }) => {
             const sigs = getDirectionSignals(signal, key);
             const hasData = Object.values(sigs).some(v => v && v !== '');
             if (!hasData) return null;
-            
+
             return (
-              <div key={key} className="mb-2 border-b pb-2">
-                <p className="text-xs font-semibold text-gray-600 mb-1">{label}</p>
-                <div className="flex flex-wrap gap-1">
+              <div key={key} style={{ marginBottom: "0.625rem", borderBottom: "1px solid #2e3247", paddingBottom: "0.625rem" }}>
+                <p style={{ fontSize: "11px", fontWeight: 600, color: "#8b90a7", marginBottom: "6px" }}>{label}</p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
                   {Object.entries(sigs).map(([name, val]) =>
-                    val? (
-                      <span key={name} className={`text-xs px-2 py-0.5 rounded-full ${val==='녹색'? 'bg-green-100 text-green-700': val==='적색'? 'bg-red-100 text-red-700': 'bg-gray-100 text-gray-600'}`}>
+                    val ? (
+                      <span key={name} style={{
+                        fontSize: "11px", padding: "2px 8px", borderRadius: "20px",
+                        background: val === '녹색' ? "#0d2e20" : val === '적색' ? "#2e1212" : "#22263a",
+                        color: val === '녹색' ? "#3ecf8e" : val === '적색' ? "#f87171" : "#8b90a7",
+                        border: `1px solid ${val === '녹색' ? "#14532d" : val === '적색' ? "#7f1d1d" : "#2e3247"}`,
+                      }}>
                         {name} {val}
                       </span>
-                    ): null)}
+                    ) : null
+                  )}
                 </div>
               </div>
-            )
+            );
           })}
-
         </div>
       )}
     </div>

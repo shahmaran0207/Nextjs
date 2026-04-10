@@ -10,16 +10,16 @@ export default function KakaoMap() {
   const [selectedRoadId, setSelectedRoadId] = useState<number | null>(null);
   const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
   const [isLinkSelectMode, setisLinkSelectMode] = useState(false);
-  const [selectedLinks, setSelectedLinks] = useState<{linkId: string, seq: number}[]>([]);
+  const [selectedLinks, setSelectedLinks] = useState<{linkid: string, seq: number}[]>([]);
 
   const existingLinkIdsRef = useRef<string[]>([]);
   const polylineMapRef = useRef<Map<string, any[]>>(new Map());
 
-  const handleLinkSelect = (linkId: string) => {
+  const handleLinkSelect = (linkid: string) => {
     setSelectedLinks(prev => {
-      const exists = prev.find(l => l.linkId === linkId);
+      const exists = prev.find(l => l.linkid === linkid);
 
-      const polylines =polylineMapRef.current.get(linkId) ?? [];
+      const polylines = polylineMapRef.current.get(linkid) ?? [];
       polylines.forEach((p: any) => {
         if (exists) {
           p.setOptions({ strokeWeight: 4, strokeOpacity: 0.7, strokeColor: "#aaaaaa"})
@@ -29,9 +29,9 @@ export default function KakaoMap() {
       });
 
       if (exists) {
-        return prev.filter(l => l.linkId !== linkId).map((l, i) => ({ ...l, seq: i + 1 }));
+        return prev.filter(l => l.linkid !== linkid).map((l, i) => ({ ...l, seq: i + 1 }));
       }
-      return [...prev, { linkId, seq: prev.length + 1 }];
+      return [...prev, { linkid, seq: prev.length + 1 }];
     });
   };
 
@@ -70,19 +70,31 @@ export default function KakaoMap() {
   };
 
   const clearAllHighlights = () => {
-
     if(highlightPolylineRef.current) {
       highlightPolylineRef.current.setMap(null);
       highlightPolylineRef.current = null;
     }
 
-    polylineMapRef.current.forEach((polylines, lkId) => {
+    polylineMapRef.current.forEach((polylines) => {
       polylines.forEach((p: any) => {
         p.setOptions({ strokeWeight: 4, strokeOpacity: 0.7, strokeColor: "#aaaaaa" });
       });
     });
     setSelectedLinks([]);
+    isLinkSelectModeRef.current = false;
     setisLinkSelectMode(false);
+  };
+
+  const resetPolylines = () => {
+    if(highlightPolylineRef.current) {
+      highlightPolylineRef.current.setMap(null);
+      highlightPolylineRef.current = null;
+    }
+    polylineMapRef.current.forEach((polylines) => {
+      polylines.forEach((p: any) => {
+        p.setOptions({ strokeWeight: 4, strokeOpacity: 0.7, strokeColor: "#aaaaaa" });
+      });
+    });
   };
 
   const handleLinkSelectRef = useRef(handleLinkSelect);
@@ -110,21 +122,21 @@ export default function KakaoMap() {
 
   const enterLinkSelectMode = () => {
     const existingLinks = linkData.map((link: any) => ({
-      linkId: link.LINKID,
-      seq: link.SEQ
+      linkid: link.linkid,
+      seq: link.seq
     }));
-    existingLinkIdsRef.current = existingLinks.map(l=>l.linkId);
+    existingLinkIdsRef.current = existingLinks.map(l => l.linkid);
     setSelectedLinks(existingLinks);
 
-    existingLinks.forEach(({ linkId }) => {
-      const polylines = polylineMapRef.current.get(linkId) ?? [];
+    existingLinks.forEach(({ linkid }) => {
+      const polylines = polylineMapRef.current.get(linkid) ?? [];
       polylines.forEach((p: any) => {
         p.setOptions({strokeWeight: 6, strokeOpacity: 1, strokeColor: "#002fffff"})
       });
     });
 
     if(existingLinks.length > 0) {
-      const lastLinkId = existingLinks[existingLinks.length -1].linkId;
+      const lastLinkId = existingLinks[existingLinks.length -1].linkid;
       const matched = busanLinkData?.features?.find(
         (feature: any) => feature.properties?.link_id === lastLinkId
       );
@@ -138,6 +150,7 @@ export default function KakaoMap() {
         }
       }
     }
+    isLinkSelectModeRef.current = true;
     setisLinkSelectMode(true);
   };
 
@@ -161,7 +174,8 @@ export default function KakaoMap() {
       if (!window.kakao) return;
 
       const road = await fetch("/api/GIS/Busan/Road/getRoadList");
-      setRoadData(await road.json());
+      const roadJson = await road.json();
+      setRoadData(Array.isArray(roadJson) ? roadJson : []);
 
       const res = await fetch("/api/GIS/Busan/Bus");
       const data = await res.json();
@@ -171,11 +185,16 @@ export default function KakaoMap() {
       setBusanLinkData(linkData);
 
       const traffic = await fetch("/api/GIS/Busan/Traffic");
-      const trafficData = await traffic.json();
+      const trafficRaw = await traffic.json();
+      const trafficData: any[] = Array.isArray(trafficRaw) ? trafficRaw : [];
 
       const trafficMap = new Map<string, number>();
       trafficData.forEach((item: any) => trafficMap.set(item.lkId, item.spd));
 
+      const incidentRes = await fetch("/api/GIS/Busan/Incident");
+      const incidentRaw = await incidentRes.json();
+      const incidentData: any[] = Array.isArray(incidentRaw) ? incidentRaw : [];
+      
       const getSpeedColor = (spd: number | undefined) => {
         if (spd === undefined || spd === null) return "#dddddd";
         if (spd >= 60) return "#00cc44";
@@ -237,6 +256,55 @@ export default function KakaoMap() {
 
         clusterer.addMarkers(markers);
 
+        const incidentInfowindow = new window.kakao.maps.InfoWindow({ zIndex: 2 });
+        let currentIncidentMarker: any = null;
+
+        const getIncidentColor = (type: string) => {
+          switch (type) {
+            case "01": return "#ff4444"; // 사고
+            case "02": return "#ff8800"; // 공사
+            case "03": return "#ffcc00"; // 행사
+            default:   return "#888888";
+          }
+        };
+
+        incidentData
+          .filter((inc: any) => inc.lat && inc.lot) // lot = 경도(lng), lat = 위도
+          .forEach((inc: any) => {
+            const markerImage = new window.kakao.maps.MarkerImage(
+              "/download.png",
+              new window.kakao.maps.Size(28, 28)
+            );
+
+            const marker = new window.kakao.maps.Marker({
+              position: new window.kakao.maps.LatLng(inc.lat, inc.lot),
+              title: inc.incSpotNm,
+              image: markerImage,
+            });
+            marker.setMap(map);
+
+            window.kakao.maps.event.addListener(marker, "click", () => {
+              if (currentIncidentMarker === marker && incidentInfowindow.getMap()) {
+                incidentInfowindow.close();
+                currentIncidentMarker = null;
+              } else {
+                incidentInfowindow.setContent(`
+                  <div style="padding:10px; font-size:13px; color:#000; min-width:200px">
+                    <b>📍 ${inc.incSpotNm}</b><br/>
+                    <span>발생일시: ${inc.ocrnDt}</span><br/>
+                    <span>제공기관: ${inc.instNm}</span><br/>
+                    <span>유형: ${inc.incTypeCd}</span><br/>
+                    <span>상태: ${inc.prgrsSttsCd === 0 ? "진행중" : "종료"}</span><br/>
+                    <span>내용: ${inc.rcptCn ?? "-"}</span>
+                  </div>
+                `);
+                incidentInfowindow.open(map, marker);
+                currentIncidentMarker = marker;
+              }
+            });
+          });
+
+
         const polylineMap = new Map<string, any[]>();
         linkData.features.forEach((feature: any) => {
           const lkId = feature.properties?.link_id;
@@ -270,8 +338,8 @@ export default function KakaoMap() {
   }, []);
 
   return (
-    <div className="relative w-full h-screen">
-      <div ref={mapRef} className="w-full h-screen" />
+    <div style={{ position: "relative", width: "100%", flex: 1, minHeight: 0 }}>
+      <div ref={mapRef} style={{ width: "100%", height: "100vh" }} />
       <RoadTable
         roadData={roadData}
         handleRoad={handleRoadWithSelect}
@@ -299,6 +367,7 @@ export default function KakaoMap() {
         setSelectedLinks={setSelectedLinks}
         handleLinkSelect={handleLinkSelect}
         clearAllHighlights={clearAllHighlights}
+        resetPolylines={resetPolylines}
         enterLinkSelectMode={enterLinkSelectMode}
       />
     </div>

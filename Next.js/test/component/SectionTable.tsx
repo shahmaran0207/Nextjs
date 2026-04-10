@@ -47,17 +47,17 @@ export default function SectionTable({ setLinkData, setSelectedLinks, setIsLinkS
               </thead>
               <tbody>
                 {sectionData.map((section: any) => (
-                  <tr key={`${section.ID}`} onClick={() => {
-                    handleSectionWithSelect(section.ID);
+                  <tr key={`${section.id}`} onClick={() => {
+                    handleSectionWithSelect(section.id);
                     clearAllHighlights();
                     setIsLinkSelectMode(false);
                     setSelectedLinks([]);
                   }} style={{ cursor: "pointer" }}>
-                    <td className="px-3 py-1 text-center" style={{ color: "#000" }}>{section.ID}</td>
-                    <td className="px-3 py-1 text-center" style={{ color: "#000" }}>{section.SECTIONNAME}</td>
-                    <td className="px-3 py-1 text-center" style={{ color: "#000" }}>{section.ROADID}</td>
+                    <td className="px-3 py-1 text-center" style={{ color: "#000" }}>{section.id}</td>
+                    <td className="px-3 py-1 text-center" style={{ color: "#000" }}>{section.sectionname}</td>
+                    <td className="px-3 py-1 text-center" style={{ color: "#000" }}>{section.roadid}</td>
                     <td className="px-3 py-1 text-center" style={{ color: "#000" }}>
-                      {section.LINKID ? section.LINKID.replace(/^\[|\]$/g, "") : "-"}
+                      {section.linkid ? section.linkid.replace(/^\[|\]$/g, "") : "-"}
                     </td>
                   </tr>
                 ))}

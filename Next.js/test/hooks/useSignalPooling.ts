@@ -14,7 +14,7 @@ export function useSignalPolling(itstId: string | null, intervalMs = 5000 ) {
 
         const fetchSignal =async() => {
             try {
-                const res = await fetch(`/api/SeoulSignal?itstId=${itstId}`);
+                const res = await fetch(`/api/GIS/Seoul/Signal/SeoulSignal?itstId=${itstId}`);
 
                 if(!res.ok) return;
 

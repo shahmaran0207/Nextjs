@@ -4,18 +4,18 @@ import { useState } from "react";
 import axios from "axios";
 
 export default function LinkTable({ existingLinkIds, enterLinkSelectMode, linkData, handleLink, selectedSectionId, isLinkSelectMode,
-   setIsLinkSelectMode, selectedLinks, setSelectedLinks, handleLinkSelect, clearAllHighlights  } :
-   { existingLinkIds: string[], enterLinkSelectMode: () => void, linkData: any[], handleLink: (id: string) => void, clearAllHighlights: () => void,
+   setIsLinkSelectMode, selectedLinks, setSelectedLinks, handleLinkSelect, clearAllHighlights, resetPolylines  } :
+   { existingLinkIds: string[], enterLinkSelectMode: () => void, linkData: any[], handleLink: (id: string) => void, clearAllHighlights: () => void, resetPolylines: () => void,
      selectedSectionId: number | null,
      isLinkSelectMode: boolean,
      setIsLinkSelectMode: (value: boolean) => void,
-     selectedLinks: {linkId: string, seq: number}[],
+     selectedLinks: {linkid: string, seq: number}[],
      setSelectedLinks: (value: any) => void,
-     handleLinkSelect: (linkId: string) => void
+     handleLinkSelect: (linkid: string) => void
     }) {
   
     const handleSave = async () => {
-      const newLinks =selectedLinks.filter(l => !existingLinkIds.includes(l.linkId));
+      const newLinks =selectedLinks.filter(l => !existingLinkIds.includes(l.linkid));
       await axios.post("/api/GIS/Busan/Link/addLink", { links: newLinks, sectionId: selectedSectionId });
       setIsLinkSelectMode(false);
       setSelectedLinks([])
@@ -29,8 +29,7 @@ export default function LinkTable({ existingLinkIds, enterLinkSelectMode, linkDa
             {selectedSectionId && (
               <button
                 onClick={() => {
-                  clearAllHighlights();
-                  setIsLinkSelectMode(true);
+                  resetPolylines();
                   enterLinkSelectMode();
                 }}
                 className="mb-2 px-3 py-1 bg-blue-500 text-white rounded text-sm w-full"
@@ -47,10 +46,10 @@ export default function LinkTable({ existingLinkIds, enterLinkSelectMode, linkDa
             </thead>
               <tbody>
                 {linkData.map((link: any) => (
-                  <tr key={`${link.SECTIONID}-${link.LINKID}`}>
-                    <td className="px-3 py-1 text-center" style={{ color: "#000" }}>{link.SECTIONID}</td>
+                  <tr key={`${link.sectionid}-${link.linkid}`}>
+                    <td className="px-3 py-1 text-center" style={{ color: "#000" }}>{link.sectionid}</td>
                     <td className="px-3 py-1 text-center" style={{ color: "#000" }}
-                      onClick={() => handleLink(link.LINKID)}>{link.LINKID}</td>
+                      onClick={() => handleLink(link.linkid)}>{link.linkid}</td>
                   </tr>
                 ))}
               </tbody>
@@ -67,10 +66,10 @@ export default function LinkTable({ existingLinkIds, enterLinkSelectMode, linkDa
             </tr>
           </thead>
           <tbody>
-            {selectedLinks.map((link) => (
-              <tr key={link.linkId}>
+            {selectedLinks.map((link, index) => (
+              <tr key={`${index}-${link.linkid}`}>
                 <td className="px-3 py-1 text-center" style={{ color: "#000" }}>{link.seq}</td>
-                <td className="px-3 py-1 text-center" style={{ color: "#000" }}>{link.linkId}</td>
+                <td className="px-3 py-1 text-center" style={{ color: "#000" }}>{link.linkid}</td>
               </tr>
             ))}
           </tbody>

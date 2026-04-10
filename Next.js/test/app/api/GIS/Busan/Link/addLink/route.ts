@@ -6,9 +6,9 @@ export async function POST(request: Request) {
         const { links, sectionId } = await request.json();
     
         await prisma.link.createMany({
-            data: links.map((link: {linkId: string; seq: number}) => ({
-                sectionId: Number(sectionId),
-                linkId: link.linkId,
+            data: links.map((link: {linkid: string; seq: number}) => ({
+                sectionid: Number(sectionId),
+                linkid: link.linkid,
                 seq: link.seq,
             }))
         })

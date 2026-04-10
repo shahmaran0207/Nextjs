@@ -7,6 +7,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         Naver({
             clientId: process.env.NAVER_CLIENT_ID!,
             clientSecret: process.env.NAVER_CLIENT_SECRET!,
+            checks: ["state"]
         }),
     ],
 

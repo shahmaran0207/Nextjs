@@ -30,7 +30,7 @@ export default function ChatPage() {
     };
 
     // const connectWebSocket = async () => {
-    //     await fetch('/api/ws');
+    //     await fetch('/api/Chat/ws');
     //     const ws = new WebSocket(`wss://${window.location.host}/ws`);
 
     //     ws.onopen = () => { console.log("WebSocket Connection established"); };
@@ -64,7 +64,7 @@ export default function ChatPage() {
     // };
 
     const connectWebSocket = async () => {
-        await fetch('/api/ws');
+        await fetch('/api/Chat/ws');
 
         const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         const host = window.location.hostname;
@@ -152,7 +152,7 @@ export default function ChatPage() {
                 isSent: true,
                 from: userId,
                 to: recepientId || 'all',
-                imageUrl,
+                imageUrl, 
             }]);
             setMessage("");
         }
@@ -257,7 +257,7 @@ export default function ChatPage() {
         <div className="flex flex-col items-center justify-center h-screen gap-4">
             <h1 className="text-2xl font-bold">아이디 입력</h1>
             <input
-                style={{color: "#fff"}}
+                style={{color: "#000"}}
                 type="text"
                 value={inputId}
                 onChange={(e) => { setInputId(e.target.value); setIdError(""); }}

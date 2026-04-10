@@ -36,20 +36,19 @@ export default function RoadTable({ showTrafficOnly, clearAllHighlights, roadDat
                     <tr className="border-b">
                         <th className="px-3 py-1 text-center" style={{ color: "#000" }}>도로 ID</th>
                         <th className="px-3 py-1 text-center" style={{ color: "#000" }}>도로명</th>
-                        <th className="px-3 py-1 text-center" style={{ color: "#000" }}>구역 ID</th>
                     </tr>
                     </thead>
                     <tbody>
                     {roadData.map((road: any) => (
-                        <tr key={`${road.ID}`} onClick={() => {
-                            handleRoad(road.ID);
+                        <tr key={`${road.id}`} onClick={() => {
+                            handleRoad(road.id);
                             clearAllHighlights();
                         }} style={{ cursor: "pointer" }}>
-                            <td className="px-3 py-1 text-center" style={{ color: "#000" }}>{road.ID}</td>
-                            <td className="px-3 py-1 text-center" style={{ color: "#000" }}>{road.ROADNAME}</td>
-                            <td className="px-3 py-1 text-center" style={{ color: "#000" }}>
-                                {road.SECTIONID ? JSON.parse(road.SECTIONID).join(",") : ""}
-                            </td>
+                            <td className="px-3 py-1 text-center" style={{ color: "#000" }}>{road.id}</td>
+                            <td className="px-3 py-1 text-center" style={{ color: "#000" }}>{road.roadname}</td>
+                            {/* <td className="px-3 py-1 text-center" style={{ color: "#000" }}>
+                                {road.sectionid ? JSON.parse(road.sectionid).join(",") : ""}
+                            </td> */}
                         </tr>
                     ))}
                     </tbody>

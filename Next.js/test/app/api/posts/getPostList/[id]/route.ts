@@ -10,7 +10,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     });
 
     if(!result) {
-      return NextResponse.json({error: "Not fount"}, { status: 404})
+      return NextResponse.json({error: "Not found"}, { status: 404})
     };
 
     const data = {

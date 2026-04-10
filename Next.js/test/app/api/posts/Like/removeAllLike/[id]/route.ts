@@ -1,22 +1,17 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/util/database";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request, { params }: {params: Promise<{id: string}>}) {
     const { id } = await params;
 
-    let conn;
     try {
-        conn = await getConnection();
-        await conn.execute(
-            `DELETE FROM TEST.POSTLIKE WHERE POSTID = :id`,
-            { id },
-            { autoCommit: true}
-        );
-        return NextResponse.json({ result: "ok"});
+        await prisma.postlike.deleteMany({
+            where: { postid: Number(id) }
+        });
+
+        return NextResponse.json({ result: "ok" });
     } catch(err: any) {
-        console.error("관련 댓글 삭제 에러:::::", err);
+        console.error("게시글 좋아요 삭제 API 에러:::::", err);
         return NextResponse.json({error: err.message}, { status: 500})
-    } finally {
-        if (conn) await conn.close();
     }
 }

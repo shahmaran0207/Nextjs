@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
 }
 
 datasource db {
@@ -29,7 +30,7 @@ model post {
   createdat DateTime? @db.Timestamp(6)
   updatedat DateTime? @db.Timestamp(6)
   image     Bytes?
-  postview  Int?
+  postview  Int?      @default(0)
 }
 
 model postcomment {
@@ -40,16 +41,44 @@ model postcomment {
   commentwriter  String? @db.VarChar(100)
 }
 
+model commentbycomment {
+  id                   Int     @id @default(autoincrement())
+  upprcommentid        Int?
+  commenttitle         String? @db.VarChar(1000)
+  commentcontent       String? @db.VarChar(1000)
+  commentwriter        String? @db.VarChar(1000)
+  postid               Int?
+}
+
 model postlike {
   id     Int     @id @default(autoincrement())
   postid Int?
   userid String? @db.VarChar(1000)
 }
 
+model posthate {
+  id Int @id @default(autoincrement())
+  postid Int?
+  userid String? @db.VarChar(1000)
+}
+
+model commentlike {
+  id          Int     @id @default(autoincrement())
+  commentid   Int?  
+  userid      String? @db.VarChar(1000)
+  postid      Int?
+}
+
+model commenthate {
+  id           Int     @id @default(autoincrement())
+  commentid    Int?
+  userid       String? @db.VarChar(1000)
+  postid       Int?
+}
+
 model road {
   id        Int     @id @default(autoincrement())
   roadname  String? @db.VarChar(600)
-  sectionid String? @db.VarChar(4000)
 }
 
 model section {
