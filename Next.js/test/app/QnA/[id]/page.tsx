@@ -47,6 +47,14 @@ export default function EachQnA({ params }: { params: Promise<{id: string}>}) {
         };
     };
 
+    const getQuestionLike = async() => {
+        const res = await fetch(`/api/QnA/Question/Like/getEachLike/${id}`);
+    };
+
+    const getQuestionHate = async() => {
+        const res = await fetch(`/api/QnA/Question/Hate/getEachHate/${id}`);
+    };
+
     const handleCancel = async() => {
         setEditMode(false);
         setTitle("");
@@ -116,6 +124,8 @@ export default function EachQnA({ params }: { params: Promise<{id: string}>}) {
         viewCount();
         getEachQnA();
         getAnswer();
+        getQuestionLike();
+        getQuestionHate();
     }, []);
 
     if (!qna) return (
@@ -175,6 +185,9 @@ export default function EachQnA({ params }: { params: Promise<{id: string}>}) {
                             style={{ maxWidth: "100%", borderRadius: "10px", marginTop: "1rem", border: `1px solid ${dark.border}` }}
                         />
                     )}
+                    <p style={{ fontSize: "14px", color: dark.textSecondary, lineHeight: "1.8", margin: "0 0 1rem", whiteSpace: "pre-wrap" }}>
+                        {qna.content}
+                    </p>
                 </div>
 
                 {/* 답변 영역 */}

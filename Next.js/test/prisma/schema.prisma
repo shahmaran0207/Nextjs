@@ -75,6 +75,18 @@ model postlike {
   userid String? @db.VarChar(1000)
 }
 
+model questionlike {
+  id          Int     @id @default(autoincrement())
+  questionid  Int
+  userid      String  @db.VarChar(1000) 
+}
+
+model questionhate {
+  id          Int     @id @default(autoincrement())
+  questionid  Int
+  userid      String  @db.VarChar(1000)
+}
+
 model posthate {
   id Int @id @default(autoincrement())
   postid Int?
