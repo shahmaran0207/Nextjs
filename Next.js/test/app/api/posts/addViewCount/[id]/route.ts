@@ -12,7 +12,7 @@ export async function POST(request: Request, { params }: {params: Promise<{id: s
 
         return NextResponse.json({success: true});
     } catch(err: any) {
-        console.log("View Count API error::::::::::::", err);
+        console.error("View Count API error::::::::::::", err);
         return NextResponse.json({error: err.message}, {status: 500})
     } 
 }

@@ -33,6 +33,25 @@ model post {
   postview  Int?      @default(0)
 }
 
+model qna {
+  id        Int       @id @default(autoincrement())
+  title     String?   @db.VarChar(1000)
+  content   String?   @db.VarChar(1000)
+  createdat DateTime? @db.Timestamp(6)
+  image     Bytes?
+  qnaview   Int?      @default(0)
+  isend     Int?      @default(0)
+}
+
+model answer {
+  id          Int         @id @default(autoincrement())
+  title       String?     @db.VarChar(1000)
+  content     String?     @db.VarChar(1000)
+  createdat   DateTime?   @db.Timestamp(6)
+  image       Bytes?
+  questionid  Int?
+}
+
 model postcomment {
   id             Int     @id @default(autoincrement())
   postid         Int?

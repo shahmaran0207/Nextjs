@@ -19,8 +19,6 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
   const [downComments, setDownComments] = useState<any[]>([]);
   const [commentTitle, setCommentTitle] = useState("");
   const [commentContent, setCommentContent] = useState("");
-  const [downCommentTitle, setDownCommentTitle] = useState("");
-  const [downCommentContent, setDownCommentContent] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemPerPage = 10;
   const totalPages = Math.ceil(comment.length / itemPerPage);
@@ -105,6 +103,7 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
     if (!window.confirm("정말 삭제하시겠습니까?")) return;
     try {
       const results = await Promise.all([
+        fetch(`/api/Comment/DownComment/removeAllDownComment/${post.id}`, { method: "POST"}),
         fetch(`/api/Comment/Hate/removeAllCommentHate/${post.id}`, { method: "POST" }),
         fetch(`/api/Comment/Like/removeAllCommentLike/${post.id}`, { method: "POST" }),
         fetch(`/api/Comment/removeAllComment/${post.id}`, { method: "POST" }),
@@ -119,6 +118,22 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
     } catch (err) {
       console.error("error:", err);
     }
+  };
+
+  const handleAddReply = async (upperCommentId: number, title: string, content: string) => {
+    try {
+      const formData = new FormData();
+      formData.append("replyTitle", title);
+      formData.append("replyContent", content);
+      formData.append("upperCommentId", String(upperCommentId));
+      reloadComment(post.id); 
+
+      await fetch(`/api/Comment/DownComment/addDownComment/${post.id}`, {
+        method: "POST", body: formData
+      });
+    } catch(err) {
+      console.error("ReplyCommetnAddError:::::", err);
+    } 
   };
 
   const handleSubmit = async (e: SyntheticEvent) => {
@@ -161,11 +176,6 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
     } catch (err) {
       console.error("대댓글 삭제 에러:", err);
     }
-  };
-
-  const handleAddReply = async (upperCommentId: number, title: string, content: string) => {
-    // TODO: 대댓글 추가 API 호출
-    reloadComment(post.id);
   };
 
   const handleCommentLike = async (commentId: string) => {
