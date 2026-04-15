@@ -1,3 +1,13 @@
+/**
+ * @swagger
+ * /api/GIS/Busan/Link/AllLink:
+ *   get:
+ *     summary: 부산 링크 목록 조회
+ *     tags: [GIS - Busan]
+ *     responses:
+ *       200:
+ *         description: 성공
+ */
 export async function GET() {
   try {
     const geomFilter = "BOX(129.0858,35.1502,129.2153,35.2376)";

@@ -14,8 +14,7 @@ interface PostCardProps {
 }
 
 export default function PostCard({
-  post, postLike, postHate, commentCount,
-  onDelete, onUpdate, onLike, onHate,
+  post, postLike, postHate, commentCount, onDelete, onUpdate, onLike, onHate,
 }: PostCardProps) {
   return (
     <>

@@ -1,51 +1,19 @@
 "use client"
 
-import { signIn, signOut, useSession } from "next-auth/react";
-import { useState, useEffect, useRef } from "react";
+import { signIn, signOut } from "next-auth/react";
+import { useEffect } from "react";
+import useAuth from "../hook/useAuth";
 
 export default function LoginPage() {
-    const { data: session, update } = useSession();
-    const [showModal, setShowModal] = useState(false);
-    const [name, setName] = useState("");
-    const [nameError, setNameError] = useState("");
-    const [checking, setChecking] = useState(false);
-    const registered = useRef(false);
+    const { checkDuplicate, nameError, checking, registered, showModal, setShowModal,
+            handleRegister, name, setName, data: session, update 
+        } = useAuth();
 
     useEffect(() => {
         if (!registered.current && (session?.user as any)?.isNewUser) {
             setShowModal(true);
         }
     }, [session]);
-
-    const checkDuplicate = async (value: string) => {
-        if (!value.trim()) {
-            setNameError("");
-            return;
-        }
-        setChecking(true);
-        const res = await fetch(`/api/Users/checkName?name=${encodeURIComponent(value)}`);
-        const data = await res.json();
-        setNameError(data.exists ? "이미 사용 중인 닉네임이에요." : "");
-        setChecking(false);
-    };
-
-    const handleRegister = async () => {
-        if (!name.trim() || nameError || checking) return;
-
-        registered.current = true;
-        const res = await fetch("/api/Users/register", {
-            method: "POST",
-            body: JSON.stringify({ name }),
-            headers: { "Content-Type": "application/json" },
-        });
-
-        if (res.ok) {
-            await update();
-            setShowModal(false);
-        } else {
-            registered.current = false;
-        }
-    };
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center gap-4">

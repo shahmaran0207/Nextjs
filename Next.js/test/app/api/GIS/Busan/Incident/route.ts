@@ -1,3 +1,13 @@
+/**
+ * @swagger
+ * /api/GIS/Busan/Incident:
+ *   get:
+ *     summary: 부산 돌발 현황 목록 조회
+ *     tags: [GIS - Busan]
+ *     responses:
+ *       200:
+ *         description: 성공
+ */
 export const revalidate = 600; // 10분 캐시
 
 export async function GET() {

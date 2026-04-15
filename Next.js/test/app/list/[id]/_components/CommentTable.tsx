@@ -23,6 +23,7 @@ export default function CommentTable({
   currentPage, totalPages, onPageChange,
   onCommentLike, onCommentHate, onRemoveComment, onRemoveReply, onAddReply,
 }: CommentTableProps) {
+  
   const [openReplyId, setOpenReplyId] = useState<number | null>(null);
   const [replyTitle, setReplyTitle] = useState("");
   const [replyContent, setReplyContent] = useState("");

@@ -3,6 +3,7 @@ import Naver from "next-auth/providers/naver";
 import { prisma } from "./lib/prisma";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+    trustHost: true,
     providers: [
         Naver({
             clientId: process.env.NAVER_CLIENT_ID!,

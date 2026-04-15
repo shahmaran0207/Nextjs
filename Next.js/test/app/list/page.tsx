@@ -2,39 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
-const dark = {
-  bg: "#0f1117",
-  surface: "#1a1d27",
-  surface2: "#22263a",
-  border: "#2e3247",
-  textPrimary: "#e8eaf0",
-  textSecondary: "#8b90a7",
-  textMuted: "#545874",
-  accent: "#7c6af7",
-  accentDim: "#2d2850",
-  blue: "#60a5fa",
-  blueDim: "#0d1f3c",
-};
+import useNoramlPost from "../hook/useNormalPost";
+import postStyle from "../hook/postStyle";
 
 const PostList = () => {
-  const [posts, setPosts] = useState<any[]>([]);
+  const { getList, posts } = useNoramlPost();
+
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const itemPerPage = 5;
   const totalPages = Math.ceil(posts.length / itemPerPage);
   const pagedPosts = posts.slice((currentPage - 1) * itemPerPage, currentPage * itemPerPage);
-
+  
+  const { dark } = postStyle();
+  
   useEffect(() => {
-    const getList = async () => {
-      try {
-        const res = await fetch('/api/posts/getPostList');
-        const data = await res.json();
-        setPosts(data);
-      } catch (err: any) {
-        console.log("error::::::::::::", err);
-      }
-    };
     getList();
   }, []);
 

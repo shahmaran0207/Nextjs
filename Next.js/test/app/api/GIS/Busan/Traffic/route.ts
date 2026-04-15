@@ -1,3 +1,13 @@
+/**
+ * @swagger
+ * /api/GIS/Busan/Traffic:
+ *   get:
+ *     summary: 부산 연계소통정보 조회
+ *     tags: [GIS - Busan]
+ *     responses:
+ *       200:
+ *         description: 성공
+ */
 export const revalidate = 600; // 10분 캐시
 
 export async function GET() {

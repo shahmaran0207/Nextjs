@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react";
 import axios from "axios";
 
 export default function LinkTable({ existingLinkIds, enterLinkSelectMode, linkData, handleLink, selectedSectionId, isLinkSelectMode,

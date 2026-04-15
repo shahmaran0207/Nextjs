@@ -2,20 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react"
-
-const dark = {
-    bg: "#0f1117",
-    surface: "#1a1d27",
-    surface2: "#22263a",
-    border: "#2e3247",
-    textPrimary: "#e8eaf0",
-    textSecondary: "#8b90a7",
-    textMuted: "#545874",
-    accent: "#7c6af7",
-    accentDim: "#2d2850",
-    blue: "#60a5fa",
-    blueDim: "#0d1f3c",
-};
+import postStyle from "../hook/postStyle";
 
 export default function QnA() {
     const router = useRouter();
@@ -24,6 +11,8 @@ export default function QnA() {
     const [currentPage, setCurrentPage] = useState(1);
     const itemPerPage = 5;
     const totalPages = Math.ceil(questionList.length / itemPerPage);
+
+    const { dark } = postStyle();
 
     const pagedPosts = questionList.slice((currentPage - 1) * itemPerPage, currentPage * itemPerPage);
 

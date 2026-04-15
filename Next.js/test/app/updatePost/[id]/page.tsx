@@ -1,30 +1,25 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import Image from "next/image";
-
-const dark = {
-  bg: "#0f1117",
-  surface: "#1a1d27",
-  surface2: "#22263a",
-  border: "#2e3247",
-  textPrimary: "#e8eaf0",
-  textSecondary: "#8b90a7",
-  textMuted: "#545874",
-  accent: "#7c6af7",
-  accentDim: "#2d2850",
-};
+import { usePostState } from "@/app/hook/usePostState";
+import postStyle from "@/app/hook/postStyle";
 
 export default function EditForm({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+
   const [post, setPost] = useState<any>(null);
   const [postId, setPostId] = useState<string>("");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+
   const router = useRouter();
 
+  const { dark, inputStyle, labelStyle } = postStyle();
+
+  const { handleImageChange, imageFile, setImageFile, previewImage } = usePostState(id);
+ 
   useEffect(() => {
     const fetchPost = async () => {
       const { id } = await params;
@@ -42,13 +37,6 @@ export default function EditForm({ params }: { params: Promise<{ id: string }> }
     </div>
   );
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImageFile(file);
-    setPreviewImage(URL.createObjectURL(file));
-  };
-
   const handleSubmit = async () => {
     const formData = new FormData();
     formData.append("title", title || post.title);
@@ -60,30 +48,6 @@ export default function EditForm({ params }: { params: Promise<{ id: string }> }
       alert("수정되었습니다.");
       router.push("/list");
     }
-  };
-
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    padding: "10px 14px",
-    fontSize: "14px",
-    border: `1.5px solid ${dark.border}`,
-    borderRadius: "10px",
-    background: dark.surface2,
-    color: dark.textPrimary,
-    outline: "none",
-    boxSizing: "border-box",
-    transition: "border-color 0.2s",
-    fontFamily: "inherit",
-  };
-
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    fontSize: "11px",
-    fontWeight: 600,
-    color: dark.textMuted,
-    marginBottom: "6px",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
   };
 
   return (

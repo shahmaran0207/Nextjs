@@ -2,6 +2,7 @@
 
 import { SyntheticEvent } from "react";
 import { dark } from "./darkTheme";
+import postStyle from "@/app/hook/postStyle";
 
 interface CommentFormProps {
   commentTitle: string;
@@ -12,21 +13,14 @@ interface CommentFormProps {
   onCancel: () => void;
 }
 
-const inputStyle: React.CSSProperties = {
-  padding: "9px 13px",
-  border: `1px solid ${dark.border}`,
-  borderRadius: "8px",
-  fontSize: "14px",
-  color: dark.textPrimary,
-  background: dark.surface2,
-  outline: "none",
-};
-
 export default function CommentForm({
   commentTitle, commentContent,
   onTitleChange, onContentChange,
   onSubmit, onCancel,
 }: CommentFormProps) {
+
+  const { inputStyle } = postStyle();
+  
   return (
     <form onSubmit={onSubmit} style={{ background: dark.surface, border: `1px solid ${dark.border}`, borderRadius: "12px", padding: "1.25rem", marginBottom: "1.5rem" }}>
       <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>

@@ -1,70 +1,14 @@
 "use client"
 
-import { useRouter } from "next/navigation";
-import { SyntheticEvent, useState } from "react";
+import postStyle from "../hook/postStyle";
+import useNoramlPost from "../hook/useNormalPost";
 
-const dark = {
-  bg: "#0f1117",
-  surface: "#1a1d27",
-  surface2: "#22263a",
-  border: "#2e3247",
-  textPrimary: "#e8eaf0",
-  textSecondary: "#8b90a7",
-  textMuted: "#545874",
-  accent: "#7c6af7",
-  accentDim: "#2d2850",
-};
+const PostForm = () => { 
+  const { handlePostImageChange, image, handleWrite,title, setTitle, content,
+          setContent, router
+        } = useNoramlPost();
 
-const PostForm = () => {
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [image, setImage] = useState<File | null>(null);
-  const router = useRouter();
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) setImage(e.target.files[0]);
-  };
-
-  const handleSubmit = async (e: SyntheticEvent) => {
-    e.preventDefault();
-    if (!confirm("저장하시겠습니까?")) return;
-    try {
-      const formData = new FormData();
-      formData.append("title", title);
-      formData.append("content", content);
-      if (image) formData.append("image", image);
-      await fetch("/api/posts/addPost", { method: "POST", body: formData });
-      setTitle(""); setContent(""); setImage(null);
-      router.push("/");
-      router.refresh();
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    padding: "10px 14px",
-    fontSize: "14px",
-    border: `1.5px solid ${dark.border}`,
-    borderRadius: "10px",
-    background: dark.surface2,
-    color: dark.textPrimary,
-    outline: "none",
-    boxSizing: "border-box",
-    transition: "border-color 0.2s",
-    fontFamily: "inherit",
-  };
-
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    fontSize: "11px",
-    fontWeight: 600,
-    color: dark.textMuted,
-    marginBottom: "6px",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-  };
+  const { labelStyle, inputStyle, dark } = postStyle();
 
   return (
     <div style={{ minHeight: "100vh", background: dark.bg, padding: "2rem 1rem" }}>
@@ -89,7 +33,7 @@ const PostForm = () => {
         }}>
           <div style={{ height: "4px", background: `linear-gradient(90deg, ${dark.accent}, #a78bfa)` }} />
           <div style={{ padding: "2rem" }}>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleWrite}>
 
               <div style={{ marginBottom: "1.25rem" }}>
                 <label htmlFor="title" style={labelStyle}>제목</label>
@@ -140,7 +84,7 @@ const PostForm = () => {
                 }}>
                   📎 {image ? image.name : "이미지를 선택하세요"}
                 </label>
-                <input type="file" id="image" accept="image/*" onChange={handleImageChange} style={{ display: "none" }} />
+                <input type="file" id="image" accept="image/*" onChange={handlePostImageChange} style={{ display: "none" }} />
               </div>
 
               <div style={{

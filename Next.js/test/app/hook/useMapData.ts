@@ -5,6 +5,7 @@ export function useMapData() {
   const [roadData, setRoadData] = useState<any[]>([]);
   const [sectionData, setSectionData] = useState<any[]>([]);
   const [linkData, setLinkData] = useState<any[]>([]);
+
   const [busanLinkData, setBusanLinkData] = useState<any>(null);
 
   const kakaoMapRef = useRef<any>(null);
@@ -16,7 +17,7 @@ export function useMapData() {
       const getSection = await axios.get(`/api/GIS/Busan/Section/getSectionList/${roadID}`);
       setSectionData(getSection.data);
     } catch (err: any) {
-      console.log("RoadError::::::::::::::", err);
+      console.error("RoadError::::::::::::::", err);
     }
   };
 
@@ -25,7 +26,7 @@ export function useMapData() {
       const getLinkList = await axios.get(`/api/GIS/Busan/Link/getLinkList/${sectionId}`);
       setLinkData(getLinkList.data);
     } catch (err: any) {
-      console.log("SectionErr:::::::::::::", err);
+      console.error("SectionErr:::::::::::::", err);
     }
   };
 
@@ -46,8 +47,9 @@ export function useMapData() {
     }
 
     const matched = busanLinkData?.features?.filter(
-        (feature: any) => feature.properties?.link_id === linkId
+      (feature: any) => feature.properties?.link_id === linkId
     );
+
     if (!matched || matched.length === 0) return;
 
     currentLinkIdRef.current = linkId;
@@ -64,27 +66,17 @@ export function useMapData() {
     );
 
     highlightPolylineRef.current = new window.kakao.maps.Polyline({
-        map,
-        path,
-        strokeWeight: 6,
-        strokeColor: "#ff00ffff",
-        strokeOpacity: 1,
-        strokeStyle: "solid",
+      map,
+      path,
+      strokeWeight: 6,
+      strokeColor: "#ff00ffff",
+      strokeOpacity: 1,
+      strokeStyle: "solid",
     });
-    };
+  };
 
   return {
-    roadData,
-    setRoadData,
-    sectionData,
-    linkData,
-    busanLinkData,
-    setBusanLinkData,
-    kakaoMapRef,
-    handleRoad,
-    handleSection,
-    handleLink,
-    highlightPolylineRef,
-    setLinkData,
+    roadData, setRoadData, sectionData, linkData, busanLinkData, setBusanLinkData,
+    kakaoMapRef, handleRoad, handleSection, handleLink, highlightPolylineRef, setLinkData,
   };
 }

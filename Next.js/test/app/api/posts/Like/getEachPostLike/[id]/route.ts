@@ -6,6 +6,7 @@ export async function GET(request: Request, { params }: { params: Promise<{id: s
     const name = new URL(request.url).searchParams.get("name");
 
     try {
+        console.log("name:::::::::::", name)
         const res = await prisma.postlike.findMany({
             where: { postid: Number(id), userid: String(name)},
         });

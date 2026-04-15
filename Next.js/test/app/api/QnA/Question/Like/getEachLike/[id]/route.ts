@@ -10,7 +10,10 @@ export async function GET(request: Request, { params } : { params: Promise<{id: 
         const res = await prisma.questionlike.findMany({
             where: { questionid: Number(id)}
         })
+
+        return NextResponse.json(res);
     } catch(err: any) {
-        //
+        console.error("getEachLike API Error:::::::::::::::", err);
+        return NextResponse.json({ error: err.message }, { status: 500 })
     }
 }
