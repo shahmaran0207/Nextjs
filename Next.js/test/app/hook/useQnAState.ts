@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, SyntheticEvent } from "react"
+import React, { useState, SyntheticEvent } from "react"
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -10,19 +10,21 @@ export function useQnAState(id: string) {
     const { data: session } = useSession();
     const name = session?.user?.name || "";
 
-    const [ title, setTitle ] = useState("");
-    const [ content, setContent ] = useState("");
-    
-    const [ questoinLike, setQuestionLike ] = useState(0);
-    const [ questionHate, setQuestionHate ] = useState(0);
+    const [title, setTitle] = useState("");
+    const [content, setContent] = useState("");
 
-    const [ answer, setAnswer ] = useState<any[]>([]);
+    const [questoinLike, setQuestionLike] = useState(0);
+    const [questionHate, setQuestionHate] = useState(0);
+    const [answerLike, setAnswerLike] = useState(0);
+    const [answerHate, setAnswerHate] = useState(0);
 
-    const [ editMode, setEditMode ] = useState(false);
-    const [ qEditMode, setQEditMode ] = useState(false);
+    const [answer, setAnswer] = useState<any[]>([]);
 
-    const [ qna, setQna ] = useState<any>(null);
-    const [ image, setImage ] = useState<File | null>(null);
+    const [editMode, setEditMode] = useState(false);
+    const [qEditMode, setQEditMode] = useState(false);
+
+    const [qna, setQna] = useState<any>(null);
+    const [image, setImage] = useState<File | null>(null);
 
     const handleUpdateAnswer = () => {
         setTitle(answer[0].title);
@@ -30,33 +32,51 @@ export function useQnAState(id: string) {
         setEditMode(true);
     };
 
-    const getQuestionLike = async() => {
+    const getQuestionLike = async () => {
         const res = await fetch(`/api/QnA/Question/Like/getEachLike/${id}`);
         const test = res ? (await res.json())?.length ?? 0 : 0;
         setQuestionLike(test);
     };
 
-    const getQuestionHate = async() => {
+    const getQuestionHate = async () => {
         const res = await fetch(`/api/QnA/Question/Hate/getEachHate/${id}`);
-        const test = res ? (await res.json())?.length ?? 0: 0;
+        const test = res ? (await res.json())?.length ?? 0 : 0;
         setQuestionHate(test);
     };
 
-    const handleQuestionHate = async() => {
-        try{
+    const getAnswerLike = async () => {
+        if (answer.length === 0) return;
+        const answerId = answer[0]?.id;
+        if (!answerId) return;
+        const res = await fetch(`/api/QnA/Answer/Like/getEachLike/${answerId}`);
+        const test = res ? (await res.json())?.length ?? 0 : 0;
+        setAnswerLike(test);
+    };
+
+    const getAnswerHate = async () => {
+        if (answer.length === 0) return;
+        const answerId = answer[0]?.id;
+        if (!answerId) return;
+        const res = await fetch(`/api/QnA/Answer/Hate/getEachHate/${answerId}`);
+        const test = res ? (await res.json())?.length ?? 0 : 0;
+        setAnswerHate(test);
+    };
+
+    const handleQuestionHate = async () => {
+        try {
             const data = await fetch(`/api/QnA/Question/Hate/getEachQuestionHate/${id}?name=${name}`);
             const res = await data.json();
 
-            if ( res == null ) {
-                try{
+            if (res == null) {
+                try {
                     await fetch(`/api/QnA/Question/Hate/addQuestionHate/${id}?name=${name}`, {
                         method: "POST"
                     });
                     getQuestionHate();
-                } catch(error) {
+                } catch (error) {
                     console.error("QuestionHate Add Error:::::", error);
-                } 
-            } else{
+                }
+            } else {
                 try {
                     await fetch(`/api/QnA/Question/Hate/removeEachQuestionHate/${id}?name=${name}`, {
                         method: "POST"
@@ -72,12 +92,94 @@ export function useQnAState(id: string) {
         }
     };
 
-    const handleQuestionLike = async() => {
+    const handleAnswerHate = async () => {
+        if (answer.length === 0) return;
+        const answerId = answer[0]?.id;
+        if (!answerId) return;
+
+        try {
+            const res = await fetch(`/api/QnA/Answer/Hate/getEachAnswerHate/${answerId}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name })
+            });
+            const data = await res.json();
+
+            if (data === null) {
+                try {
+                    await fetch(`/api/QnA/Answer/Hate/addEachAnswerHate/${answerId}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ name })
+                    });
+                    getAnswerHate();
+                } catch (err) {
+                    console.error("AnswerHate Add Error::::::", err);
+                }
+            } else {
+                try {
+                    await fetch(`/api/QnA/Answer/Hate/removeEachAnswerHate/${answerId}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ name })
+                    });
+                    getAnswerHate();
+                } catch (err) {
+                    console.error("AnswerHate Remove Error:::::", err);
+                }
+            }
+        } catch (err) {
+            console.error("handleAnswerHate Error::::::::::", err);
+        }
+    };
+
+    const handleAnswerLike = async () => {
+        if (answer.length === 0) return;
+        const answerId = answer[0]?.id;
+        if (!answerId) return;
+
+        try {
+            const res = await fetch(`/api/QnA/Answer/Like/getEachAnswerLike/${answerId}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name })
+            });
+            const data = await res.json();
+
+            if (data === null) {
+                try {
+                    await fetch(`/api/QnA/Answer/Like/addEachAnswerLike/${answerId}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ name })
+                    });
+                    getAnswerLike();
+                } catch (err) {
+                    console.error("AnswerLike Add Error::::::", err);
+                }
+            } else {
+                try {
+                    await fetch(`/api/QnA/Answer/Like/removeEachAnswerLike/${answerId}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ name })
+                    });
+                    getAnswerLike();
+                } catch (err) {
+                    console.error("AnswerLike Remove Error:::::", err);
+                }
+            }
+        } catch (err) {
+            console.error("handleAnswerLike Error::::::::::", err);
+        }
+    };
+
+    const handleQuestionLike = async () => {
         try {
             const data = await fetch(`/api/QnA/Question/Like/getEachQuestionLike/${id}?name=${name}`);
             const res = await data.json();
 
-            if (res === null ) {
+            if (res === null) {
                 try {
                     await fetch(`/api/QnA/Question/Like/addQuestionLike/${id}?name=${name}`, {
                         method: "POST"
@@ -96,12 +198,12 @@ export function useQnAState(id: string) {
                     console.error("QuestionLike Remove Error:::::::::::", err);
                 }
             }
-        } catch( err ) {
+        } catch (err) {
             console.error("QuestionLike Error:::::::::::", err);
         }
     };
 
-    const handleCancel = async() => {
+    const handleCancel = async () => {
         setEditMode(false);
         setQEditMode(false);
         setTitle("");
@@ -109,7 +211,7 @@ export function useQnAState(id: string) {
         setImage(null);
     };
 
-    const handleUpdAnswer = async() => {
+    const handleUpdAnswer = async () => {
         try {
             const formData = new FormData();
             formData.append("title", title);
@@ -117,7 +219,7 @@ export function useQnAState(id: string) {
             if (image) formData.append("image", image);
 
             await fetch(`/api/QnA/Answer/updateAnswer/${id}`, {
-                method: "POST", 
+                method: "POST",
                 body: formData
             });
             handleCancel();
@@ -127,7 +229,7 @@ export function useQnAState(id: string) {
         };
     };
 
-    const handleUpdQuestion = async() => {
+    const handleUpdQuestion = async () => {
         try {
             const formData = new FormData();
             formData.append("title", title);
@@ -135,7 +237,7 @@ export function useQnAState(id: string) {
             if (image) formData.append("image", image);
 
             await fetch(`/api/QnA/Question/updateQuestion/${id}`, {
-                method: "POST", 
+                method: "POST",
                 body: formData
             });
             handleCancel();
@@ -145,12 +247,12 @@ export function useQnAState(id: string) {
         };
     };
 
-    const getAnswer = async() => {
+    const getAnswer = async () => {
         const res = await fetch(`/api/QnA/Answer/getAnswer/${id}`);
         const data = await res.json();
-        if(data.error==="Not Found"){
+        if (data.error === "Not Found") {
             setAnswer([])
-        } else{
+        } else {
             setAnswer(Array.isArray(data) ? data : [data]);
         }
     };
@@ -159,7 +261,7 @@ export function useQnAState(id: string) {
         if (e.target.files?.[0]) setImage(e.target.files[0]);
     };
 
-    const getEachQnA = async() => {
+    const getEachQnA = async () => {
         const res = await fetch(`/api/QnA/Question/getQnAList/${id}`);
         const data = await res.json();
         setQna(data);
@@ -175,24 +277,24 @@ export function useQnAState(id: string) {
             formData.append("content", content);
             formData.append("QuestionId", id);
             if (image) formData.append("image", image);
-            await fetch(`/api/QnA/Question/updateEnd/${id}`, { method: "POST"});
-            await fetch('/api/QnA/Answer/addAnswer', { method: "POST", body: formData});
+            await fetch(`/api/QnA/Question/updateEnd/${id}`, { method: "POST" });
+            await fetch('/api/QnA/Answer/addAnswer', { method: "POST", body: formData });
             setTitle("");
             setContent("");
             setImage(null);
             getEachQnA();
             getAnswer();
-        } catch(error) {
+        } catch (error) {
             console.error("답변 추가 에러::::::::", error);
         }
     };
 
-    const handleRemoveAnswer = async() => {
+    const handleRemoveAnswer = async () => {
         if (!confirm("답변을 삭제하시겠습니까?")) return;
 
         try {
-            await fetch(`/api/QnA/Question/reUpdateEnd/${id}`, { method: "POST"});
-            await fetch(`/api/QnA/Answer/removeAnswer/${id}`, { method: "POST"});
+            await fetch(`/api/QnA/Question/reUpdateEnd/${id}`, { method: "POST" });
+            await fetch(`/api/QnA/Answer/removeAnswer/${id}`, { method: "POST" });
             getEachQnA();
             getAnswer();
         } catch (error) {
@@ -200,38 +302,40 @@ export function useQnAState(id: string) {
         }
     };
 
-    const viewCount = async() => {
-        await fetch(`/api/QnA/Question/addViewCount/${id}`, { method: "POST"});
+    const viewCount = async () => {
+        await fetch(`/api/QnA/Question/addViewCount/${id}`, { method: "POST" });
     };
 
-    const deleteQuestion = async() => {
+    const deleteQuestion = async () => {
         if (!confirm("해당 문의사항을 삭제하시겠습니까?")) return;
 
         try {
-            const [removeAnswer, removeQuestionHate, removeQuestionLike, removeQuestion] = await Promise.all([
+            const [removeAnswer, removeAnswerLike, removeAnswerHate, removeQuestionHate, removeQuestionLike, removeQuestion] = await Promise.all([
                 fetch(`/api/QnA/Answer/removeAnswer/${id}`, { method: "POST" }),
+                fetch(`/api/QnA/Answer/Like/removeAnswerLike/${id}`, { method: "POST" }),
+                fetch(`/api/QnA/Answer/Hate/removeAnswerHate/${id}`, { method: "POST" }),
                 fetch(`/api/QnA/Question/Hate/removeQuestionHate/${id}`, { method: "POST" }),
-                fetch(`/api/QnA/Question/Like/removeQuestionLike/${id}`, { method: "POST"}),
-                fetch(`/api/QnA/Question/removeQuestion/${id}`, { method: "POST"})
+                fetch(`/api/QnA/Question/Like/removeQuestionLike/${id}`, { method: "POST" }),
+                fetch(`/api/QnA/Question/removeQuestion/${id}`, { method: "POST" })
             ]);
 
-            if ( removeAnswer.status === 200 && removeQuestionHate.status === 200 && removeQuestionLike.status === 200 && removeQuestion.status === 200) {
+            if (removeAnswer.status === 200 && removeAnswerLike.status === 200 && removeAnswerHate.status === 200 && removeQuestionHate.status === 200 && removeQuestionLike.status === 200 && removeQuestion.status === 200) {
                 alert("삭제 되었습니다.");
                 router.push("/")
             };
-                
+
         } catch (err) {
             console.error("delete Question Error::::::::::", err);
         }
     };
 
-    const questionUpdateMode = async() => {
+    const questionUpdateMode = async () => {
         setTitle(qna.title);
         setContent(qna.content);
         setQEditMode(true);
     };
 
-    const handleUpdateQuestion = async() => {
+    const handleUpdateQuestion = async () => {
         try {
             const formData = new FormData();
             formData.append("title", title);
@@ -242,7 +346,7 @@ export function useQnAState(id: string) {
                 method: "POST",
                 body: formData
             });
-            
+
             handleCancel();
             getEachQnA();
         } catch (error) {
@@ -251,12 +355,13 @@ export function useQnAState(id: string) {
     };
 
     return {
-        title, setTitle, content, setContent, answer, setAnswer,handleQuestionHate, 
+        title, setTitle, content, setContent, answer, setAnswer, handleQuestionHate,
         setQEditMode, editMode, setEditMode, handleUpdateAnswer, questoinLike,
         setQuestionLike, deleteQuestion, getQuestionLike, handleCancel, image, setImage,
         handleUpdAnswer, getAnswer, qEditMode, questionHate, setQuestionHate,
         getQuestionHate, handleImageChange, getEachQnA, questionUpdateMode, qna, setQna,
         handleSubmit, handleRemoveAnswer, viewCount, handleQuestionLike, handleUpdQuestion,
-        handleUpdateQuestion
+        handleUpdateQuestion, getAnswerLike, getAnswerHate, answerLike, setAnswerLike,
+        answerHate, setAnswerHate, handleAnswerHate, handleAnswerLike
     };
 }

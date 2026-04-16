@@ -22,7 +22,18 @@ export default function LinkTable({ existingLinkIds, enterLinkSelectMode, linkDa
     };
   
     return (
-      <div className="absolute bottom-40 right-4 bg-white rounded-lg shadow-lg p-3 z-10">
+      <div style={{
+        position: "absolute",
+        bottom: "10rem",
+        right: "1rem",
+        background: "#1a1d27",
+        borderRadius: "12px",
+        border: "1px solid rgba(56,189,248,0.15)",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+        padding: "0.75rem",
+        zIndex: 10,
+        minWidth: "250px",
+      }}>
         {!isLinkSelectMode ? (
           <>
             {selectedSectionId && (
@@ -31,23 +42,38 @@ export default function LinkTable({ existingLinkIds, enterLinkSelectMode, linkDa
                   resetPolylines();
                   enterLinkSelectMode();
                 }}
-                className="mb-2 px-3 py-1 bg-blue-500 text-white rounded text-sm w-full"
+                style={{
+                  marginBottom: "0.5rem",
+                  padding: "0.5rem 0.75rem",
+                  background: "rgba(56,189,248,0.1)",
+                  color: "#38bdf8",
+                  border: "1px solid rgba(56,189,248,0.3)",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  width: "100%",
+                  cursor: "pointer",
+                  fontWeight: 500,
+                }}
               >
                 링크 추가
               </button>
             )}
-            <table className="text-sm">
+            <table style={{ fontSize: "13px", width: "100%", borderCollapse: "collapse" }}>
               <thead>
-              <tr className="border-b">
-                <th className="px-3 py-1 text-center" style={{ color: "#000" }}>구역 ID</th>
-                <th className="px-3 py-1 text-center" style={{ color: "#000" }}>링크 ID</th>
+              <tr style={{ borderBottom: "1px solid rgba(56,189,248,0.15)" }}>
+                <th style={{ padding: "0.5rem 0.75rem", textAlign: "center", color: "#8b90a7", fontWeight: 500 }}>구역 ID</th>
+                <th style={{ padding: "0.5rem 0.75rem", textAlign: "center", color: "#8b90a7", fontWeight: 500 }}>링크 ID</th>
               </tr>
             </thead>
               <tbody>
                 {linkData.map((link: any) => (
-                  <tr key={`${link.sectionid}-${link.linkid}`}>
-                    <td className="px-3 py-1 text-center" style={{ color: "#000" }}>{link.sectionid}</td>
-                    <td className="px-3 py-1 text-center" style={{ color: "#000" }}
+                  <tr key={`${link.sectionid}-${link.linkid}`}
+                    style={{ borderBottom: "1px solid rgba(56,189,248,0.08)" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#22263a")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <td style={{ padding: "0.5rem 0.75rem", textAlign: "center", color: "#e8eaf0" }}>{link.sectionid}</td>
+                    <td style={{ padding: "0.5rem 0.75rem", textAlign: "center", color: "#38bdf8", cursor: "pointer" }}
                       onClick={() => handleLink(link.linkid)}>{link.linkid}</td>
                   </tr>
                 ))}
@@ -56,31 +82,52 @@ export default function LinkTable({ existingLinkIds, enterLinkSelectMode, linkDa
           </>
         ) : (
           <>
-        <p className="text-sm mb-2" style={{ color: "#000" }}>지도에서 링크를 클릭하세요</p>
-        <table className="text-sm mb-2">
+        <p style={{ fontSize: "13px", marginBottom: "0.5rem", color: "#8b90a7" }}>지도에서 링크를 클릭하세요</p>
+        <table style={{ fontSize: "13px", marginBottom: "0.5rem", width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr className="border-b">
-              <th className="px-3 py-1 text-center" style={{ color: "#000" }}>순서</th>
-              <th className="px-3 py-1 text-center" style={{ color: "#000" }}>링크 ID</th>
+            <tr style={{ borderBottom: "1px solid rgba(56,189,248,0.15)" }}>
+              <th style={{ padding: "0.5rem 0.75rem", textAlign: "center", color: "#8b90a7", fontWeight: 500 }}>순서</th>
+              <th style={{ padding: "0.5rem 0.75rem", textAlign: "center", color: "#8b90a7", fontWeight: 500 }}>링크 ID</th>
             </tr>
           </thead>
           <tbody>
             {selectedLinks.map((link, index) => (
-              <tr key={`${index}-${link.linkid}`}>
-                <td className="px-3 py-1 text-center" style={{ color: "#000" }}>{link.seq}</td>
-                <td className="px-3 py-1 text-center" style={{ color: "#000" }}>{link.linkid}</td>
+              <tr key={`${index}-${link.linkid}`}
+                style={{ borderBottom: "1px solid rgba(56,189,248,0.08)" }}
+              >
+                <td style={{ padding: "0.5rem 0.75rem", textAlign: "center", color: "#e8eaf0" }}>{link.seq}</td>
+                <td style={{ padding: "0.5rem 0.75rem", textAlign: "center", color: "#e8eaf0" }}>{link.linkid}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <div className="flex gap-2">
+        <div style={{ display: "flex", gap: "0.5rem" }}>
           <button
             onClick={handleSave}
-            className="flex-1 px-3 py-1 bg-blue-500 text-white rounded text-sm"
+            style={{
+              flex: 1,
+              padding: "0.5rem 0.75rem",
+              background: "#38bdf8",
+              color: "#0a0e1a",
+              border: "none",
+              borderRadius: "8px",
+              fontSize: "13px",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
           >저장</button>
           <button
             onClick={clearAllHighlights}
-            className="flex-1 px-3 py-1 bg-gray-300 text-black rounded text-sm"
+            style={{
+              flex: 1,
+              padding: "0.5rem 0.75rem",
+              background: "transparent",
+              color: "#8b90a7",
+              border: "1px solid rgba(56,189,248,0.15)",
+              borderRadius: "8px",
+              fontSize: "13px",
+              cursor: "pointer",
+            }}
           >취소</button>
         </div>
       </>

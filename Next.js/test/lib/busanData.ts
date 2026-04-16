@@ -29,7 +29,7 @@ export async function getBusanTraffic() {
     const allItems: any[] = [];
     let pageNo = 1;
     const numOfRows = 100;
-    const maxItems = 100;
+    const maxItems = 500;
 
     while (allItems.length < maxItems) {
       const url = `https://apis.data.go.kr/6260000/BusanITSLINKTraffic/LINKTrafficList?serviceKey=${process.env.BUSAN_TRAFFIC_KEY}&pageNo=${pageNo}&numOfRows=${numOfRows}`;

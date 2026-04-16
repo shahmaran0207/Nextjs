@@ -19,10 +19,10 @@ export default function PostCard({
   return (
     <>
       <div style={{ background: dark.surface, borderRadius: "16px", border: `1px solid ${dark.border}`, overflow: "hidden", marginBottom: "1rem" }}>
-        <div style={{ height: "4px", background: `linear-gradient(90deg, ${dark.accent}, #a78bfa)` }} />
+        <div style={{ height: "4px", background: `linear-gradient(90deg, ${dark.accent}, #0ea5e9)` }} />
         <div style={{ padding: "2rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "0.75rem", flexWrap: "wrap" }}>
-            <span style={{ fontSize: "12px", padding: "3px 10px", borderRadius: "20px", background: dark.accentDim, color: "#a78bfa", fontWeight: 500 }}>게시글</span>
+            <span style={{ fontSize: "12px", padding: "3px 10px", borderRadius: "20px", background: dark.accentDim, color: dark.accent, fontWeight: 500 }}>게시글</span>
             <span style={{ fontSize: "12px", color: dark.textMuted }}>
               {new Date(post.createdat).toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" })}
             </span>

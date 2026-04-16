@@ -10,7 +10,7 @@ export async function POST(request: Request) {
         const questionId = formData.get("QuestionId") as String;
 
         const now = new Date();
-        const kstOffset = 9*60*1000;
+        const kstOffset = 9 * 60 * 1000;
         const kstDate = new Date(now.getTime() + kstOffset);
 
         let imageBuffer: Uint8Array<ArrayBuffer> | null = null;
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
                 content: content,
                 createdat: kstDate,
                 questionid: Number(questionId),
-                ...(imageBuffer  && { image: imageBuffer }),
+                ...(imageBuffer && { image: imageBuffer }),
             },
         });
 
@@ -33,6 +33,6 @@ export async function POST(request: Request) {
 
     } catch (err: any) {
         console.error("QnA 답변 추가 API 에러::::::::::::", err);
-        return NextResponse.json({ error: err.message }, {status: 500})
+        return NextResponse.json({ error: err.message }, { status: 500 })
     }
 }

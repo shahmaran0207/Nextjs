@@ -31,7 +31,7 @@ export default function QuestionEditForm({
       border: `1px solid ${dark.border}`,
       padding: "1.75rem 2rem",
     }}>
-      <p style={{ fontSize: "13px", color: "#a78bfa", marginBottom: "1.5rem", fontWeight: 600 }}>
+      <p style={{ fontSize: "13px", color: dark.accent, marginBottom: "1.5rem", fontWeight: 600 }}>
         ✏️ 문의사항 수정 중
       </p>
 
@@ -126,7 +126,7 @@ export default function QuestionEditForm({
           borderRadius: "10px",
           background: dark.surface2, 
           border: `1px solid ${dark.border}`,
-          color: "#a78bfa", 
+          color: dark.accent, 
           fontSize: "13px", 
           cursor: "pointer",
         }}>
@@ -149,7 +149,7 @@ export default function QuestionEditForm({
             borderRadius: "8px",
             background: dark.accentDim, 
             border: `1px solid ${dark.accent}`,
-            color: "#a78bfa", 
+            color: dark.accent, 
             fontSize: "13px", 
             fontWeight: 600, 
             cursor: "pointer",

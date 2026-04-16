@@ -30,7 +30,7 @@ export default function Question({
       marginBottom: "1.5rem",
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "1rem", flexWrap: "wrap" }}>
-        <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "20px", background: dark.accentDim, color: "#a78bfa", fontWeight: 500 }}>
+        <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "20px", background: dark.accentDim, color: dark.accent, fontWeight: 500 }}>
           QnA
         </span>
         <span style={{ fontSize: "12px", color: dark.textMuted }}>

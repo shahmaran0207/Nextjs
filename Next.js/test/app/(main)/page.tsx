@@ -1,15 +1,15 @@
 "use client"
 
 const dark = {
-  bg: "#0f1117",
+  bg: "#0a0e1a",
   surface: "#1a1d27",
   surface2: "#22263a",
-  border: "#2e3247",
+  border: "rgba(56,189,248,0.15)",
   textPrimary: "#e8eaf0",
   textSecondary: "#8b90a7",
   textMuted: "#545874",
-  accent: "#7c6af7",
-  accentDim: "#2d2850",
+  accent: "#38bdf8",
+  accentDim: "rgba(56,189,248,0.1)",
 };
 
 const navItems = [
@@ -28,9 +28,48 @@ export default function Page() {
     <div style={{
       minHeight: "100vh",
       background: dark.bg,
-      padding: "2rem 1rem",
-      margin: "-1rem calc(-50vw + 50%)",
+      display: "flex",
+      flexDirection: "column",
     }}>
+      {/* Digital Twin Header */}
+      <header style={{
+        background: "rgba(10, 14, 26, 0.95)",
+        borderBottom: `1px solid ${dark.border}`,
+        padding: "0.75rem 1.5rem",
+        position: "sticky",
+        top: 0,
+        zIndex: 200,
+        backdropFilter: "blur(12px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{
+            width: "32px",
+            height: "32px",
+            background: "linear-gradient(135deg, #38bdf8, #0ea5e9)",
+            borderRadius: "8px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 0 16px rgba(56,189,248,0.4)",
+            fontSize: "16px",
+          }}>
+            🏠
+          </div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#e8eaf0", lineHeight: 1 }}>
+              메인 페이지
+            </h1>
+            <p style={{ margin: 0, fontSize: "11px", color: "#38bdf8", lineHeight: 1.4, marginTop: "2px" }}>
+              원하는 기능을 선택하세요
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <div style={{ flex: 1, padding: "2rem 1rem" }}>
       <div style={{ maxWidth: "760px", margin: "0 auto" }}>
 
         {/* 헤더 */}
@@ -45,7 +84,7 @@ export default function Page() {
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "0.75rem" }}>
             <span style={{
               fontSize: "11px", padding: "2px 8px", borderRadius: "20px",
-              background: dark.accentDim, color: "#a78bfa", fontWeight: 500,
+              background: dark.accentDim, color: dark.accent, fontWeight: 500,
             }}>
               My App
             </span>
@@ -97,6 +136,7 @@ export default function Page() {
           ))}
         </div>
 
+      </div>
       </div>
     </div>
   );

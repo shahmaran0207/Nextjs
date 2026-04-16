@@ -1,15 +1,15 @@
 import { getBusanLink, getBusanTraffic, getBusanBit } from '../../lib/busanData';
 import TwinMap from '@/component/TwinMap';
 
-export default async function digitalTwin() {
+export default async function DigitalTwinPage() {
   
-  const [linkData, trafficData, bitData ] = await Promise.all([
+  const [linkData, trafficData, bitData] = await Promise.all([
     getBusanLink(),
     getBusanTraffic(),
     getBusanBit(),
   ]);
 
-  return(
+  return (
     <TwinMap
       linkData={linkData}
       trafficData={trafficData}

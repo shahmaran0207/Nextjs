@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, use} from "react";
-import { dark } from "./_components/darkTheme";
 import PostCard from "./_components/PostCard";
 import CommentForm from "./_components/CommentForm";
 import CommentTable from "./_components/CommentTable";
@@ -67,58 +66,144 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
   }, [id]);
 
   if (!post) return (
-    <div style={{ minHeight: "100vh", background: dark.bg, display: "flex", alignItems: "center", justifyContent: "center", color: dark.textMuted, fontSize: "15px" }}>
+    <div style={{ minHeight: "100vh", background: "#0a0e1a", display: "flex", alignItems: "center", justifyContent: "center", color: "#8b90a7", fontSize: "15px" }}>
       로딩 중...
     </div>
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: dark.bg, padding: "2rem 1rem" }}>
-      <div style={{ maxWidth: "760px", margin: "0 auto" }}>
-        <button onClick={() => router.back()} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "13px", color: dark.textMuted, background: "transparent", border: "none", cursor: "pointer", marginBottom: "1.5rem", padding: "6px 10px", borderRadius: "8px" }}>
-          ← 목록으로
-        </button>
-
-        <PostCard
-          post={post}
-          postLike={postLike}
-          postHate={postHate}
-          commentCount={comment.length}
-          onDelete={handleDelete}
-          onUpdate={() => router.push(`/updatePost/${post.id}`)}
-          onLike={handleLike}
-          onHate={handleHate}
-        />
-
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "1rem" }}>
-          <span style={{ fontSize: "15px", fontWeight: 600, color: dark.textPrimary }}>댓글</span>
-          <span style={{ fontSize: "12px", padding: "2px 8px", borderRadius: "20px", background: dark.surface2, color: dark.textSecondary }}>{comment.length}</span>
+    <div style={{ minHeight: "100vh", background: "#0a0e1a", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      {/* 다크 상단 헤더 */}
+      <header style={{
+        background: "rgba(10, 14, 26, 0.95)",
+        borderBottom: "1px solid rgba(56,189,248,0.15)",
+        padding: "0.75rem 1.5rem",
+        position: "sticky",
+        top: 0,
+        zIndex: 200,
+        backdropFilter: "blur(12px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{
+            width: "32px",
+            height: "32px",
+            background: "linear-gradient(135deg, #38bdf8, #0ea5e9)",
+            borderRadius: "8px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 0 16px rgba(56,189,248,0.4)",
+            fontSize: "16px",
+          }}>
+            📝
+          </div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#e8eaf0", lineHeight: 1 }}>
+              게시글 상세
+            </h1>
+            <p style={{ margin: 0, fontSize: "11px", color: "#38bdf8", lineHeight: 1.4, marginTop: "2px" }}>
+              게시글 보기
+            </p>
+          </div>
         </div>
 
-        <CommentForm
-          commentTitle={commentTitle}
-          commentContent={commentContent}
-          onTitleChange={e => setCommentTitle(e.target.value)}
-          onContentChange={e => setCommentContent(e.target.value)}
-          onSubmit={handleSubmit}
-          onCancel={() => { setCommentTitle(""); setCommentContent(""); }}
-        />
+        <nav style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <button
+            onClick={() => router.back()}
+            style={{
+              fontSize: "13px",
+              color: "#8b90a7",
+              textDecoration: "none",
+              padding: "6px 12px",
+              borderRadius: "8px",
+              border: "1px solid rgba(255,255,255,0.08)",
+              background: "transparent",
+              cursor: "pointer",
+              transition: "color 0.15s, border-color 0.15s",
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLElement).style.color = "#e8eaf0";
+              (e.currentTarget as HTMLElement).style.borderColor = "rgba(56,189,248,0.3)";
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLElement).style.color = "#8b90a7";
+              (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)";
+            }}
+          >
+            ← 목록으로
+          </button>
+          <a
+            href="/"
+            style={{
+              fontSize: "13px",
+              color: "#8b90a7",
+              textDecoration: "none",
+              padding: "6px 12px",
+              borderRadius: "8px",
+              border: "1px solid rgba(255,255,255,0.08)",
+              transition: "color 0.15s, border-color 0.15s",
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLElement).style.color = "#e8eaf0";
+              (e.currentTarget as HTMLElement).style.borderColor = "rgba(56,189,248,0.3)";
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLElement).style.color = "#8b90a7";
+              (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)";
+            }}
+          >
+            홈으로
+          </a>
+        </nav>
+      </header>
 
-        <CommentTable
-          comments={pagedComments}
-          downComments={downComments}
-          commentLikeCounts={commentLikeCounts}
-          commentHateCounts={commentHateCounts}
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          onCommentLike={handleCommentLike}
-          onCommentHate={handleCommentHate}
-          onRemoveComment={removeComment}
-          onRemoveReply={handleRemoveReply}
-          onAddReply={handleAddReply}
-        />
-      </div>
+      <main style={{ flex: 1, padding: "2rem 1rem", overflow: "auto" }}>
+        <div style={{ maxWidth: "760px", margin: "0 auto" }}>
+
+          <PostCard
+            post={post}
+            postLike={postLike}
+            postHate={postHate}
+            commentCount={comment.length}
+            onDelete={handleDelete}
+            onUpdate={() => router.push(`/updatePost/${post.id}`)}
+            onLike={handleLike}
+            onHate={handleHate}
+          />
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "1rem" }}>
+            <span style={{ fontSize: "15px", fontWeight: 600, color: "#e8eaf0" }}>댓글</span>
+            <span style={{ fontSize: "12px", padding: "2px 8px", borderRadius: "20px", background: "#22263a", color: "#8b90a7" }}>{comment.length}</span>
+          </div>
+
+          <CommentForm
+            commentTitle={commentTitle}
+            commentContent={commentContent}
+            onTitleChange={e => setCommentTitle(e.target.value)}
+            onContentChange={e => setCommentContent(e.target.value)}
+            onSubmit={handleSubmit}
+            onCancel={() => { setCommentTitle(""); setCommentContent(""); }}
+          />
+
+          <CommentTable
+            comments={pagedComments}
+            downComments={downComments}
+            commentLikeCounts={commentLikeCounts}
+            commentHateCounts={commentHateCounts}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            onCommentLike={handleCommentLike}
+            onCommentHate={handleCommentHate}
+            onRemoveComment={removeComment}
+            onRemoveReply={handleRemoveReply}
+            onAddReply={handleAddReply}
+          />
+        </div>
+      </main>
     </div>
   );
 };

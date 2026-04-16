@@ -87,6 +87,20 @@ model questionhate {
   userid      String  @db.VarChar(1000)
 }
 
+model answerlike {
+  id          Int     @id @default(autoincrement())
+  questionid  Int
+  userid      String  @db.VarChar(1000)
+  answerid    Int
+}
+
+model answerhate {
+  id          Int   @id @default(autoincrement())
+  questoinid  Int
+  userid      String  @db.VarChar(1000)
+  answerid    Int
+}
+
 model posthate {
   id Int @id @default(autoincrement())
   postid Int?
@@ -123,4 +137,11 @@ model users {
   id       Int     @id(map: "users_pkey1") @default(autoincrement())
   name     String? @db.VarChar(100)
   naver_id String? @db.VarChar(3000)
+}
+
+model busancctv {
+  id         Int      @id @default(autoincrement())
+  code       String?  @db.VarChar(50)
+  name       String?  @db.VarChar(255)
+  geom       Unsupported("geometry(MultiPolygon, 4326)")
 }

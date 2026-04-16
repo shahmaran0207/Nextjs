@@ -1,14 +1,14 @@
 export default function postStyle() {
     const dark = {
-      bg: "#0f1117",
+      bg: "#0a0e1a",
       surface: "#1a1d27",
       surface2: "#22263a",
-      border: "#2e3247",
+      border: "rgba(56,189,248,0.15)",
       textPrimary: "#e8eaf0",
       textSecondary: "#8b90a7",
       textMuted: "#545874",
-      accent: "#7c6af7",
-      accentDim: "#2d2850",
+      accent: "#38bdf8",
+      accentDim: "rgba(56,189,248,0.1)",
     };
 
     const inputStyle: React.CSSProperties = {

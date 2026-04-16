@@ -5,12 +5,20 @@ interface AnswerProps {
   answer: AnswerType;
   onEdit: () => void;
   onDelete: () => void;
+  onLike: () => void;
+  onHate: () => void;
+  answerLike: number;
+  answerHate: number;
 }
 
 export default function Answer({
   answer,
   onEdit,
   onDelete,
+  onLike,
+  onHate,
+  answerLike,
+  answerHate
 }: AnswerProps) {
   return (
     <div style={{
@@ -46,18 +54,18 @@ export default function Answer({
           style={{ maxWidth: "100%", borderRadius: "10px", marginTop: "1rem", border: `1px solid ${dark.border}` }}
         />
       )}
-      
+
       <div style={{ display: "flex", gap: "8px", marginTop: "1.25rem" }}>
         <button
           type="button"
           style={{
-            padding: "8px 18px", 
+            padding: "8px 18px",
             borderRadius: "8px",
-            background: dark.accentDim, 
+            background: dark.accentDim,
             border: `1px solid ${dark.accent}`,
-            color: "#a78bfa", 
-            fontSize: "13px", 
-            fontWeight: 600, 
+            color: dark.accent,
+            fontSize: "13px",
+            fontWeight: 600,
             cursor: "pointer",
           }}
           onClick={onEdit}
@@ -67,18 +75,27 @@ export default function Answer({
         <button
           type="button"
           style={{
-            padding: "8px 18px", 
+            padding: "8px 18px",
             borderRadius: "8px",
-            background: "#2e1a1a", 
+            background: "#2e1a1a",
             border: "1px solid #7f1d1d",
-            color: "#f87171", 
-            fontSize: "13px", 
-            fontWeight: 600, 
+            color: "#f87171",
+            fontSize: "13px",
+            fontWeight: 600,
             cursor: "pointer",
           }}
           onClick={onDelete}
         >
           삭제
+        </button>
+        <button onClick={onLike}
+          style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "8px 16px", background: dark.greenDim, color: dark.green, border: `1px solid #14532d`, borderRadius: "8px", fontSize: "13px", fontWeight: 500, cursor: "pointer" }}>
+          👍 좋아요 {answerLike}
+        </button>
+
+        <button onClick={onHate}
+          style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "8px 16px", background: dark.orangeDim, color: dark.orange, border: `1px solid #7c2d12`, borderRadius: "8px", fontSize: "13px", fontWeight: 500, cursor: "pointer" }}>
+          👎 싫어요 {answerHate}
         </button>
       </div>
     </div>

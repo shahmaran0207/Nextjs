@@ -99,7 +99,7 @@ export default function AnswerForm({
             borderRadius: "10px",
             background: dark.surface2, 
             border: `1px solid ${dark.border}`,
-            color: "#a78bfa", 
+            color: dark.accent, 
             fontSize: "13px", 
             cursor: "pointer",
           }}>
