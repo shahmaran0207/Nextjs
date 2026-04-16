@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider          = "postgresql"
 }
 
 model chat {
@@ -139,9 +139,3 @@ model users {
   naver_id String? @db.VarChar(3000)
 }
 
-model busancctv {
-  id         Int      @id @default(autoincrement())
-  code       String?  @db.VarChar(50)
-  name       String?  @db.VarChar(255)
-  geom       Unsupported("geometry(MultiPolygon, 4326)")
-}
