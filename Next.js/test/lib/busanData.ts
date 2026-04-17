@@ -3,26 +3,87 @@ export async function getBusanLink() {
     const geomFilter = "BOX(129.0858,35.1502,129.2153,35.2376)";
     const baseUrl = `https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LT_L_MOCTLINK&key=${process.env.VWORLD_API_KEY}&domain=http://localhost:3000&geomFilter=${encodeURIComponent(geomFilter)}&geometry=true&format=json&size=1000&crs=EPSG:4326`;
 
+    console.log("🔗 VWorld API 호출 시작...");
     const firstRes = await fetch(`${baseUrl}&page=1`);
     const text = await firstRes.text();
-    console.log("vworld 응답:", text.slice(0, 200)); // 뭐가 오는지 확인
+    console.log("📡 VWorld 응답 (첫 200자):", text.slice(0, 200));
+    
     const firstData = JSON.parse(text);
+    
+    // 응답 구조 확인
+    console.log("📊 응답 상태:", firstData.response?.status);
+    console.log("📊 전체 레코드 수:", firstData.response?.record?.total);
+    console.log("📊 전체 페이지 수:", firstData.response?.page?.total);
+    
     const totalPages = parseInt(firstData.response.page.total);
-
     let allFeatures = [...firstData.response.result.featureCollection.features];
+    
+    console.log(`📄 1페이지 features 개수: ${allFeatures.length}`);
+    console.log(`📄 첫 번째 feature 샘플:`, JSON.stringify(allFeatures[0], null, 2).slice(0, 300));
 
-    for (let page = 2; page <= totalPages; page++) {
+    // 페이지가 많으면 최대 10페이지만 (성능 고려)
+    const maxPages = Math.min(totalPages, 10);
+    console.log(`📚 총 ${totalPages}페이지 중 ${maxPages}페이지 로딩...`);
+
+    for (let page = 2; page <= maxPages; page++) {
       const res = await fetch(`${baseUrl}&page=${page}`);
       const data = await res.json();
-      allFeatures = [...allFeatures, ...data.response.result.featureCollection.features];
+      const pageFeatures = data.response.result.featureCollection.features;
+      allFeatures = [...allFeatures, ...pageFeatures];
+      
+      if (page % 5 === 0) {
+        console.log(`📄 ${page}페이지까지 로딩 완료 (누적: ${allFeatures.length}개)`);
+      }
     }
 
+    console.log(`✅ 최종 로딩된 features: ${allFeatures.length}개`);
     return { features: allFeatures };
   } catch (err) {
-    console.error("getBusanLink 에러:", err);
+    console.error("❌ getBusanLink 에러:", err);
     return { features: [] };
   }
 }
+
+export async function getBusanBoundary() {
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    const rows = await prisma.$queryRawUnsafe<
+      { gid: number; emd_cd: string | null; emd_nm: string | null; geojson: string }[]
+    >(
+      // SRID=0으로 저장된 geometry를 한국 중부원점 2010(5186)으로 지정 후 WGS84(4326)로 변환
+      `SELECT gid, emd_cd, emd_nm,
+              ST_AsGeoJSON(ST_Transform(ST_SetSRID(geom, 5186), 4326))::text AS geojson
+       FROM test.busanpolyline
+       ORDER BY gid`
+    );
+
+    const features = rows.map((row) => {
+      const geometry = JSON.parse(row.geojson);
+      // geometry.type에 따라 외각환(exterior ring) 추출 방식이 다름
+      // - Polygon:      coordinates = [ ring, ring, ... ]  → coordinates[0]
+      // - MultiPolygon: coordinates = [ [ ring, ... ], [ ring, ... ] ] → coordinates[0][0]
+      let contour: number[][];
+      if (geometry.type === "MultiPolygon") {
+        contour = geometry.coordinates[0][0] as number[][];
+      } else {
+        // Polygon
+        contour = geometry.coordinates[0] as number[][];
+      }
+      return {
+        id: row.gid,
+        code: row.emd_cd ?? "",
+        name: row.emd_nm ?? "",
+        contour,
+      };
+    });
+
+    return features;
+  } catch (err) {
+    console.error("getBusanBoundary 에러:", err);
+    return [];
+  }
+}
+
 
 export async function getBusanTraffic() {
   try {
@@ -31,23 +92,51 @@ export async function getBusanTraffic() {
     const numOfRows = 100;
     const maxItems = 500;
 
-    while (allItems.length < maxItems) {
-      const url = `https://apis.data.go.kr/6260000/BusanITSLINKTraffic/LINKTrafficList?serviceKey=${process.env.BUSAN_TRAFFIC_KEY}&pageNo=${pageNo}&numOfRows=${numOfRows}`;
-      const res = await fetch(url);
-      const text = await res.text();
-      console.log("traffic 응답:", text.slice(0, 200));
-      const data = JSON.parse(text);
+    while (allItems.length < maxItems && pageNo <= 10) { // 최대 10페이지만
+      try {
+        const url = `https://apis.data.go.kr/6260000/BusanITSLINKTraffic/LINKTrafficList?serviceKey=${process.env.BUSAN_TRAFFIC_KEY}&pageNo=${pageNo}&numOfRows=${numOfRows}&resultType=json`;
+        const res = await fetch(url);
+        const text = await res.text();
 
-      const items = data.content?.items;
-      if (!items || items.length === 0) break;
+        // API 키 에러 체크
+        if (text.includes('SERVICE_KEY') || text.includes('ERROR')) {
+          console.error("Traffic API 키 에러 또는 서비스 오류:", text.slice(0, 300));
+          break;
+        }
 
-      allItems.push(...(Array.isArray(items) ? items : [items]));
-      pageNo++;
+        // JSON 파싱 시도
+        let data;
+        try {
+          data = JSON.parse(text);
+          const items = data.content?.items;
+          if (!items || items.length === 0) break;
+          allItems.push(...(Array.isArray(items) ? items : [items]));
+        } catch (jsonError) {
+          // XML 파싱 시도
+          const items = [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((match) => {
+            const item = match[1];
+            const get = (tag: string) => item.match(new RegExp(`<${tag}>(.*?)<\/${tag}>`))?.[1]?.trim() ?? "";
+            return {
+              lkId: get("lkId"),
+              spd: parseFloat(get("spd")) || 0,
+            };
+          });
+
+          if (items.length === 0) break;
+          allItems.push(...items);
+        }
+
+        pageNo++;
+      } catch (pageError) {
+        console.error(`Traffic API 페이지 ${pageNo} 에러:`, pageError);
+        break;
+      }
     }
 
+    console.log(`Total traffic items loaded: ${allItems.length}`);
     return allItems.slice(0, maxItems);
   } catch (err) {
-    console.error("getBusanTraffic 에러:", err);
+    console.error("getBusanTraffic 전체 에러:", err);
     return [];
   }
 }
@@ -75,6 +164,102 @@ export async function getBusanBit() {
     return items;
   } catch (err) {
     console.error("getBusanBit 에러:", err);
+    return [];
+  }
+}
+
+export async function getBusanConstruction() {
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    const rows = await prisma.$queryRawUnsafe<
+      {
+        gid: number;
+        lng: number;
+        lat: number;
+        project_name: string | null;
+        progress_rate: number | null;
+        plan_rate: number | null;
+        achievement_rate: number | null;
+        start_date: string | null;
+        end_date: string | null;
+        location_text: string | null;
+        budget_text: string | null;
+        d_day: number | null;
+        summary: string | null;
+        contact: string | null;
+        field_code: string | null;
+      }[]
+    >(
+      // test.busan_construction: Point(4326) 좌표 및 공사 상세 정보 조회
+      `SELECT
+         gid,
+         ST_X(geom)       AS lng,
+         ST_Y(geom)       AS lat,
+         project_name,
+         COALESCE(progress_rate::float, 0)    AS progress_rate,
+         COALESCE(plan_rate::float, 0)        AS plan_rate,
+         COALESCE(achievement_rate::float, 0) AS achievement_rate,
+         TO_CHAR(start_date, 'YYYY-MM-DD')   AS start_date,
+         TO_CHAR(end_date,   'YYYY-MM-DD')   AS end_date,
+         location_text,
+         budget_text,
+         d_day,
+         summary,
+         contact,
+         field_code
+       FROM test.busan_construction
+       WHERE geom IS NOT NULL`
+    );
+    return rows.filter((r) => r.lat >= -90 && r.lat <= 90 && r.lng >= -180 && r.lng <= 180);
+  } catch (err) {
+    console.error("getBusanConstruction 에러:", err);
+    return [];
+  }
+}
+
+export async function getBusanThemeTravel() {
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    const rows = await prisma.$queryRawUnsafe<
+      {
+        gid: number;
+        lng: number;
+        lat: number;
+        content_name: string | null;
+        district_name: string | null;
+        category_name: string | null;
+        place_name: string | null;
+        title: string | null;
+        subtitle: string | null;
+        address: string | null;
+        phone: string | null;
+        operating_hours: string | null;
+        fee_info: string | null;
+        closed_days: string | null;
+      }[]
+    >(
+      // test.busan_theme_travel: Point(4326) 좌표 및 테마여행 상세정보 조회
+      `SELECT
+         gid,
+         ST_X(geom)    AS lng,
+         ST_Y(geom)    AS lat,
+         content_name,
+         district_name,
+         category_name,
+         place_name,
+         title,
+         subtitle,
+         address,
+         phone,
+         operating_hours,
+         fee_info,
+         closed_days
+       FROM test.busan_theme_travel
+       WHERE geom IS NOT NULL`
+    );
+    return rows.filter((r) => r.lat >= -90 && r.lat <= 90 && r.lng >= -180 && r.lng <= 180);
+  } catch (err) {
+    console.error("getBusanThemeTravel 에러:", err);
     return [];
   }
 }

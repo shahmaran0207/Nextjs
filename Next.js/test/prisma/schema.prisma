@@ -139,3 +139,70 @@ model users {
   naver_id String? @db.VarChar(3000)
 }
 
+// 수동 생성 테이블 — migrate 금지, generate만 사용
+// 실제 DB 컬럼: gid, emd_cd, col_adm_se, emd_nm, sgg_oid, geom(PostGIS MultiPolygon)
+model busanpolyline {
+  gid        Int     @id
+  emd_cd     String? @db.VarChar(5)
+  col_adm_se String? @db.VarChar(2)
+  emd_nm     String? @db.VarChar(50)
+  sgg_oid    Int?
+  geom       Unsupported("geometry(MultiPolygon, 4326)")?
+
+  @@ignore
+}
+
+model busan_construction {
+  gid              Int       @id
+  seq_no           BigInt?
+  project_name     String?
+  d_day            BigInt?
+  total_days       BigInt?
+  elapsed_days     BigInt?
+  progress_rate    Decimal?
+  plan_rate        Decimal?
+  achievement_rate Decimal?
+  field_code       String?   @db.VarChar(10)
+  location_text    String?
+  start_date       DateTime? @db.Date
+  end_date         DateTime? @db.Date
+  dept_code        String?   @db.VarChar(10)
+  contact          String?
+  budget_text      String?
+  lat              Decimal?
+  lon              Decimal?
+  geom             Unsupported("geometry(Point, 4326)")?
+
+  @@ignore
+}
+
+model busan_theme_travel {
+  gid             Int      @id
+  fid             BigInt?
+  content_id      BigInt?
+  content_name    String?
+  district_name   String?
+  category_name   String?
+  lat             Decimal?
+  lon             Decimal?
+  place_name      String?
+  title           String?
+  subtitle        String?
+  main_content    String?
+  address         String?
+  address_detail  String?
+  phone           String?
+  homepage        String?
+  transport_info  String?
+  operating_days  String?
+  closed_days     String?
+  operating_hours String?
+  fee_info        String?
+  notice_info     String?
+  image_url       String?
+  thumbnail_url   String?
+  detail_info     String?
+  geom            Unsupported("geometry(Point, 4326)")?
+
+  @@ignore
+}
