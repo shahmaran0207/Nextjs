@@ -49,25 +49,30 @@ export default function CctvPopup({ cctv, isOpen, onClose }: CctvPopupProps) {
       });
 
       hls.on(Hls.Events.ERROR, (event, data) => {
-        console.error("HLS error:", data);
+        // non-fatal 에러는 HLS.js가 자동으로 복구하므로 무시
+        if (!data.fatal) return;
+
+        console.error("HLS fatal error:", {
+          type: data.type,
+          details: data.details,
+          url: (data as { url?: string }).url,
+        });
         setIsLoading(false);
 
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              setError("네트워크 오류가 발생했습니다");
-              // Try to recover
-              hls.startLoad();
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              setError("영상을 불러올 수 없습니다");
-              // Try to recover
-              hls.recoverMediaError();
-              break;
-            default:
-              setError("알 수 없는 오류가 발생했습니다");
-              break;
-          }
+        switch (data.type) {
+          case Hls.ErrorTypes.NETWORK_ERROR:
+            setError("네트워크 오류가 발생했습니다");
+            // Try to recover
+            hls.startLoad();
+            break;
+          case Hls.ErrorTypes.MEDIA_ERROR:
+            setError("영상을 불러올 수 없습니다");
+            // Try to recover
+            hls.recoverMediaError();
+            break;
+          default:
+            setError("알 수 없는 오류가 발생했습니다");
+            break;
         }
       });
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {

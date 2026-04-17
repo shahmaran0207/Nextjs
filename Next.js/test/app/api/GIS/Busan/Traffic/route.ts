@@ -15,7 +15,7 @@ export async function GET() {
     const allItems: any[] = [];
     let pageNo = 1;
     const numOfRows = 100;
-    const maxItems = 50;
+    const maxItems = 5000;
     const maxPages = 100000;
 
     while (allItems.length < maxItems && pageNo <= maxPages) {
