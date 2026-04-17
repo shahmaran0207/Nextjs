@@ -33,6 +33,7 @@ export function createPathLayer(
   pathData: any[],
   trafficMap: Map<string, number>,
   highlightedLinkIds: Set<string>,
+  activeLinkId: string | null,
   isLinkSelectModeRef: any,
   handleLinkSelect: (lkId: string) => void
 ) {
@@ -45,17 +46,24 @@ export function createPathLayer(
     data: pathData,
     getPath: (d: any) => d.path,
     getColor: (d: any) => {
+      if (activeLinkId && d.lkId === activeLinkId) {
+        return [56, 189, 248, 255]; // 특별 하이라이트: 테마 Cyan
+      }
+
       const isHighlighted = highlightedLinkIds.has(d.lkId);
       if (isHighlighted) {
-        return [255, 215, 0, 255]; // 하이라이트: 금색
+        return [255, 215, 0, 200]; // 하이라이트 (같은 구역 내 기타 링크): 금색 (opacity 조절)
       }
 
       const spd = trafficMap.get(d.lkId);
       return getSpeedRgba(spd);
     },
     getWidth: (d: any) => {
+      if (activeLinkId && d.lkId === activeLinkId) {
+        return 10; // 가장 두껍게
+      }
       const isHighlighted = highlightedLinkIds.has(d.lkId);
-      return isHighlighted ? 8 : 4;
+      return isHighlighted ? 6 : 3.5;
     },
     widthUnits: 'pixels',
     widthMinPixels: 2,
@@ -71,8 +79,8 @@ export function createPathLayer(
       return true;
     },
     updateTriggers: {
-      getColor: [highlightedArray, trafficMap.size],
-      getWidth: [highlightedArray],
+      getColor: [highlightedArray, trafficMap.size, activeLinkId],
+      getWidth: [highlightedArray, activeLinkId],
     },
   });
 }

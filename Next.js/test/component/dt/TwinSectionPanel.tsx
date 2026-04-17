@@ -4,16 +4,12 @@ import axios from "axios";
 import { useState } from "react";
 
 const panel: React.CSSProperties = {
-  position: "absolute",
-  top: "1rem",
-  right: "1rem",
   background: "rgba(10, 14, 26, 0.92)",
   backdropFilter: "blur(16px)",
   WebkitBackdropFilter: "blur(16px)",
   border: "1px solid rgba(56,189,248,0.2)",
   borderRadius: "12px",
   padding: "14px",
-  zIndex: 100,
   width: "280px",
   display: "flex",
   flexDirection: "column",

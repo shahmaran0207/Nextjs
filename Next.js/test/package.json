@@ -6,7 +6,10 @@
     "dev": "cross-env TURBOPACK=0 next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@ai-sdk/openai": "^0.0.72",
@@ -36,6 +39,7 @@
     "dotenv": "^17.4.1",
     "firebase": "^12.11.0",
     "fonts": "^0.0.2",
+    "hls.js": "^1.4.12",
     "js-cookie": "^3.0.5",
     "lucide-react": "^1.7.0",
     "maplibre-gl": "^5.21.1",
@@ -68,6 +72,10 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.0",
     "@types/react": "^19",
@@ -77,8 +85,13 @@
     "@types/ws": "^8.18.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
+    "fast-check": "^4.6.0",
+    "jest": "^30.3.0",
+    "jest-axe": "^10.0.0",
+    "msw": "^2.0.0",
     "prisma": "^7.7.0",
     "tailwindcss": "^4",
+    "ts-jest": "^29.4.9",
     "typescript": "^5"
   }
 }

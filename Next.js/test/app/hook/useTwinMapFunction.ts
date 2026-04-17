@@ -40,6 +40,7 @@ export function useTwinMapFunction() {
   // ─── 하이라이트 링크 ID Set (DeckGL PathLayer 색상 분기용) ────
   const [highlightedLinkIds, setHighlightedLinkIds] = useState<Set<string>>(new Set());
   const [sectionLinkIds, setSectionLinkIds] = useState<Set<string>>(new Set()); // 구역에 속한 링크
+  const [activeLinkId, setActiveLinkId] = useState<string | null>(null);
 
   // ─── 도로 클릭 ───────────────────────────────────────────────
   const handleRoad = useCallback(async (roadId: number) => {
@@ -52,6 +53,7 @@ export function useTwinMapFunction() {
       setSelectedLinks([]);
       setHighlightedLinkIds(new Set());
       setSectionLinkIds(new Set());
+      setActiveLinkId(null);
 
       const res = await axios.get(`/api/GIS/Busan/Section/getSectionList/${roadId}`);
       setSectionData(Array.isArray(res.data) ? res.data : []);
@@ -68,6 +70,7 @@ export function useTwinMapFunction() {
       isLinkSelectModeRef.current = false;
       setSelectedLinks([]);
       setHighlightedLinkIds(new Set());
+      setActiveLinkId(null);
 
       const res = await axios.get(`/api/GIS/Busan/Link/getLinkList/${sectionId}`);
       const links = Array.isArray(res.data) ? res.data : [];
@@ -84,6 +87,7 @@ export function useTwinMapFunction() {
 
   // ─── 링크 클릭 (테이블) → 지도 이동 ──────────────────────────
   const handleLink = useCallback((linkId: string, busanLinkData: any) => {
+    setActiveLinkId(linkId);
     const matched = busanLinkData?.features?.filter(
       (f: any) => f.properties?.link_id === linkId
     );
@@ -110,6 +114,7 @@ export function useTwinMapFunction() {
     setHighlightedLinkIds(ids);
     isLinkSelectModeRef.current = true;
     setIsLinkSelectMode(true);
+    setActiveLinkId(null);
 
     // 마지막 링크 위치로 이동
     if (existingLinks.length > 0) {
@@ -153,6 +158,7 @@ export function useTwinMapFunction() {
     setSelectedLinks([]);
     setIsLinkSelectMode(false);
     isLinkSelectModeRef.current = false;
+    setActiveLinkId(null);
   }, []);
 
   // ─── 소통정보만 보기 ──────────────────────────────────────────
@@ -196,5 +202,6 @@ export function useTwinMapFunction() {
     clearAllHighlights,
     showTrafficOnly,
     saveLinks,
+    activeLinkId, setActiveLinkId,
   };
 }

@@ -61,3 +61,77 @@ export function getBoundaryColor(id: number): [number, number, number] {
     Math.round((b + m) * 255),
   ];
 }
+
+/**
+ * Get field configuration by field code
+ * @param fieldCode - Field code (F01-F08)
+ * @returns Field configuration object or default (F08)
+ * 
+ * Property 10: Configuration Lookup Correctness
+ * For any configuration key (field_code), the returned value SHALL match 
+ * the configured value for that key, or the default value if the key is not found.
+ */
+export function getFieldConfig(fieldCode: string | null | undefined) {
+  const code = fieldCode && FIELD_CONFIG[fieldCode] ? fieldCode : "F08";
+  return FIELD_CONFIG[code];
+}
+
+/**
+ * Get field label by field code
+ * @param fieldCode - Field code (F01-F08)
+ * @returns Field label string
+ */
+export function getFieldLabel(fieldCode: string | null | undefined): string {
+  const config = getFieldConfig(fieldCode);
+  return config.label;
+}
+
+/**
+ * Get theme configuration by category name
+ * @param categoryName - Category name
+ * @returns Theme configuration object or default ("기타")
+ * 
+ * Property 10: Configuration Lookup Correctness
+ * For any configuration key (category_name), the returned value SHALL match 
+ * the configured value for that key, or the default value if the key is not found.
+ */
+export function getThemeConfig(categoryName: string | null | undefined) {
+  const cat = categoryName && THEME_CONFIG[categoryName] ? categoryName : "기타";
+  return THEME_CONFIG[cat];
+}
+
+/**
+ * Get theme label by category name
+ * @param categoryName - Category name
+ * @returns Theme label string
+ */
+export function getThemeLabel(categoryName: string | null | undefined): string {
+  const config = getThemeConfig(categoryName);
+  return config.label;
+}
+
+/**
+ * Get theme emoji by category name
+ * @param categoryName - Category name
+ * @returns Theme emoji string
+ */
+export function getThemeEmoji(categoryName: string | null | undefined): string {
+  const config = getThemeConfig(categoryName);
+  return config.emoji;
+}
+
+/**
+ * Get all available field codes
+ * @returns Array of field codes
+ */
+export function getAllFieldCodes(): string[] {
+  return Object.keys(FIELD_CONFIG);
+}
+
+/**
+ * Get all available theme categories
+ * @returns Array of category names
+ */
+export function getAllThemeCategories(): string[] {
+  return Object.keys(THEME_CONFIG);
+}

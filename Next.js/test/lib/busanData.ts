@@ -3,40 +3,24 @@ export async function getBusanLink() {
     const geomFilter = "BOX(129.0858,35.1502,129.2153,35.2376)";
     const baseUrl = `https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LT_L_MOCTLINK&key=${process.env.VWORLD_API_KEY}&domain=http://localhost:3000&geomFilter=${encodeURIComponent(geomFilter)}&geometry=true&format=json&size=1000&crs=EPSG:4326`;
 
-    console.log("🔗 VWorld API 호출 시작...");
     const firstRes = await fetch(`${baseUrl}&page=1`);
     const text = await firstRes.text();
-    console.log("📡 VWorld 응답 (첫 200자):", text.slice(0, 200));
-    
+
     const firstData = JSON.parse(text);
-    
-    // 응답 구조 확인
-    console.log("📊 응답 상태:", firstData.response?.status);
-    console.log("📊 전체 레코드 수:", firstData.response?.record?.total);
-    console.log("📊 전체 페이지 수:", firstData.response?.page?.total);
-    
+
     const totalPages = parseInt(firstData.response.page.total);
     let allFeatures = [...firstData.response.result.featureCollection.features];
-    
-    console.log(`📄 1페이지 features 개수: ${allFeatures.length}`);
-    console.log(`📄 첫 번째 feature 샘플:`, JSON.stringify(allFeatures[0], null, 2).slice(0, 300));
 
     // 페이지가 많으면 최대 10페이지만 (성능 고려)
     const maxPages = Math.min(totalPages, 10);
-    console.log(`📚 총 ${totalPages}페이지 중 ${maxPages}페이지 로딩...`);
 
     for (let page = 2; page <= maxPages; page++) {
       const res = await fetch(`${baseUrl}&page=${page}`);
       const data = await res.json();
       const pageFeatures = data.response.result.featureCollection.features;
       allFeatures = [...allFeatures, ...pageFeatures];
-      
-      if (page % 5 === 0) {
-        console.log(`📄 ${page}페이지까지 로딩 완료 (누적: ${allFeatures.length}개)`);
-      }
     }
 
-    console.log(`✅ 최종 로딩된 features: ${allFeatures.length}개`);
     return { features: allFeatures };
   } catch (err) {
     console.error("❌ getBusanLink 에러:", err);
@@ -62,12 +46,12 @@ export async function getBusanBoundary() {
       // geometry.type에 따라 외각환(exterior ring) 추출 방식이 다름
       // - Polygon:      coordinates = [ ring, ring, ... ]  → coordinates[0]
       // - MultiPolygon: coordinates = [ [ ring, ... ], [ ring, ... ] ] → coordinates[0][0]
-      let contour: number[][];
+      let contour: [number, number][];
       if (geometry.type === "MultiPolygon") {
-        contour = geometry.coordinates[0][0] as number[][];
+        contour = geometry.coordinates[0][0] as [number, number][];
       } else {
         // Polygon
-        contour = geometry.coordinates[0] as number[][];
+        contour = geometry.coordinates[0] as [number, number][];
       }
       return {
         id: row.gid,
@@ -133,7 +117,6 @@ export async function getBusanTraffic() {
       }
     }
 
-    console.log(`Total traffic items loaded: ${allItems.length}`);
     return allItems.slice(0, maxItems);
   } catch (err) {
     console.error("getBusanTraffic 전체 에러:", err);
@@ -146,7 +129,6 @@ export async function getBusanBit() {
     const url = `http://apis.data.go.kr/6260000/BusanTblBusinfoeqStusService/getTblBusinfoeqStusInfo?serviceKey=${process.env.DATA_API_KEY}&numOfRows=9999`;
     const res = await fetch(url);
     const text = await res.text();
-    console.log("bit 응답:", text.slice(0, 200));
 
     const items = [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((match) => {
       const item = match[1];
