@@ -6,6 +6,8 @@ import { DataProvider, useDataContext } from "./DataContext";
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const { dataStats } = useDataContext();
+  const [weather, setWeather] = useState<any>(null);
+  const [airQuality, setAirQuality] = useState<any>(null);
 
   useEffect(() => {
     // 클라이언트에서만 시간 설정
@@ -13,6 +15,40 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [weatherRes, airRes] = await Promise.all([
+          fetch("/api/weather/busan"),
+          fetch("/api/airquality/busan"),
+        ]);
+        if (weatherRes.ok) setWeather(await weatherRes.json());
+        if (airRes.ok) setAirQuality(await airRes.json());
+      } catch (err) {
+        console.error("날씨/대기질 로드 실패:", err);
+      }
+    };
+    fetchData();
+    const interval = setInterval(fetchData, 600000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const getPM10Grade = (value: number | null) => {
+    if (value === null) return { text: "-", color: "#8b90a7" };
+    if (value <= 30) return { text: "좋음", color: "#10b981" };
+    if (value <= 80) return { text: "보통", color: "#f59e0b" };
+    if (value <= 150) return { text: "나쁨", color: "#ef4444" };
+    return { text: "매우나쁨", color: "#991b1b" };
+  };
+
+  const getPM25Grade = (value: number | null) => {
+    if (value === null) return { text: "-", color: "#8b90a7" };
+    if (value <= 15) return { text: "좋음", color: "#10b981" };
+    if (value <= 35) return { text: "보통", color: "#f59e0b" };
+    if (value <= 75) return { text: "나쁨", color: "#ef4444" };
+    return { text: "매우나쁨", color: "#991b1b" };
+  };
 
   return (
     <div style={{ height: "100vh", width: "100vw", background: "#0a0e1a", display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
@@ -199,6 +235,135 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 </div>
               </div>
             ))}
+            
+            {/* 날씨 카드 */}
+            {weather && weather.temperature !== null && (
+              <div style={{
+                background: "rgba(56,189,248,0.05)",
+                border: "1px solid #38bdf833",
+                borderRadius: "8px",
+                padding: "6px 12px",
+                minWidth: "90px",
+                position: "relative",
+                overflow: "hidden",
+              }}>
+                <div style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: "2px",
+                  background: "linear-gradient(90deg, transparent, #38bdf8, transparent)",
+                  animation: "dataFlow 2s ease-in-out infinite 0.9s",
+                }} />
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
+                  <span style={{ fontSize: "11px" }}>🌡️</span>
+                  <span style={{ fontSize: "9px", color: "#8b90a7", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    날씨
+                  </span>
+                </div>
+                <div style={{ fontSize: "15px", fontWeight: 700, color: "#38bdf8", fontFamily: "monospace" }}>
+                  {weather.temperature}
+                  <span style={{ fontSize: "10px", marginLeft: "3px", opacity: 0.7 }}>°C</span>
+                </div>
+              </div>
+            )}
+            
+            {/* 미세먼지 PM10 카드 */}
+            {airQuality && airQuality.pm10 !== null && (() => {
+              const pm10Grade = getPM10Grade(airQuality.pm10);
+              return (
+                <div style={{
+                  background: "rgba(56,189,248,0.05)",
+                  border: `1px solid ${pm10Grade.color}33`,
+                  borderRadius: "8px",
+                  padding: "6px 12px",
+                  minWidth: "100px",
+                  position: "relative",
+                  overflow: "hidden",
+                }}>
+                  <div style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: "2px",
+                    background: `linear-gradient(90deg, transparent, ${pm10Grade.color}, transparent)`,
+                    animation: "dataFlow 2s ease-in-out infinite 1.2s",
+                  }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
+                    <span style={{ fontSize: "11px" }}>🌫️</span>
+                    <span style={{ fontSize: "9px", color: "#8b90a7", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      미세먼지
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <div style={{ fontSize: "15px", fontWeight: 700, color: pm10Grade.color, fontFamily: "monospace" }}>
+                      {airQuality.pm10}
+                    </div>
+                    <span style={{
+                      fontSize: "11px",
+                      fontWeight: 600,
+                      color: pm10Grade.color,
+                      padding: "2px 6px",
+                      background: `${pm10Grade.color}30`,
+                      borderRadius: "4px",
+                      border: `1px solid ${pm10Grade.color}50`,
+                    }}>
+                      {pm10Grade.text}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
+            
+            {/* 초미세먼지 PM2.5 카드 */}
+            {airQuality && airQuality.pm25 !== null && (() => {
+              const pm25Grade = getPM25Grade(airQuality.pm25);
+              return (
+                <div style={{
+                  background: "rgba(56,189,248,0.05)",
+                  border: `1px solid ${pm25Grade.color}33`,
+                  borderRadius: "8px",
+                  padding: "6px 12px",
+                  minWidth: "100px",
+                  position: "relative",
+                  overflow: "hidden",
+                }}>
+                  <div style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: "2px",
+                    background: `linear-gradient(90deg, transparent, ${pm25Grade.color}, transparent)`,
+                    animation: "dataFlow 2s ease-in-out infinite 1.5s",
+                  }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
+                    <span style={{ fontSize: "11px" }}>💨</span>
+                    <span style={{ fontSize: "9px", color: "#8b90a7", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      초미세먼지
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <div style={{ fontSize: "15px", fontWeight: 700, color: pm25Grade.color, fontFamily: "monospace" }}>
+                      {airQuality.pm25}
+                    </div>
+                    <span style={{
+                      fontSize: "11px",
+                      fontWeight: 600,
+                      color: pm25Grade.color,
+                      padding: "2px 6px",
+                      background: `${pm25Grade.color}30`,
+                      borderRadius: "4px",
+                      border: `1px solid ${pm25Grade.color}50`,
+                    }}>
+                      {pm25Grade.text}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* 시계 */}

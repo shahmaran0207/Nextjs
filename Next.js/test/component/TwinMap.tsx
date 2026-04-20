@@ -10,6 +10,7 @@ import TwinLinkPanel from "@/component/dt/TwinLinkPanel";
 import TimeFilterPanel from "@/component/dt/panels/TimeFilterPanel";
 import DashboardPanel from "@/component/dt/panels/DashboardPanel";
 import RoadviewPanel from "@/component/dt/panels/RoadviewPanel";
+import WeatherHeader from "@/component/dt/WeatherHeader";
 import { TourismCarouselDisplay, ConstructionCarouselDisplay } from "@/component/CarouselInfoDisplay";
 import MapLegend from "@/component/MapLegend";
 import CctvPopup from "@/component/dt/popups/CctvPopup";
@@ -524,6 +525,9 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
       >
         {roadviewState.isOpen ? "🗺️" : "👁️"}
       </button>
+
+      {/* 날씨 헤더 */}
+      <WeatherHeader />
 
       {/* 내 위치로 이동 버튼 */}
       <button
