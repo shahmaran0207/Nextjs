@@ -264,7 +264,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
     // styleimagemissing 이벤트 리스너 등록 (스타일 로드 전에 등록)
     map.on('styleimagemissing', (e: any) => {
       const id = e.id;
-      
+
       // 존재하지 않는 이미지에 대해 투명 이미지 생성
       if (!map.hasImage(id)) {
         try {
@@ -296,10 +296,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
         const buildingLayer = map.getLayer('building-3d');
         if (buildingLayer) {
           map.setLayoutProperty('building-3d', 'visibility', 'visible');
-          console.log('✅ 3D 건물 레이어 활성화');
         }
-
-        console.log('✅ MapTiler 3D 지도 로드 완료');
       } catch (err) {
         console.warn('지도 레이어 설정 실패:', err);
       }

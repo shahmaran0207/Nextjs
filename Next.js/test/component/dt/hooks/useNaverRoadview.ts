@@ -21,7 +21,7 @@ export function useNaverRoadview({
   const [error, setError] = useState<string | null>(null);
   const [isAvailable, setIsAvailable] = useState(false);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
-  
+
   // 캐시 관리
   const cacheRef = useRef<RoadviewCache>({});
   const requestCountRef = useRef<{ [key: string]: number }>({});
@@ -32,9 +32,9 @@ export function useNaverRoadview({
 
     return new Promise<void>((resolve, reject) => {
       // 이미 로드되어 있는지 확인
-      if (window.naver && window.naver.maps && 
-          window.naver.maps.Panorama && 
-          window.naver.maps.Service) {
+      if ((window as any).naver && (window as any).naver.maps &&
+        (window as any).naver.maps.Panorama &&
+        (window as any).naver.maps.Service) {
         setIsScriptLoaded(true);
         resolve();
         return;
@@ -44,34 +44,34 @@ export function useNaverRoadview({
       // 로드뷰 사용을 위해 submodules=panorama,geocoder 추가
       script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID}&submodules=panorama,geocoder`;
       script.async = true;
-      
+
       script.onload = () => {
         // Panorama와 Service가 로드될 때까지 대기
         const checkModules = setInterval(() => {
-          if (window.naver && window.naver.maps && 
-              window.naver.maps.Panorama && 
-              window.naver.maps.Service) {
+          if ((window as any).naver && (window as any).naver.maps &&
+            (window as any).naver.maps.Panorama &&
+            (window as any).naver.maps.Service) {
             clearInterval(checkModules);
             setIsScriptLoaded(true);
             resolve();
           }
         }, 100);
-        
+
         // 5초 타임아웃
         setTimeout(() => {
           clearInterval(checkModules);
-          if (!window.naver?.maps?.Panorama || !window.naver?.maps?.Service) {
+          if (!(window as any).naver?.maps?.Panorama || !(window as any).naver?.maps?.Service) {
             setError("로드뷰 모듈을 로드할 수 없습니다");
             reject(new Error("Panorama or Service module not loaded"));
           }
         }, 5000);
       };
-      
+
       script.onerror = () => {
         setError("로드뷰를 로드할 수 없습니다");
         reject(new Error("Failed to load Naver Maps script"));
       };
-      
+
       document.head.appendChild(script);
     });
   }, [isScriptLoaded]);
@@ -91,8 +91,8 @@ export function useNaverRoadview({
       await loadNaverScript();
 
       // 로드뷰 인스턴스 생성
-      const roadview = new window.naver.maps.Panorama(container, {
-        position: new window.naver.maps.LatLng(35.1796, 129.0756), // 부산 기본 위치
+      const roadview = new (window as any).naver.maps.Panorama(container, {
+        position: new (window as any).naver.maps.LatLng(35.1796, 129.0756), // 부산 기본 위치
         pov: {
           pan: 0,
           tilt: 0,
@@ -100,18 +100,55 @@ export function useNaverRoadview({
         },
       });
 
-      // 위치 변경 이벤트 리스너
-      window.naver.maps.Event.addListener(roadview, "position_changed", () => {
-        const position = roadview.getPosition();
-        const pov = roadview.getPov();
-        
-        if (onPositionChange) {
-          onPositionChange(
-            { lat: position.lat(), lng: position.lng() },
-            pov.pan
-          );
-        }
+      // 위치 변경 이벤트 리스너 (여러 이벤트 시도)
+      const events = ['position_changed', 'pano_changed', 'pov_changed'];
+
+      // forEach 콜백 내부에서는 타입 narrowing이 보장되지 않으므로 로컬 변수로 추출
+      const naverMaps = window.naver?.maps;
+      if (!naverMaps) return;
+
+      events.forEach(eventName => {
+        naverMaps.Event.addListener(roadview, eventName, () => {
+          const position = roadview.getPosition();
+          const pov = roadview.getPov();
+
+          if (onPositionChange && eventName === 'pano_changed') {
+            // pano_changed는 실제 위치 이동 시 발생
+            onPositionChange(
+              { lat: position.lat(), lng: position.lng() },
+              pov.pan
+            );
+          }
+        });
       });
+
+      // 폴링으로 위치 변경 감지 (백업)
+      let lastPosition = roadview.getPosition();
+      const pollInterval = setInterval(() => {
+        const currentPosition = roadview.getPosition();
+        if (currentPosition && lastPosition &&
+          (Math.abs(currentPosition.lat() - lastPosition.lat()) > 0.00001 ||
+            Math.abs(currentPosition.lng() - lastPosition.lng()) > 0.00001)) {
+
+          console.log("🔄 폴링으로 위치 변경 감지:", {
+            lat: currentPosition.lat(),
+            lng: currentPosition.lng()
+          });
+
+          if (onPositionChange) {
+            const pov = roadview.getPov();
+            onPositionChange(
+              { lat: currentPosition.lat(), lng: currentPosition.lng() },
+              pov.pan
+            );
+          }
+
+          lastPosition = currentPosition;
+        }
+      }, 500); // 0.5초마다 체크
+
+      // 정리 함수 저장
+      (roadview as any)._pollInterval = pollInterval;
 
       setRoadviewInstance(roadview);
       setIsLoading(false);
@@ -137,37 +174,37 @@ export function useNaverRoadview({
         if (cacheRef.current[positionKey]) {
           // 캐시된 데이터 사용
           roadviewInstance.setPosition(
-            new window.naver.maps.LatLng(position.lat, position.lng)
+            new (window as any).naver.maps.LatLng(position.lat, position.lng)
           );
           setIsAvailable(true);
           if (onAvailabilityChange) onAvailabilityChange(true);
           setIsLoading(false);
-          
+
           // 요청 카운트는 증가하지 않음 (캐시 사용)
           return;
         }
 
         // 요청 카운트 증가
-        requestCountRef.current[positionKey] = 
+        requestCountRef.current[positionKey] =
           (requestCountRef.current[positionKey] || 0) + 1;
 
         // 로드뷰 위치 직접 설정 (네이버 API가 자동으로 가장 가까운 로드뷰 찾음)
-        const newPosition = new window.naver.maps.LatLng(position.lat, position.lng);
-        
+        const newPosition = new (window as any).naver.maps.LatLng(position.lat, position.lng);
+
         try {
           roadviewInstance.setPosition(newPosition);
-          
+
           // 위치 설정 후 실제 로드뷰 위치 확인
           setTimeout(() => {
             try {
               const actualPosition = roadviewInstance.getPosition();
               const panoId = roadviewInstance.getPanoId?.();
-              
+
               // panoId가 있으면 로드뷰 존재, 없으면 로드뷰 없음
               if (actualPosition && panoId) {
                 setIsAvailable(true);
                 if (onAvailabilityChange) onAvailabilityChange(true);
-                
+
                 // 캐시에 저장
                 cacheRef.current[positionKey] = {
                   position: actualPosition,
@@ -205,6 +242,10 @@ export function useNaverRoadview({
   useEffect(() => {
     return () => {
       if (roadviewInstance) {
+        // 폴링 인터벌 정리
+        if ((roadviewInstance as any)._pollInterval) {
+          clearInterval((roadviewInstance as any)._pollInterval);
+        }
         // 네이버 로드뷰는 자동으로 정리되므로 별도 destroy 불필요
         setRoadviewInstance(null);
       }
