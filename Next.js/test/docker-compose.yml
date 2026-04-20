@@ -1,0 +1,87 @@
+services:
+  nextjs-blue:
+    container_name: nextjs-blue
+    image: demo/nextjs-blue
+    build: .
+    networks:
+      - app_network
+    expose:
+      - 3000
+      - 3001
+    environment:
+      - DB_USER=Test
+      - DB_PASSWORD=Test
+      - DB_CONNECTIONSTRING=192.168.70.125:1521/XEPDB1
+      - NEXT_PUBLIC_KAKAO_MAP_KEY=1b890231fdd9e52518e28721a1a0c41b
+      - DATA_API_KEY=7e97a795ead263c77b2f8c1bdacc4302c63ea5e8cd183cbc7d5b8a634bb497c1
+      - VWORLD_API_KEY=140F48FB-80B8-3257-847D-BFBF02480F5E
+      - BUSAN_TRAFFIC_KEY=7e97a795ead263c77b2f8c1bdacc4302c63ea5e8cd183cbc7d5b8a634bb497c1
+      - NEXT_PUBLIC_MAPTILER_KEY=fKF8gmBWlA2Re9H6cfet
+      - RESEND_API_KEY=re_55BL1emV_Dus1ZtLhPZePxNTu1hyakeBA
+      - FROM_EAMIL=shahmaran0207@gmail.com
+      - BASE_URL=https://localhost
+      - MAIL_USER=shahmaran0207@gmail.com
+      - MAIL_PASS=ldxscghxbbeetmzt
+      - NAVER_CLIENT_ID=Vz3zKnV_t8XO4LffdQAv
+      - NAVER_CLIENT_SECRET=kaIbWP_ePx
+      - NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyBncwWG3zGMHnjlbAo9LrPhMoAY3BiJhG4
+      - NEXT_PUBLIC_FIREBASE_AUTH_DOAMIN=test-84d30.firebaseapp.com
+      - NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=test-84d30.firebasestorage.app
+      - NEXT_PUBLIC_FIREBASE_PROJECT_ID=test-84d30
+      - NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=344872807432
+      - NEXT_PUBLIC_FIREBASE_APP_ID=1:344872807432:web:e71d90d8420445ab8ef5bd
+      - NEXT_PUBLIC_FIREBASE_VALID_KEY=BHH67AeIZPv-TIxqFerSgnv0GdJQ5WTtVAjncu7GT1mtO4KcHQ-uIZEWnIwhr4mMCYS9_Wg2FmUwVAdaR6zwmec
+      - TDATA_API_KEY=a0204dcf-88d5-48dc-8d07-bbc9138ef312
+
+  nextjs-green:
+    container_name: nextjs-green
+    image: demo/nextjs-green
+    build: .
+    networks:
+      - app_network
+    expose:
+      - 3000
+      - 3001
+    environment:
+      - DB_USER=Test
+      - DB_PASSWORD=Test
+      - DB_CONNECTIONSTRING=192.168.70.125:1521/XEPDB1
+      - NEXT_PUBLIC_KAKAO_MAP_KEY=1b890231fdd9e52518e28721a1a0c41b
+      - DATA_API_KEY=7e97a795ead263c77b2f8c1bdacc4302c63ea5e8cd183cbc7d5b8a634bb497c1
+      - VWORLD_API_KEY=140F48FB-80B8-3257-847D-BFBF02480F5E
+      - BUSAN_TRAFFIC_KEY=7e97a795ead263c77b2f8c1bdacc4302c63ea5e8cd183cbc7d5b8a634bb497c1
+      - NEXT_PUBLIC_MAPTILER_KEY=fKF8gmBWlA2Re9H6cfet
+      - RESEND_API_KEY=re_55BL1emV_Dus1ZtLhPZePxNTu1hyakeBA
+      - FROM_EAMIL=shahmaran0207@gmail.com
+      - BASE_URL=https://localhost
+      - MAIL_USER=shahmaran0207@gmail.com
+      - MAIL_PASS=ldxscghxbbeetmzt
+      - NAVER_CLIENT_ID=Vz3zKnV_t8XO4LffdQAv
+      - NAVER_CLIENT_SECRET=kaIbWP_ePx
+      - NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyBncwWG3zGMHnjlbAo9LrPhMoAY3BiJhG4
+      - NEXT_PUBLIC_FIREBASE_AUTH_DOAMIN=test-84d30.firebaseapp.com
+      - NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=test-84d30.firebasestorage.app
+      - NEXT_PUBLIC_FIREBASE_PROJECT_ID=test-84d30
+      - NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=344872807432
+      - NEXT_PUBLIC_FIREBASE_APP_ID=1:344872807432:web:e71d90d8420445ab8ef5bd
+      - NEXT_PUBLIC_FIREBASE_VALID_KEY=BHH67AeIZPv-TIxqFerSgnv0GdJQ5WTtVAjncu7GT1mtO4KcHQ-uIZEWnIwhr4mMCYS9_Wg2FmUwVAdaR6zwmec    
+      - TDATA_API_KEY=a0204dcf-88d5-48dc-8d07-bbc9138ef312
+
+  nginx:
+    image: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx-current.conf:/etc/nginx/conf.d/service.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - nextjs-blue
+      - nextjs-green
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge

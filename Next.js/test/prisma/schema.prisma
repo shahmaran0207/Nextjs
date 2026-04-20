@@ -1,0 +1,208 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider          = "postgresql"
+}
+
+model chat {
+  id        Int     @id @default(autoincrement())
+  recepient String? @db.VarChar(1000)
+  sender    String? @db.VarChar(1000)
+  content   String? @db.VarChar(1000)
+  image     Bytes?
+}
+
+model link {
+  sectionid Int
+  linkid    String   @db.VarChar(100)
+  seq       Decimal? @db.Decimal
+
+  @@id([sectionid, linkid])
+}
+
+model post {
+  id        Int       @id @default(autoincrement())
+  title     String?   @db.VarChar(1000)
+  content   String?   @db.VarChar(1000)
+  createdat DateTime? @db.Timestamp(6)
+  updatedat DateTime? @db.Timestamp(6)
+  image     Bytes?
+  postview  Int?      @default(0)
+}
+
+model qna {
+  id        Int       @id @default(autoincrement())
+  title     String?   @db.VarChar(1000)
+  content   String?   @db.VarChar(1000)
+  createdat DateTime? @db.Timestamp(6)
+  image     Bytes?
+  qnaview   Int?      @default(0)
+  isend     Int?      @default(0)
+}
+
+model answer {
+  id          Int         @id @default(autoincrement())
+  title       String?     @db.VarChar(1000)
+  content     String?     @db.VarChar(1000)
+  createdat   DateTime?   @db.Timestamp(6)
+  image       Bytes?
+  questionid  Int?
+}
+
+model postcomment {
+  id             Int     @id @default(autoincrement())
+  postid         Int?
+  commenttitle   String? @db.VarChar(1000)
+  commentcontent String? @db.VarChar(1000)
+  commentwriter  String? @db.VarChar(100)
+}
+
+model commentbycomment {
+  id                   Int     @id @default(autoincrement())
+  upprcommentid        Int?
+  commenttitle         String? @db.VarChar(1000)
+  commentcontent       String? @db.VarChar(1000)
+  commentwriter        String? @db.VarChar(1000)
+  postid               Int?
+}
+
+model postlike {
+  id     Int     @id @default(autoincrement())
+  postid Int?
+  userid String? @db.VarChar(1000)
+}
+
+model questionlike {
+  id          Int     @id @default(autoincrement())
+  questionid  Int
+  userid      String  @db.VarChar(1000) 
+}
+
+model questionhate {
+  id          Int     @id @default(autoincrement())
+  questionid  Int
+  userid      String  @db.VarChar(1000)
+}
+
+model answerlike {
+  id          Int     @id @default(autoincrement())
+  questionid  Int
+  userid      String  @db.VarChar(1000)
+  answerid    Int
+}
+
+model answerhate {
+  id          Int   @id @default(autoincrement())
+  questoinid  Int
+  userid      String  @db.VarChar(1000)
+  answerid    Int
+}
+
+model posthate {
+  id Int @id @default(autoincrement())
+  postid Int?
+  userid String? @db.VarChar(1000)
+}
+
+model commentlike {
+  id          Int     @id @default(autoincrement())
+  commentid   Int?  
+  userid      String? @db.VarChar(1000)
+  postid      Int?
+}
+
+model commenthate {
+  id           Int     @id @default(autoincrement())
+  commentid    Int?
+  userid       String? @db.VarChar(1000)
+  postid       Int?
+}
+
+model road {
+  id        Int     @id @default(autoincrement())
+  roadname  String? @db.VarChar(600)
+}
+
+model section {
+  id          Int     @id @default(autoincrement())
+  linkid      String? @db.VarChar(4000)
+  roadid      Int?
+  sectionname String? @db.VarChar(100)
+}
+
+model users {
+  id       Int     @id(map: "users_pkey1") @default(autoincrement())
+  name     String? @db.VarChar(100)
+  naver_id String? @db.VarChar(3000)
+}
+
+// 수동 생성 테이블 — migrate 금지, generate만 사용
+// 실제 DB 컬럼: gid, emd_cd, col_adm_se, emd_nm, sgg_oid, geom(PostGIS MultiPolygon)
+model busanpolyline {
+  gid        Int     @id
+  emd_cd     String? @db.VarChar(5)
+  col_adm_se String? @db.VarChar(2)
+  emd_nm     String? @db.VarChar(50)
+  sgg_oid    Int?
+  geom       Unsupported("geometry(MultiPolygon, 4326)")?
+
+  @@ignore
+}
+
+model busan_construction {
+  gid              Int       @id
+  seq_no           BigInt?
+  project_name     String?
+  d_day            BigInt?
+  total_days       BigInt?
+  elapsed_days     BigInt?
+  progress_rate    Decimal?
+  plan_rate        Decimal?
+  achievement_rate Decimal?
+  field_code       String?   @db.VarChar(10)
+  location_text    String?
+  start_date       DateTime? @db.Date
+  end_date         DateTime? @db.Date
+  dept_code        String?   @db.VarChar(10)
+  contact          String?
+  budget_text      String?
+  lat              Decimal?
+  lon              Decimal?
+  geom             Unsupported("geometry(Point, 4326)")?
+
+  @@ignore
+}
+
+model busan_theme_travel {
+  gid             Int      @id
+  fid             BigInt?
+  content_id      BigInt?
+  content_name    String?
+  district_name   String?
+  category_name   String?
+  lat             Decimal?
+  lon             Decimal?
+  place_name      String?
+  title           String?
+  subtitle        String?
+  main_content    String?
+  address         String?
+  address_detail  String?
+  phone           String?
+  homepage        String?
+  transport_info  String?
+  operating_days  String?
+  closed_days     String?
+  operating_hours String?
+  fee_info        String?
+  notice_info     String?
+  image_url       String?
+  thumbnail_url   String?
+  detail_info     String?
+  geom            Unsupported("geometry(Point, 4326)")?
+
+  @@ignore
+}

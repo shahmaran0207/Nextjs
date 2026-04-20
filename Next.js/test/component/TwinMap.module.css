@@ -1,0 +1,280 @@
+/* 공통 패널 스타일 */
+.panel {
+  background: rgba(10, 14, 26, 0.92);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 12px;
+  padding: 12px 16px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* 컨테이너 스타일 */
+.mapContainer {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.deckglContainer {
+  position: relative;
+  z-index: 1;
+}
+
+.mapglContainer {
+  position: relative;
+  z-index: 0;
+}
+
+/* 패널 위치 스타일 */
+.topRightPanel {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 110;
+}
+
+.bottomRightPanel {
+  position: absolute;
+  bottom: 1.5rem;
+  right: 1rem;
+  z-index: 110;
+}
+
+/* 스크롤바 스타일 */
+.dtPanelScroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dtPanelScroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.dtPanelScroll::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.3);
+  border-radius: 3px;
+}
+
+.dtPanelScroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.5);
+}
+
+/* 툴팁 스타일 */
+.tooltip {
+  position: absolute;
+  background: rgba(10, 14, 26, 0.92);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #e8eaf0;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 200;
+  white-space: pre-line;
+  max-width: 220px;
+}
+
+/* 배너 스타일 */
+.banner {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 10px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 150;
+  backdrop-filter: blur(12px);
+  animation: dtFadeIn 0.2s ease-out;
+}
+
+.linkSelectBanner {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  color: #38bdf8;
+}
+
+/* 범례 컨테이너 */
+.legendContainer {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 1rem;
+  z-index: 100;
+  width: 240px;
+  max-height: calc(50vh - 2rem);
+  display: flex;
+  flex-direction: column;
+}
+
+.legendScrollArea {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.legendSection {
+  border-top: 1px solid rgba(56, 189, 248, 0.15);
+  margin-top: 10px;
+  padding-top: 8px;
+}
+
+.legendTitle {
+  color: #38bdf8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+  padding-bottom: 4px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.legendItemText {
+  color: #e8eaf0;
+  font-size: 11px;
+}
+
+.legendItemTextSmall {
+  color: #e8eaf0;
+  font-size: 10px;
+}
+
+/* 순환 카운터 공통 스타일 */
+.carouselCounter {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 10px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 150;
+  backdrop-filter: blur(12px);
+  min-width: 300px;
+}
+
+.carouselCounterTourism {
+  background: rgba(236, 72, 153, 0.15);
+  border: 1px solid rgba(236, 72, 153, 0.5);
+  color: #ec4899;
+  box-shadow: 0 4px 16px rgba(236, 72, 153, 0.3);
+}
+
+.carouselCounterConstruction {
+  background: rgba(249, 115, 22, 0.15);
+  border: 1px solid rgba(249, 115, 22, 0.5);
+  color: #f97316;
+  box-shadow: 0 4px 16px rgba(249, 115, 22, 0.3);
+}
+
+/* 순환 상세 정보 툴팁 공통 스타일 */
+.carouselTooltip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(80px, -50%);
+  background: rgba(10, 14, 26, 0.95);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: #e8eaf0;
+  font-size: 13px;
+  z-index: 200;
+  backdrop-filter: blur(16px);
+  min-width: 280px;
+  max-width: 320px;
+  pointer-events: none;
+}
+
+.carouselTooltipTourism {
+  border: 2px solid rgba(236, 72, 153, 0.6);
+  box-shadow: 0 8px 32px rgba(236, 72, 153, 0.4), 0 0 20px rgba(236, 72, 153, 0.2);
+}
+
+.carouselTooltipConstruction {
+  border: 2px solid rgba(249, 115, 22, 0.6);
+  box-shadow: 0 8px 32px rgba(249, 115, 22, 0.4), 0 0 20px rgba(249, 115, 22, 0.2);
+}
+
+.tooltipHeader {
+  font-size: 14px;
+  font-weight: 700;
+  padding-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tooltipHeaderTourism {
+  color: #ec4899;
+  border-bottom: 1px solid rgba(236, 72, 153, 0.3);
+}
+
+.tooltipHeaderConstruction {
+  color: #f97316;
+  border-bottom: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+.tooltipContent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tooltipItem {
+  font-size: 11px;
+}
+
+.tooltipItemTitle {
+  font-size: 12px;
+  color: #fbcfe8;
+}
+
+.tooltipItemSubtitle {
+  font-size: 11px;
+  color: #8b90a7;
+}
+
+.tooltipItemNormal {
+  color: #e8eaf0;
+}
+
+.tooltipItemMuted {
+  color: #8b90a7;
+}
+
+.tooltipItemSmall {
+  font-size: 10px;
+  color: #8b90a7;
+}
+
+.tooltipItemSuccess {
+  color: #4ade80;
+}
+
+.tooltipItemDanger {
+  color: #ef4444;
+}
+
+.tooltipItemWarning {
+  color: #fbbf24;
+}
+
+.tooltipItemProgress {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tooltipItemField {
+  font-size: 12px;
+  color: #fed7aa;
+}
