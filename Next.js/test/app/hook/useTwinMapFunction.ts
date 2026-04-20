@@ -86,24 +86,45 @@ export function useTwinMapFunction() {
   }, []);
 
   // ─── 링크 클릭 (테이블) → 지도 이동 ──────────────────────────
-  const handleLink = useCallback((linkId: string, busanLinkData: any) => {
+  const handleLink = useCallback(async (linkId: string, busanLinkData: any) => {
     setActiveLinkId(linkId);
-    const matched = busanLinkData?.features?.filter(
+    
+    // 먼저 현재 busanLinkData에서 찾기
+    let matched = busanLinkData?.features?.find(
       (f: any) => f.properties?.link_id === linkId
     );
-    if (!matched || matched.length === 0) return;
-
-    const geometry = matched[0].geometry;
-    // LineString: coordinates = [[lng, lat], [lng, lat], ...]
-    const coords = geometry.coordinates;
-    const [lng, lat] = coords[0];
-    setViewState(prev => ({
-      ...prev,
-      longitude: lng,
-      latitude: lat,
-      zoom: 15,
-      transitionDuration: 600,
-    }));
+    
+    if (!matched) {
+      // 현재 뷰포트에 없는 경우 - AllLink API로 전체 링크에서 찾기
+      try {
+        console.log("🔍 뷰포트 밖 링크 검색:", linkId);
+        const response = await fetch("/api/GIS/Busan/Link/AllLink");
+        if (response.ok) {
+          const allLinkData = await response.json();
+          matched = allLinkData.features?.find(
+            (f: any) => f.properties?.link_id === linkId
+          );
+        }
+      } catch (err) {
+        console.error("링크 검색 실패:", err);
+      }
+    }
+    
+    if (matched) {
+      const geometry = matched.geometry;
+      const coords = geometry.coordinates;
+      const [lng, lat] = coords[0];
+      console.log("📍 링크 위치로 이동:", linkId, [lng, lat]);
+      setViewState(prev => ({
+        ...prev,
+        longitude: lng,
+        latitude: lat,
+        zoom: 15,
+        transitionDuration: 600,
+      }));
+    } else {
+      console.warn("⚠️ 링크를 찾을 수 없습니다:", linkId);
+    }
   }, []);
 
   // ─── 링크 선택 모드 진입 ──────────────────────────────────────
