@@ -506,7 +506,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
           justifyContent: "center",
           fontSize: "24px",
           transition: "all 0.3s ease",
-          zIndex: 1001, // 로드뷰 패널(1000)보다 위에 표시
+          zIndex: 1001,
         }}
         aria-label={roadviewState.isOpen ? "로드뷰 패널 닫기" : "로드뷰 패널 열기"}
         onMouseEnter={(e) => {
@@ -523,6 +523,61 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
         }}
       >
         {roadviewState.isOpen ? "🗺️" : "👁️"}
+      </button>
+
+      {/* 내 위치로 이동 버튼 */}
+      <button
+        onClick={() => {
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                const { latitude, longitude } = position.coords;
+                setViewState(prev => ({
+                  ...prev,
+                  longitude,
+                  latitude,
+                  zoom: 15,
+                  transitionDuration: 600,
+                }));
+              },
+              (error) => {
+                console.error("위치 조회 실패:", error);
+                alert("위치 정보를 가져올 수 없습니다. 브라우저 설정을 확인해주세요.");
+              }
+            );
+          } else {
+            alert("이 브라우저는 위치 정보를 지원하지 않습니다.");
+          }
+        }}
+        style={{
+          position: "fixed",
+          bottom: "24px",
+          right: "92px",
+          width: "44px",
+          height: "44px",
+          borderRadius: "50%",
+          background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
+          border: "2px solid rgba(16, 185, 129, 0.4)",
+          boxShadow: "0 4px 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(16, 185, 129, 0.2)",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "20px",
+          transition: "all 0.3s ease",
+          zIndex: 1001,
+        }}
+        aria-label="내 위치로 이동"
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "scale(1.1)";
+          e.currentTarget.style.boxShadow = "0 6px 30px rgba(16, 185, 129, 0.6), 0 0 60px rgba(16, 185, 129, 0.3)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "scale(1)";
+          e.currentTarget.style.boxShadow = "0 4px 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(16, 185, 129, 0.2)";
+        }}
+      >
+        📍
       </button>
 
       {/* 왼쪽 상단: 도로 테이블 (독립) */}
