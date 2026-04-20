@@ -35,11 +35,14 @@ export function createPathLayer(
   highlightedLinkIds: Set<string>,
   activeLinkId: string | null,
   isLinkSelectModeRef: any,
-  handleLinkSelect: (lkId: string) => void
+  handleLinkSelect: (lkId: string, busanLinkData: any) => void,
+  busanLinkData: any,
+  selectableLinkIds: Set<string>
 ) {
 
   // Set을 배열로 변환하여 updateTriggers가 제대로 작동하도록
   const highlightedArray = Array.from(highlightedLinkIds);
+  const selectableArray = Array.from(selectableLinkIds);
 
   return new PathLayer({
     id: "path-layer",
@@ -55,6 +58,16 @@ export function createPathLayer(
         return [255, 215, 0, 200]; // 하이라이트 (같은 구역 내 기타 링크): 금색 (opacity 조절)
       }
 
+      // 링크 선택 모드일 때 선택 가능한 링크 표시
+      if (isLinkSelectModeRef.current && selectableLinkIds.has(d.lkId)) {
+        return [74, 222, 128, 180]; // 선택 가능: 밝은 초록색
+      }
+
+      // 링크 선택 모드일 때 선택 불가능한 링크는 어둡게
+      if (isLinkSelectModeRef.current) {
+        return [100, 100, 100, 80]; // 선택 불가: 어두운 회색
+      }
+
       const spd = trafficMap.get(d.lkId);
       return getSpeedRgba(spd);
     },
@@ -63,7 +76,14 @@ export function createPathLayer(
         return 10; // 가장 두껍게
       }
       const isHighlighted = highlightedLinkIds.has(d.lkId);
-      return isHighlighted ? 6 : 3.5;
+      if (isHighlighted) {
+        return 6;
+      }
+      // 링크 선택 모드일 때 선택 가능한 링크는 두껍게
+      if (isLinkSelectModeRef.current && selectableLinkIds.has(d.lkId)) {
+        return 5;
+      }
+      return 3.5;
     },
     widthUnits: 'pixels',
     widthMinPixels: 2,
@@ -74,13 +94,18 @@ export function createPathLayer(
     billboard: false,
     onClick: (info: any) => {
       if (info.object && isLinkSelectModeRef.current) {
-        handleLinkSelect(info.object.lkId);
+        // 선택 가능한 링크만 클릭 처리
+        if (selectableLinkIds.size === 0 || selectableLinkIds.has(info.object.lkId)) {
+          handleLinkSelect(info.object.lkId, busanLinkData);
+        } else {
+          console.log("선택 불가능한 링크 클릭 무시:", info.object.lkId);
+        }
       }
       return true;
     },
     updateTriggers: {
-      getColor: [highlightedArray, trafficMap.size, activeLinkId],
-      getWidth: [highlightedArray, activeLinkId],
+      getColor: [highlightedArray, trafficMap.size, activeLinkId, selectableArray],
+      getWidth: [highlightedArray, activeLinkId, selectableArray],
     },
   });
 }

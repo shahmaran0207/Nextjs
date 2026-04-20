@@ -12,13 +12,27 @@ export default async function DigitalTwinPage() {
   });
   const trafficData = trafficRes.ok ? await trafficRes.json() : [];
 
-  const [linkData, bitData, boundaryData, constructionData, themeTravelData] = await Promise.all([
-    getBusanLink(),
+  // 링크 데이터는 클라이언트에서 뷰포트 기반으로 동적 로딩
+  // const [linkData, bitData, boundaryData, constructionData, themeTravelData] = await Promise.all([
+  //   getBusanLink(),
+  //   getBusanBit(),
+  //   getBusanBoundary(),
+  //   getBusanConstruction(),
+  //   getBusanThemeTravel(),
+  // ]);
+
+  const [bitData, boundaryData, constructionData, themeTravelData] = await Promise.all([
     getBusanBit(),
     getBusanBoundary(),
     getBusanConstruction(),
     getBusanThemeTravel(),
   ]);
+
+  // 초기 링크 데이터는 빈 GeoJSON (클라이언트에서 동적 로딩)
+  const linkData = {
+    type: "FeatureCollection",
+    features: [],
+  };
 
   return (
     <TwinMap
@@ -30,4 +44,4 @@ export default async function DigitalTwinPage() {
       themeTravelData={themeTravelData}
     />
   );
-}
+}

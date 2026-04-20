@@ -78,7 +78,7 @@ export default function TwinLinkPanel({
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
                 <thead style={{ position: "sticky", top: 0, background: "rgba(10, 14, 26, 0.95)", zIndex: 1 }}>
                   <tr>
-                    <th style={{ color: "#8b90a7", padding: "4px 6px", textAlign: "left", borderBottom: "1px solid rgba(255,255,255,0.07)", fontWeight: 600 }}>구역ID</th>
+                    <th style={{ color: "#8b90a7", padding: "4px 6px", textAlign: "left", borderBottom: "1px solid rgba(255,255,255,0.07)", fontWeight: 600 }}>순서</th>
                     <th style={{ color: "#8b90a7", padding: "4px 6px", textAlign: "left", borderBottom: "1px solid rgba(255,255,255,0.07)", fontWeight: 600 }}>링크ID</th>
                   </tr>
                 </thead>
@@ -89,7 +89,7 @@ export default function TwinLinkPanel({
                       style={{ cursor: "pointer" }}
                       onClick={() => handleLink(link.linkid)}
                     >
-                      <td style={{ color: "#8b90a7", padding: "5px 6px" }}>{link.sectionid}</td>
+                      <td style={{ color: "#8b90a7", padding: "5px 6px" }}>{link.seq}</td>
                       <td style={{ color: "#38bdf8", padding: "5px 6px", fontFamily: "monospace", fontSize: "11px" }}>{link.linkid}</td>
                     </tr>
                   ))}

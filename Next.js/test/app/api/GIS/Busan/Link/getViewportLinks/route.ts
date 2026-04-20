@@ -1,44 +1,35 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 /**
- * @swagger
- * /api/GIS/Busan/Link/AllLink:
- *   get:
- *     summary: 부산 표준링크 전체 조회 (뷰포트 기반)
- *     tags: [GIS - Busan]
- *     parameters:
- *       - in: query
- *         name: minLng
- *         schema:
- *           type: number
- *       - in: query
- *         name: maxLng
- *         schema:
- *           type: number
- *       - in: query
- *         name: minLat
- *         schema:
- *           type: number
- *       - in: query
- *         name: maxLat
- *         schema:
- *           type: number
- *     responses:
- *       200:
- *         description: 성공
+ * 뷰포트 기반 표준링크 데이터 가져오기
+ * GET /api/GIS/Busan/Link/getViewportLinks?minLng=129.0&maxLng=129.2&minLat=35.1&maxLat=35.3&zoom=12
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     
-    // 쿼리 파라미터 (없으면 부산 전체 영역)
+    // 쿼리 파라미터 파싱
     const minLng = parseFloat(searchParams.get("minLng") || "128.8");
     const maxLng = parseFloat(searchParams.get("maxLng") || "129.3");
     const minLat = parseFloat(searchParams.get("minLat") || "34.9");
     const maxLat = parseFloat(searchParams.get("maxLat") || "35.4");
+    const zoom = parseInt(searchParams.get("zoom") || "12");
 
-    // PostGIS 공간 쿼리로 해당 영역의 링크만 가져오기
+    // 줌 레벨에 따른 도로 등급 필터링
+    // 줌이 낮을수록 주요 도로만 표시
+    let roadRankFilter = "";
+    if (zoom < 11) {
+      // 고속도로, 국도만
+      roadRankFilter = "AND road_rank IN ('101', '102', '103', '104', '105', '106')";
+    } else if (zoom < 13) {
+      // 고속도로, 국도, 지방도
+      roadRankFilter = "AND road_rank IN ('101', '102', '103', '104', '105', '106', '107')";
+    }
+    // zoom >= 13: 모든 도로 표시
+
+    // PostGIS ST_Intersects를 사용한 공간 쿼리
+    // BOX를 만들어서 해당 영역과 교차하는 링크만 가져오기
     // LEFT JOIN으로 from/to 노드 좌표도 함께 가져오기
     const query = `
       SELECT 
@@ -61,7 +52,8 @@ export async function GET(request: Request) {
       LEFT JOIN test.busan_standard_node fn ON l.f_node = fn.node_id
       LEFT JOIN test.busan_standard_node tn ON l.t_node = tn.node_id
       WHERE l.geom && ST_MakeEnvelope($1, $2, $3, $4, 4326)
-      LIMIT 50000
+      ${roadRankFilter}
+      LIMIT 10000
     `;
 
     const result: any[] = await prisma.$queryRawUnsafe(
@@ -93,9 +85,37 @@ export async function GET(request: Request) {
       geometry: JSON.parse(row.geom_json),
     }));
 
-    return NextResponse.json({ features });
+    const geojson = {
+      type: "FeatureCollection",
+      features,
+    };
+
+    console.log(`[getViewportLinks] 반환: ${features.length}개 링크`);
+    if (features.length > 0) {
+      console.log("[getViewportLinks] 첫 번째 feature:", features[0]);
+    }
+
+    return NextResponse.json(geojson, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "public, max-age=3600", // 1시간 캐싱
+      },
+    });
   } catch (err: any) {
-    console.error("표준링크 조회 API 에러:", err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("뷰포트 링크 조회 API 에러:", err);
+    console.error("에러 상세:", {
+      message: err.message,
+      stack: err.stack,
+      name: err.name,
+    });
+    return NextResponse.json(
+      { 
+        error: err.message,
+        details: err.stack,
+        type: err.name,
+      },
+      { status: 500 }
+    );
   }
 }

@@ -24,6 +24,7 @@ import { useCategoryFilter } from "@/hooks/useCategoryFilter";
 import { ConstructionPoint, ThemeTravelPoint } from "@/component/dt/modules/DashboardStatsModule";
 import { useTwinClusters } from "@/component/dt/hooks/useTwinClusters";
 import { useTwinTooltip } from "@/component/dt/hooks/useTwinTooltip";
+import { useViewportLinks } from "@/component/dt/hooks/useViewportLinks";
 import { useTwinCarousels } from "@/component/dt/hooks/useTwinCarousels";
 import { DISTRICT_COORDINATES } from "@/component/dt/constants/districtCoordinates";
 import { DistrictBoundary } from "@/types/ui-ux";
@@ -70,9 +71,36 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
     highlightedLinkIds, existingLinkIdsRef, handleRoad,
     handleSection, handleLink, handleLinkSelect, enterLinkSelectMode,
     clearAllHighlights, showTrafficOnly, saveLinks, activeLinkId,
+    getSelectableLinkIds,
   } = useTwinMapFunction();
 
-  const [busanLinkData] = useState(initLinkData);
+  const [busanLinkData, setBusanLinkData] = useState(initLinkData);
+  const [allLinksData, setAllLinksData] = useState<any>(null); // 링크 선택 모드용 전체 링크 데이터
+  
+  // 뷰포트 기반 동적 링크 로딩 (링크 선택 모드가 아닐 때만)
+  const { linkData: viewportLinkData, isLoading: isLinksLoading } = useViewportLinks({
+    viewState,
+    enabled: !isLinkSelectMode, // 링크 선택 모드일 때는 비활성화
+  });
+
+  // 뷰포트 링크 데이터가 로드되면 업데이트 (링크 선택 모드가 아닐 때만)
+  useEffect(() => {
+    if (viewportLinkData && !isLinkSelectMode) {
+      console.log("=== 뷰포트 링크 데이터 ===");
+      console.log("총 링크 수:", viewportLinkData.features?.length || 0);
+      setBusanLinkData(viewportLinkData);
+    }
+  }, [viewportLinkData, isLinkSelectMode]);
+
+  // 링크 선택 모드일 때는 전체 링크 데이터 사용
+  useEffect(() => {
+    if (isLinkSelectMode && allLinksData) {
+      console.log("=== 링크 선택 모드: 전체 링크 사용 ===");
+      console.log("총 링크 수:", allLinksData.features?.length || 0);
+      setBusanLinkData(allLinksData);
+    }
+  }, [isLinkSelectMode, allLinksData]);
+
   const isLinkSelectModeState = useRef(isLinkSelectMode);
 
   // CCTV 상태
@@ -320,21 +348,39 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
   const trafficMap = new Map<string, number>();
   trafficData.forEach((item: any) => trafficMap.set(item.lkId, item.spd));
 
+  // ─── 선택 가능한 링크 ID 계산 ──────────────────────────────────
+  const selectableLinkIds = useMemo(() => {
+    if (!isLinkSelectMode) return new Set<string>();
+    return getSelectableLinkIds(selectedLinks, busanLinkData);
+  }, [isLinkSelectMode, selectedLinks, busanLinkData, getSelectableLinkIds]);
+
   // ─── PathLayer 데이터 빌드 ────────────────────────────────────
-  const pathData = (busanLinkData?.features ?? []).flatMap((feature: any) => {
+  const pathData = (busanLinkData?.features ?? []).map((feature: any) => {
     const lkId: string = feature.properties?.link_id ?? "";
     const coords = feature.geometry?.coordinates ?? [];
 
-    // MultiLineString의 각 LineString을 개별 경로로 변환
-    return coords.map((line: number[][]) => ({
+    // LineString: coordinates = [[lng, lat], [lng, lat], ...]
+    return {
       lkId,
-      path: line, // 이미 [lng, lat] 형식이므로 그대로 사용
-    }));
+      path: coords, // 이미 [lng, lat] 형식의 배열
+    };
   });
+
+  // pathData 로그 (첫 로드 시에만)
+  useEffect(() => {
+    if (pathData.length > 0) {
+      console.log("=== PathLayer 데이터 ===");
+      console.log("총 경로 수:", pathData.length);
+      console.log("첫 번째 경로:", pathData[0]);
+      console.log("첫 번째 경로의 path 타입:", Array.isArray(pathData[0].path) ? "배열" : typeof pathData[0].path);
+      console.log("첫 번째 경로의 path 길이:", pathData[0].path?.length);
+      console.log("첫 번째 경로의 첫 좌표:", pathData[0].path?.[0]);
+    }
+  }, [pathData.length]);
 
   // ─── 레이어 생성 ──────────────────────────────────────────────
   const boundaryLayer = createBoundaryLayer(boundaryData);
-  const pathLayer = createPathLayer(pathData, trafficMap, highlightedLinkIds, activeLinkId, isLinkSelectModeRef, handleLinkSelect);
+  const pathLayer = createPathLayer(pathData, trafficMap, highlightedLinkIds, activeLinkId, isLinkSelectModeRef, handleLinkSelect, busanLinkData, selectableLinkIds);
   // isCctvOnly 모드 시 CCTV 레이어만 표시 (다른 마커 숨김)
   const bitLayers = isCctvOnly ? [] : createBitClusterLayers(bitClusters);
   const constructionLayers = isCctvOnly ? [] : createConstructionClusterLayers(constructionClusters);
@@ -382,7 +428,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
         style={{ position: 'relative', zIndex: '1' }}
       >
         <MapGL
-          mapStyle={`https://api.maptiler.com/maps/basic-v2-dark/style.json?key=${process.env.NEXT_PUBLIC_MAPTILER_KEY}`}
+          mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
           interactiveLayerIds={[]} // MapLibre 레이어의 클릭 이벤트 비활성화
           style={{ position: 'relative', zIndex: '0' }}
           onLoad={handleMapLoad}
@@ -539,7 +585,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
             isLinkSelectMode={isLinkSelectMode}
             selectedLinks={selectedLinks}
             existingLinkIds={existingLinkIdsRef.current}
-            enterLinkSelectMode={() => enterLinkSelectMode(busanLinkData)}
+            enterLinkSelectMode={() => enterLinkSelectMode(busanLinkData, setAllLinksData)}
             handleLink={(id) => handleLink(id, busanLinkData)}
             clearAllHighlights={clearAllHighlights}
             saveLinks={saveLinks}

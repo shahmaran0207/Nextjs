@@ -206,3 +206,48 @@ model busan_theme_travel {
 
   @@ignore
 }
+
+model busan_standard_node {
+  fid        Int    @id @default(autoincrement())
+  node_id    String? @db.VarChar(10)
+  node_type  String? @db.VarChar(3)
+  node_name  String? @db.VarChar(50)
+  turn_p     String? @db.VarChar(1)
+  updatedate String? @db.VarChar(8)
+  remark     String? @db.VarChar(30)
+  hist_type  String? @db.VarChar(8)
+  histremark String? @db.VarChar(30)
+  geom       Unsupported("geometry(Point, 4326)")?
+
+  @@map("busan_standard_node")
+  @@schema("test")
+}
+
+model busan_standard_link {
+  fid        Int    @id @default(autoincrement())
+  link_id    String? @db.VarChar(10)
+  f_node     String? @db.VarChar(10)
+  t_node     String? @db.VarChar(10)
+  lanes      BigInt?
+  road_rank  String? @db.VarChar(3)
+  road_type  String? @db.VarChar(3)
+  road_no    String? @db.VarChar(5)
+  road_name  String? @db.VarChar(30)
+  road_use   String? @db.VarChar(1)
+  multi_link String? @db.VarChar(1)
+  connect    String? @db.VarChar(3)
+  max_spd    BigInt?
+  rest_veh   String? @db.VarChar(3)
+  rest_w     BigInt?
+  rest_h     BigInt?
+  c_its      String? @db.VarChar(1)
+  length     Float?
+  updatedate String? @db.VarChar(8)
+  remark     String? @db.VarChar(30)
+  hist_type  String? @db.VarChar(8)
+  histremark String? @db.VarChar(30)
+  geom       Unsupported("geometry(LineString, 4326)")?
+
+  @@map("busan_standard_link")
+  @@schema("test")
+}
