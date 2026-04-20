@@ -7,8 +7,23 @@ import { NextResponse } from "next/server";
 export async function GET() {
   try {
     const now = new Date();
-    const baseDate = now.toISOString().slice(0, 10).replace(/-/g, "");
-    const hours = now.getHours().toString().padStart(2, "0");
+
+    // KST(UTC+9) 기준으로 날짜/시간 계산
+    const kstOffset = 9 * 60 * 60 * 1000;
+    const kstNow = new Date(now.getTime() + kstOffset);
+
+    // 기상청 초단기실황은 매시 40분 이후 해당 시각 데이터가 발표됨
+    // 40분 이전이면 1시간 전 데이터를 요청
+    const minutes = kstNow.getUTCMinutes();
+    if (minutes < 40) {
+      kstNow.setUTCHours(kstNow.getUTCHours() - 1);
+    }
+
+    const year = kstNow.getUTCFullYear();
+    const month = String(kstNow.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(kstNow.getUTCDate()).padStart(2, "0");
+    const baseDate = `${year}${month}${day}`;
+    const hours = String(kstNow.getUTCHours()).padStart(2, "0");
     const baseTime = `${hours}00`;
 
     // 부산시청 좌표
