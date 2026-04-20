@@ -261,42 +261,47 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
     const map = event.target;
     mapRef.current = map;
 
-    // 스타일이 완전히 로드된 후 빈 이미지 등록
-    map.once('styledata', () => {
-      try {
-        // 빈 문자열 이미지를 미리 등록하여 경고 방지
-        const emptyImageIds = ['', ' ', '  '];
-        emptyImageIds.forEach(id => {
-          if (map.hasImage && !map.hasImage(id)) {
-            const size = 1;
-            map.addImage(id, {
-              width: size,
-              height: size,
-              data: new Uint8Array(size * size * 4)
-            });
-          }
-        });
-      } catch (err) {
-        // 무시
-      }
-    });
-
-    // styleimagemissing 이벤트 리스너 등록
+    // styleimagemissing 이벤트 리스너 등록 (스타일 로드 전에 등록)
     map.on('styleimagemissing', (e: any) => {
       const id = e.id;
-
+      
       // 존재하지 않는 이미지에 대해 투명 이미지 생성
-      if (map.hasImage && !map.hasImage(id)) {
+      if (!map.hasImage(id)) {
         try {
           const size = 64;
+          const data = new Uint8Array(size * size * 4);
+          // 완전 투명 이미지
+          for (let i = 0; i < data.length; i += 4) {
+            data[i] = 0;     // R
+            data[i + 1] = 0; // G
+            data[i + 2] = 0; // B
+            data[i + 3] = 0; // A (투명)
+          }
           map.addImage(id, {
             width: size,
             height: size,
-            data: new Uint8Array(size * size * 4)
+            data: data
           });
         } catch (err) {
           // 무시
         }
+      }
+    });
+
+    // 스타일이 완전히 로드된 후 3D 건물 활성화
+    map.once('styledata', () => {
+      try {
+        // MapTiler 스타일에 이미 3D 건물이 포함되어 있음
+        // 3D 건물 레이어의 가시성 확인 및 조정
+        const buildingLayer = map.getLayer('building-3d');
+        if (buildingLayer) {
+          map.setLayoutProperty('building-3d', 'visibility', 'visible');
+          console.log('✅ 3D 건물 레이어 활성화');
+        }
+
+        console.log('✅ MapTiler 3D 지도 로드 완료');
+      } catch (err) {
+        console.warn('지도 레이어 설정 실패:', err);
       }
     });
   };
@@ -412,8 +417,8 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
         style={{ position: 'relative', zIndex: '1' }}
       >
         <MapGL
-          mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-          interactiveLayerIds={[]} // MapLibre 레이어의 클릭 이벤트 비활성화
+          mapStyle={`https://api.maptiler.com/maps/streets-v2-dark/style.json?key=fKF8gmBWlA2Re9H6cfet`}
+          interactiveLayerIds={[]}
           style={{ position: 'relative', zIndex: '0' }}
           onLoad={handleMapLoad}
         >
