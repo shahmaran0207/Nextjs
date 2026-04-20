@@ -81,7 +81,7 @@ export async function GET() {
     console.error("[Traffic API] 에러:", err.message);
     // 캐시가 있으면 만료됐더라도 반환 (graceful degradation)
     if (_cache) {
-      console.log(`[Traffic API] 에러 발생 - 만료된 캐시 반환 (${_cache.data.length}개)`);
+      console.error(`[Traffic API] 에러 발생 - 만료된 캐시 반환 (${_cache.data.length}개)`);
       return Response.json(_cache.data);
     }
     return Response.json({ error: err.message }, { status: 500 });

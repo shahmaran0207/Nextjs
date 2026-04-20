@@ -14,31 +14,31 @@ function getDistanceMeters(
     lat2: number, lng2: number
 ): number {
     const R = 6371000;
-    const dLat = ((lat2-lat1) * Math.PI) / 180;
-    const dLng = ((lng2-lng1) * Math.PI) / 180;
-    const a = 
-        Math.sin(dLat / 2) ** 2+
-        Math.cos((lat1 * Math.PI)/180) *
-        Math.cos((lat2 * Math.PI)/180) *
-        Math.sin(dLng/2) **2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLng = ((lng2 - lng1) * Math.PI) / 180;
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
 const MOVE_THRESHOLD_METERS = 500;
-const FETCH_RADIUS_METERS=10000;
+const FETCH_RADIUS_METERS = 10000;
 
 export function useCrossRoad() {
-    const [ crossRoads, setCrossRoads ] = useState<CrossRoadItem[]>([]);
-    const [ loading, setLoading ] = useState(false);
+    const [crossRoads, setCrossRoads] = useState<CrossRoadItem[]>([]);
+    const [loading, setLoading] = useState(false);
 
-    const lastFetchCenter = useRef<{lat: number; lng: number } | null>(null);
+    const lastFetchCenter = useRef<{ lat: number; lng: number } | null>(null);
 
     const fetchIfMoved = useCallback(async (lat: number, lng: number) => {
         const prev = lastFetchCenter.current;
 
         if (prev) {
             const dist = getDistanceMeters(prev.lat, prev.lng, lat, lng);
-            if(dist < MOVE_THRESHOLD_METERS) return;
+            if (dist < MOVE_THRESHOLD_METERS) return;
         };
 
         lastFetchCenter.current = { lat, lng };
@@ -60,12 +60,11 @@ export function useCrossRoad() {
                 .filter((item: CrossRoadItem) =>
                     getDistanceMeters(lat, lng, item.mapCtptIntLat, item.mapCtptIntLot) <= FETCH_RADIUS_METERS
                 );
-            console.log('filtered result:', filtered.length);
             setCrossRoads(filtered);
         } finally {
             setLoading(false);
         }
     }, []);
 
-    return { crossRoads, loading, fetchIfMoved};
+    return { crossRoads, loading, fetchIfMoved };
 }

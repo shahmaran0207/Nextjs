@@ -76,7 +76,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
 
   const [busanLinkData, setBusanLinkData] = useState(initLinkData);
   const [allLinksData, setAllLinksData] = useState<any>(null); // 링크 선택 모드용 전체 링크 데이터
-  
+
   // 뷰포트 기반 동적 링크 로딩 (링크 선택 모드가 아닐 때만)
   const { linkData: viewportLinkData, isLoading: isLinksLoading } = useViewportLinks({
     viewState,
@@ -86,8 +86,6 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
   // 뷰포트 링크 데이터가 로드되면 업데이트 (링크 선택 모드가 아닐 때만)
   useEffect(() => {
     if (viewportLinkData && !isLinkSelectMode) {
-      console.log("=== 뷰포트 링크 데이터 ===");
-      console.log("총 링크 수:", viewportLinkData.features?.length || 0);
       setBusanLinkData(viewportLinkData);
     }
   }, [viewportLinkData, isLinkSelectMode]);
@@ -95,8 +93,6 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
   // 링크 선택 모드일 때는 전체 링크 데이터 사용
   useEffect(() => {
     if (isLinkSelectMode && allLinksData) {
-      console.log("=== 링크 선택 모드: 전체 링크 사용 ===");
-      console.log("총 링크 수:", allLinksData.features?.length || 0);
       setBusanLinkData(allLinksData);
     }
   }, [isLinkSelectMode, allLinksData]);
@@ -188,29 +184,29 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
   const handleMapClick = (info: any) => {
     // 링크 선택 모드일 때는 로드뷰 클릭 무시
     if (isLinkSelectModeState.current) return;
-    
+
     // 로드뷰가 열려있지 않으면 클릭 무시 (토글 버튼으로만 열기)
     if (!roadviewState.isOpen) return;
-    
+
     // 다른 레이어 클릭 시 로드뷰 클릭 무시
     if (info.layer?.id && !info.layer.id.includes('boundary')) return;
-    
+
     if (!info.coordinate) return;
-    
+
     const [lng, lat] = info.coordinate;
-    
+
     // 부산 지역 좌표 유효성 검증 (대략적인 범위)
     if (lat < 34.8 || lat > 35.4 || lng < 128.7 || lng > 129.3) {
       console.warn('Clicked position is outside Busan area');
       return;
     }
-    
+
     // 로드뷰 위치만 변경 (이미 열려있으므로)
     setRoadviewState(prev => ({
       ...prev,
       position: { lat, lng },
     }));
-    
+
     // 마커 표시
     setRoadviewMarker({ lat, lng });
   };
@@ -219,7 +215,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
   const toggleRoadviewPanel = () => {
     setRoadviewState(prev => {
       const newIsOpen = !prev.isOpen;
-      
+
       // 패널을 열 때 기본 위치 설정 (부산역)
       if (newIsOpen && !prev.position) {
         const defaultPosition = { lat: 35.1796, lng: 129.0756 };
@@ -230,7 +226,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
           position: defaultPosition,
         };
       }
-      
+
       return {
         ...prev,
         isOpen: newIsOpen,
@@ -245,7 +241,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
       position: newPosition,
       direction,
     }));
-    
+
     setRoadviewMarker(newPosition);
   };
 
@@ -264,7 +260,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
   const handleMapLoad = (event: any) => {
     const map = event.target;
     mapRef.current = map;
-    
+
     // 스타일이 완전히 로드된 후 빈 이미지 등록
     map.once('styledata', () => {
       try {
@@ -284,11 +280,11 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
         // 무시
       }
     });
-    
+
     // styleimagemissing 이벤트 리스너 등록
     map.on('styleimagemissing', (e: any) => {
       const id = e.id;
-      
+
       // 존재하지 않는 이미지에 대해 투명 이미지 생성
       if (map.hasImage && !map.hasImage(id)) {
         try {
@@ -365,18 +361,6 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
       path: coords, // 이미 [lng, lat] 형식의 배열
     };
   });
-
-  // pathData 로그 (첫 로드 시에만)
-  useEffect(() => {
-    if (pathData.length > 0) {
-      console.log("=== PathLayer 데이터 ===");
-      console.log("총 경로 수:", pathData.length);
-      console.log("첫 번째 경로:", pathData[0]);
-      console.log("첫 번째 경로의 path 타입:", Array.isArray(pathData[0].path) ? "배열" : typeof pathData[0].path);
-      console.log("첫 번째 경로의 path 길이:", pathData[0].path?.length);
-      console.log("첫 번째 경로의 첫 좌표:", pathData[0].path?.[0]);
-    }
-  }, [pathData.length]);
 
   // ─── 레이어 생성 ──────────────────────────────────────────────
   const boundaryLayer = createBoundaryLayer(boundaryData);
@@ -507,7 +491,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
           width: "56px",
           height: "56px",
           borderRadius: "50%",
-          background: roadviewState.isOpen 
+          background: roadviewState.isOpen
             ? "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)"
             : "linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%)",
           border: "2px solid rgba(56, 189, 248, 0.4)",

@@ -11,11 +11,11 @@ export async function POST(request: NextRequest) {
 
     try {
         const dupCheck = await prisma.users.findFirst({
-            where: { name: String(name)},
+            where: { name: String(name) },
         });
 
-        if(dupCheck) {
-            return NextResponse.json({error: "이미 사용중인 닉네임입니다."}, { status: 500});
+        if (dupCheck) {
+            return NextResponse.json({ error: "이미 사용중인 닉네임입니다." }, { status: 500 });
         };
 
         await prisma.users.create({
@@ -25,10 +25,10 @@ export async function POST(request: NextRequest) {
             },
         });
 
-        return NextResponse.json({ ok: true});
-    } catch(err: any) {
-        console.log("계정 등록 API 에러:::::::", err);
-        return NextResponse.json({ error: err.message}, { status: 500});
+        return NextResponse.json({ ok: true });
+    } catch (err: any) {
+        console.error("계정 등록 API 에러:::::::", err);
+        return NextResponse.json({ error: err.message }, { status: 500 });
     }
-    
+
 }

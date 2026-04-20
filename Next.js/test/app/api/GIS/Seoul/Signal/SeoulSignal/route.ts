@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
- 
+
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const itstId = searchParams.get("itstId");
 
-    if(!itstId) {
-        return NextResponse.json({error: "itstId is required"}, { status: 400});
+    if (!itstId) {
+        return NextResponse.json({ error: "itstId is required" }, { status: 400 });
     };
 
     const url = new URL(
@@ -23,15 +23,14 @@ export async function GET(request: Request) {
         const data = await res.json();
 
         const item = data?.body?.items?.[0] ?? null;
-        console.log('signal API response for', itstId, ':', res.status, JSON.stringify(data).slice(0, 300));
 
         return Response.json({ item });
     } catch (err) {
         console.error("TOD Signal API error::::::", err);
         return NextResponse.json(
-            {error: "Failed to Ftech TOD signal data"},
-            { status: 500}
+            { error: "Failed to Ftech TOD signal data" },
+            { status: 500 }
         );
     }
-    
+
 }

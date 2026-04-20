@@ -119,15 +119,13 @@ export function useTwinMapFunction() {
     setActiveLinkId(null);
 
     // 링크 선택 모드에서는 AllLink API로 전체 링크 가져오기
-    console.log("🔗 링크 선택 모드: AllLink API 호출 시작");
     try {
       const response = await fetch("/api/GIS/Busan/Link/AllLink");
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       const allLinkData = await response.json();
-      console.log("✅ AllLink 데이터 로드 완료:", allLinkData.features?.length, "개");
-      
+
       // 전체 링크 데이터를 상태로 저장 (TwinMap에서 사용)
       setAllLinksData(allLinkData);
     } catch (err) {
@@ -156,20 +154,14 @@ export function useTwinMapFunction() {
 
   // ─── 선택 가능한 링크 ID 계산 ──────────────────────────────────
   const getSelectableLinkIds = useCallback((selectedLinks: any[], busanLinkData: any): Set<string> => {
-    console.log("=== getSelectableLinkIds 호출 ===");
-    console.log("selectedLinks:", selectedLinks);
-    console.log("busanLinkData features 수:", busanLinkData?.features?.length);
-
     // 링크가 하나도 선택되지 않았으면 모든 링크 선택 가능
     if (selectedLinks.length === 0) {
-      console.log("선택된 링크 없음 → 모든 링크 선택 가능");
       return new Set(busanLinkData?.features?.map((f: any) => f.properties?.link_id) || []);
     }
 
     // 마지막 선택된 링크의 노드 정보
     const lastLink = selectedLinks[selectedLinks.length - 1];
-    console.log("마지막 링크:", lastLink);
-    
+
     const lastFeature = busanLinkData?.features?.find(
       (f: any) => f.properties?.link_id === lastLink.linkid
     );
@@ -182,11 +174,10 @@ export function useTwinMapFunction() {
     const lastProps = lastFeature.properties;
     const lastFNode = lastProps.f_node;
     const lastTNode = lastProps.t_node;
-    console.log("마지막 링크 노드:", { f_node: lastFNode, t_node: lastTNode });
 
     // 연결 가능한 링크 필터링
     const selectableIds = new Set<string>();
-    
+
     busanLinkData?.features?.forEach((feature: any) => {
       const props = feature.properties;
       const linkId = props.link_id;
@@ -209,9 +200,6 @@ export function useTwinMapFunction() {
       }
     });
 
-    console.log("선택 가능한 링크 수:", selectableIds.size);
-    console.log("선택 가능한 링크 ID (처음 5개):", Array.from(selectableIds).slice(0, 5));
-
     return selectableIds;
   }, []);
 
@@ -221,7 +209,7 @@ export function useTwinMapFunction() {
 
     setSelectedLinks(prev => {
       const exists = prev.find(l => l.linkid === linkId);
-      
+
       // 이미 선택된 링크를 클릭하면 제거
       if (exists) {
         const next = prev.filter(l => l.linkid !== linkId).map((l, i) => ({ ...l, seq: i + 1 }));
@@ -236,7 +224,7 @@ export function useTwinMapFunction() {
         const clickedFeature = busanLinkData?.features?.find(
           (f: any) => f.properties?.link_id === linkId
         );
-        
+
         if (!clickedFeature) {
           console.warn("링크 정보를 찾을 수 없습니다:", linkId);
           return prev;
@@ -274,12 +262,6 @@ export function useTwinMapFunction() {
           console.warn("❌ 연결되지 않은 링크 - 선택 무시");
           return prev;
         }
-
-        console.log("✅ 링크 연결 성공:", { 
-          from: lastLink.linkid, 
-          to: linkId, 
-          connectNode: lastTNode 
-        });
       }
 
       // 연결 가능하면 추가

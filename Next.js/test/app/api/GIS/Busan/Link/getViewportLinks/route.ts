@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    
+
     // 쿼리 파라미터 파싱
     const minLng = parseFloat(searchParams.get("minLng") || "128.8");
     const maxLng = parseFloat(searchParams.get("maxLng") || "129.3");
@@ -90,11 +90,6 @@ export async function GET(request: NextRequest) {
       features,
     };
 
-    console.log(`[getViewportLinks] 반환: ${features.length}개 링크`);
-    if (features.length > 0) {
-      console.log("[getViewportLinks] 첫 번째 feature:", features[0]);
-    }
-
     return NextResponse.json(geojson, {
       status: 200,
       headers: {
@@ -110,7 +105,7 @@ export async function GET(request: NextRequest) {
       name: err.name,
     });
     return NextResponse.json(
-      { 
+      {
         error: err.message,
         details: err.stack,
         type: err.name,

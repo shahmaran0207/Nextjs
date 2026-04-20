@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function POST(request: Request, { params } : { params: Promise<{id: string}>}) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id } = await params;
         const formData = await request.formData();
@@ -18,9 +18,9 @@ export async function POST(request: Request, { params } : { params: Promise<{id:
             }
         });
 
-        return NextResponse.json({ result: "ok"});
+        return NextResponse.json({ result: "ok" });
     } catch (err: any) {
-        console.log("addReplyComment API Error:::::::::::", err);
-        return NextResponse.json({error: err.message}, { status: 500});
+        console.error("addReplyComment API Error:::::::::::", err);
+        return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }

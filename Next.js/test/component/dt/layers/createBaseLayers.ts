@@ -97,8 +97,6 @@ export function createPathLayer(
         // 선택 가능한 링크만 클릭 처리
         if (selectableLinkIds.size === 0 || selectableLinkIds.has(info.object.lkId)) {
           handleLinkSelect(info.object.lkId, busanLinkData);
-        } else {
-          console.log("선택 불가능한 링크 클릭 무시:", info.object.lkId);
         }
       }
       return true;

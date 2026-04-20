@@ -132,8 +132,6 @@ export async function getBusanTraffic() {
         break;
       }
     }
-
-    console.log(`getBusanTraffic 완료: 총 ${allItems.length}개 / API totalCount: ${totalCount ?? '알 수 없음'}개`);
     return allItems.slice(0, maxItems);
   } catch (err) {
     console.error("getBusanTraffic 전체 에러:", err);

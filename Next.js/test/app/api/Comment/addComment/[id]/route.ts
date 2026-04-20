@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function POST(request: Request, { params }: {params: Promise<{id: string}>}) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id } = await params;
         const formData = await request.formData();
@@ -18,9 +18,9 @@ export async function POST(request: Request, { params }: {params: Promise<{id: s
             }
         });
 
-        return NextResponse.json({ result: "ok"});
-    } catch(err: any) {
-        console.log("댓글 추가 에러:::::::::::::::", err);
-        return NextResponse.json({error: err.message}, { status: 500})
+        return NextResponse.json({ result: "ok" });
+    } catch (err: any) {
+        console.error("댓글 추가 에러 API:::::::::::::::", err);
+        return NextResponse.json({ error: err.message }, { status: 500 })
     }
 }
