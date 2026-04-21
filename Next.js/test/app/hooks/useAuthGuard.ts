@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * 인증 상태를 확인하고, 비인증 시 로그인 페이지로 리다이렉트하는 커스텀 훅
@@ -9,11 +9,13 @@ import { useEffect } from "react";
  * 사용법:
  *   import { useAuthGuard } from "@/app/hooks/useAuthGuard";
  *   export default function Page() {
- *     useAuthGuard();
+ *     const { email } = useAuthGuard();
  *     return <div>...</div>;
  *   }
  */
 export function useAuthGuard() {
+  const [email, setEmail] = useState("");
+
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem("token");
@@ -33,7 +35,12 @@ export function useAuthGuard() {
         window.location.href = "/Login";
         return;
       }
+
+      const data = await res.json();
+      setEmail(data.email);
     };
     checkAuth();
   }, []);
+
+  return { email };
 }
