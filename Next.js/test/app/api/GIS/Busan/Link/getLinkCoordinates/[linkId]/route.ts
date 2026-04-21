@@ -19,10 +19,10 @@ import { prisma } from "@/lib/prisma";
  */
 export async function GET(
   request: Request,
-  { params }: { params: { linkId: string } }
+  { params }: { params: Promise<{ linkId: string }> }
 ) {
   try {
-    const { linkId } = params;
+    const { linkId } = await params;
 
     const query = `
       SELECT 

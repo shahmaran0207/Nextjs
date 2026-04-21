@@ -41,9 +41,10 @@ export interface RoadviewCache {
 }
 
 /**
- * 네이버 지도 API 전역 객체 (window.naver.maps)
+ * 네이버 지도 API 전역 객체 (window.naver.maps) - 로드뷰 전용
+ * naver-maps.d.ts의 NaverMaps와 충돌을 피하기 위해 별도 이름 사용
  */
-export interface NaverMaps {
+export interface RoadviewNaverMaps {
   Panorama: new (container: HTMLElement, options: PanoramaOptions) => Panorama;
   LatLng: new (lat: number, lng: number) => LatLng;
   Event: {
@@ -117,13 +118,3 @@ export interface PanoramaLocation {
   panoId: string;
 }
 
-/**
- * window 객체에 네이버 지도 API 타입 추가
- */
-declare global {
-  interface Window {
-    naver?: {
-      maps?: NaverMaps;
-    };
-  }
-}
