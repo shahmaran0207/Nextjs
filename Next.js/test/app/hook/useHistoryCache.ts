@@ -38,6 +38,10 @@ const ESTIMATED_ENTRY_SIZE = 100 * 1024; // 항목당 약 100KB 추정
  * Date를 캐시 키로 변환 (ISO 문자열)
  */
 function dateToKey(date: Date): string {
+  // Invalid Date 체크
+  if (!date || isNaN(date.getTime())) {
+    throw new Error(`Invalid date object: ${date}`);
+  }
   return date.toISOString();
 }
 

@@ -60,17 +60,27 @@ export default function TrafficHistoryPanel({
   // 캐시를 활용한 데이터 조회 함수
   const fetchWithCache = useCallback(
     async (time: Date) => {
-      // 캐시 확인 (요구사항 7.3)
-      const cachedData = cache.get(time);
-      if (cachedData) {
-        console.log("[TrafficHistoryPanel] 캐시에서 데이터 로드:", time.toISOString());
-        onTrafficDataChange(cachedData);
-        setCurrentTime(time);
+      // Invalid Date 체크
+      if (!time || isNaN(time.getTime())) {
+        console.error("[TrafficHistoryPanel] Invalid time:", time);
         return;
       }
 
-      // 캐시 미스: API 조회
-      await fetchTrafficData(time);
+      try {
+        // 캐시 확인 (요구사항 7.3)
+        const cachedData = cache.get(time);
+        if (cachedData) {
+          console.log("[TrafficHistoryPanel] 캐시에서 데이터 로드:", time.toISOString());
+          onTrafficDataChange(cachedData);
+          setCurrentTime(time);
+          return;
+        }
+
+        // 캐시 미스: API 조회
+        await fetchTrafficData(time);
+      } catch (err) {
+        console.error("[TrafficHistoryPanel] fetchWithCache 오류:", err);
+      }
     },
     [cache, fetchTrafficData, onTrafficDataChange, setCurrentTime]
   );

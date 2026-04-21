@@ -73,9 +73,24 @@ export function usePlayback(options: UsePlaybackOptions): UsePlaybackReturn {
 
     intervalIdRef.current = setInterval(() => {
       const opts = optionsRef.current;
+      
+      // currentTime 유효성 검사
+      if (!opts.currentTime || isNaN(opts.currentTime.getTime())) {
+        console.error("[usePlayback] Invalid currentTime:", opts.currentTime);
+        pause();
+        return;
+      }
+
       const nextTime = new Date(
         opts.currentTime.getTime() + currentInterval * 60 * 1000
       );
+
+      // nextTime 유효성 검사
+      if (isNaN(nextTime.getTime())) {
+        console.error("[usePlayback] Invalid nextTime calculated from:", opts.currentTime);
+        pause();
+        return;
+      }
 
       // 종료 시점 도달 시 자동 정지 (요구사항 3.5)
       if (nextTime > opts.endTime) {
@@ -96,7 +111,7 @@ export function usePlayback(options: UsePlaybackOptions): UsePlaybackReturn {
         opts.onTimeChange(nextTime);
       }
     }, realTimeInterval);
-  }, [currentSpeed, currentInterval]);
+  }, [currentSpeed, currentInterval, pause]);
 
   /**
    * 재생 일시정지
