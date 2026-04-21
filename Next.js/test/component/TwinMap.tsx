@@ -14,6 +14,7 @@ import WeatherHeader from "@/component/dt/WeatherHeader";
 import { TourismCarouselDisplay, ConstructionCarouselDisplay } from "@/component/CarouselInfoDisplay";
 import MapLegend from "@/component/MapLegend";
 import CctvPopup from "@/component/dt/popups/CctvPopup";
+import LinkSpeedHistoryPopup from "@/component/dt/popups/LinkSpeedHistoryPopup";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { createBoundaryLayer, createPathLayer } from "@/component/dt/layers/createBaseLayers";
 import { createBitClusterLayers, createConstructionClusterLayers, createThemeTravelClusterLayers, createCctvClusterLayers } from "@/component/dt/layers/createClusterLayers";
@@ -46,7 +47,7 @@ try {
 
 interface TwinMapProps {
   linkData: { features: any[] };
-  trafficData: any[]; // 서버에서 초기값으로 넘겨받음 (비어있을 수 있음)
+  trafficData: any[];
   bitData: any[];
   boundaryData: DistrictBoundary[];
   constructionData: ConstructionPoint[];
@@ -110,6 +111,14 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
   const [selectedCctv, setSelectedCctv] = useState<CCTVPoint | null>(null);
   const [isCctvPopupOpen, setIsCctvPopupOpen] = useState(false);
   const [isCctvOnly, setIsCctvOnly] = useState(false);  // CCTV 단독 표시 모드
+
+  // 링크 속도 히스토리 팝업 상태
+  const [historyPopup, setHistoryPopup] = useState<{
+    linkId: string;
+    speed: number | null;
+    x: number;
+    y: number;
+  } | null>(null);
 
   // 로드뷰 상태 (Task 5.1)
   const [roadviewState, setRoadviewState] = useState<RoadviewState>({
@@ -459,7 +468,16 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
   const boundaryLayer = createBoundaryLayer(boundaryData);
 
   // 링크 레이어: 필터링 여부와 관계없이 PathLayer 사용 (소통정보 색상 유지)
-  const linkLayers = [createPathLayer(pathData, trafficMap, highlightedLinkIds, activeLinkId, isLinkSelectModeRef, handleLinkSelect, busanLinkData, selectableLinkIds)];
+  const linkLayers = [createPathLayer(pathData, trafficMap, highlightedLinkIds, activeLinkId, isLinkSelectModeRef, handleLinkSelect, busanLinkData, selectableLinkIds,
+    (lkId, speed, x, y) => {
+      // 같은 링크 재클릭 시 팝업 닫기
+      if (historyPopup?.linkId === lkId) {
+        setHistoryPopup(null);
+      } else {
+        setHistoryPopup({ linkId: lkId, speed, x, y });
+      }
+    }
+  )];
 
   // isCctvOnly 모드 시 CCTV 레이어만 표시 (다른 마커 숨김)
   const bitLayers = isCctvOnly ? [] : createBitClusterLayers(bitClusters);
@@ -481,7 +499,12 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
     <div className={styles.mapContainer}>
       <DeckGL
         viewState={viewState}
-        onViewStateChange={({ viewState: vs }: any) => setViewState(vs)}
+        onViewStateChange={({ viewState: vs, interactionState }: any) => {
+          setViewState(vs);
+          if (historyPopup && interactionState && (interactionState.isDragging || interactionState.isPanning || interactionState.isZooming || interactionState.isRotating)) {
+            setHistoryPopup(null);
+          }
+        }}
         controller={{
           dragPan: true,
           dragRotate: true,
@@ -565,6 +588,16 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
           cctv={selectedCctv}
           isOpen={isCctvPopupOpen}
           onClose={() => setIsCctvPopupOpen(false)}
+        />
+      )}
+
+      {/* 링크 속도 히스토리 팝업 */}
+      {historyPopup && !isLinkSelectMode && (
+        <LinkSpeedHistoryPopup
+          linkId={historyPopup.linkId}
+          currentSpeed={historyPopup.speed}
+          position={{ x: historyPopup.x, y: historyPopup.y }}
+          onClose={() => setHistoryPopup(null)}
         />
       )}
 

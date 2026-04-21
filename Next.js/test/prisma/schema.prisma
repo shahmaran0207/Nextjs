@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider          = "postgresql"
+  provider = "postgresql"
 }
 
 model chat {
@@ -44,10 +44,10 @@ model qna {
 }
 
 model answer {
-  id          Int         @id @default(autoincrement())
-  title       String?     @db.VarChar(1000)
-  content     String?     @db.VarChar(1000)
-  createdat   DateTime?   @db.Timestamp(6)
+  id          Int       @id @default(autoincrement())
+  title       String?   @db.VarChar(1000)
+  content     String?   @db.VarChar(1000)
+  createdat   DateTime? @db.Timestamp(6)
   image       Bytes?
   questionid  Int?
 }
@@ -61,12 +61,12 @@ model postcomment {
 }
 
 model commentbycomment {
-  id                   Int     @id @default(autoincrement())
-  upprcommentid        Int?
-  commenttitle         String? @db.VarChar(1000)
-  commentcontent       String? @db.VarChar(1000)
-  commentwriter        String? @db.VarChar(1000)
-  postid               Int?
+  id            Int     @id @default(autoincrement())
+  upprcommentid Int?
+  commenttitle  String? @db.VarChar(1000)
+  commentcontent String? @db.VarChar(1000)
+  commentwriter String? @db.VarChar(1000)
+  postid        Int?
 }
 
 model postlike {
@@ -76,54 +76,54 @@ model postlike {
 }
 
 model questionlike {
-  id          Int     @id @default(autoincrement())
-  questionid  Int
-  userid      String  @db.VarChar(1000) 
+  id         Int    @id @default(autoincrement())
+  questionid Int
+  userid     String @db.VarChar(1000)
 }
 
 model questionhate {
-  id          Int     @id @default(autoincrement())
-  questionid  Int
-  userid      String  @db.VarChar(1000)
+  id         Int    @id @default(autoincrement())
+  questionid Int
+  userid     String @db.VarChar(1000)
 }
 
 model answerlike {
-  id          Int     @id @default(autoincrement())
-  questionid  Int
-  userid      String  @db.VarChar(1000)
-  answerid    Int
+  id         Int    @id @default(autoincrement())
+  questionid Int
+  userid     String @db.VarChar(1000)
+  answerid   Int
 }
 
 model answerhate {
-  id          Int   @id @default(autoincrement())
-  questoinid  Int
-  userid      String  @db.VarChar(1000)
-  answerid    Int
+  id         Int    @id @default(autoincrement())
+  questoinid Int
+  userid     String @db.VarChar(1000)
+  answerid   Int
 }
 
 model posthate {
-  id Int @id @default(autoincrement())
+  id     Int     @id @default(autoincrement())
   postid Int?
   userid String? @db.VarChar(1000)
 }
 
 model commentlike {
-  id          Int     @id @default(autoincrement())
-  commentid   Int?  
-  userid      String? @db.VarChar(1000)
-  postid      Int?
+  id        Int     @id @default(autoincrement())
+  commentid Int?
+  userid    String? @db.VarChar(1000)
+  postid    Int?
 }
 
 model commenthate {
-  id           Int     @id @default(autoincrement())
-  commentid    Int?
-  userid       String? @db.VarChar(1000)
-  postid       Int?
+  id        Int     @id @default(autoincrement())
+  commentid Int?
+  userid    String? @db.VarChar(1000)
+  postid    Int?
 }
 
 model road {
-  id        Int     @id @default(autoincrement())
-  roadname  String? @db.VarChar(600)
+  id       Int     @id @default(autoincrement())
+  roadname String? @db.VarChar(600)
 }
 
 model section {
@@ -208,7 +208,7 @@ model busan_theme_travel {
 }
 
 model busan_standard_node {
-  fid        Int    @id @default(autoincrement())
+  fid        Int     @id @default(autoincrement())
   node_id    String? @db.VarChar(10)
   node_type  String? @db.VarChar(3)
   node_name  String? @db.VarChar(50)
@@ -220,11 +220,10 @@ model busan_standard_node {
   geom       Unsupported("geometry(Point, 4326)")?
 
   @@map("busan_standard_node")
-  @@schema("test")
 }
 
 model busan_standard_link {
-  fid        Int    @id @default(autoincrement())
+  fid        Int     @id @default(autoincrement())
   link_id    String? @db.VarChar(10)
   f_node     String? @db.VarChar(10)
   t_node     String? @db.VarChar(10)
@@ -249,5 +248,13 @@ model busan_standard_link {
   geom       Unsupported("geometry(LineString, 4326)")?
 
   @@map("busan_standard_link")
-  @@schema("test")
+}
+
+model link_speed_history {
+  id          Int      @id @default(autoincrement())
+  link_id     String   @db.VarChar(20)
+  speed       Float
+  recorded_at DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([link_id, recorded_at])
 }

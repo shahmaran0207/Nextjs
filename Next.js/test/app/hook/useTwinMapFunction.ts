@@ -88,16 +88,15 @@ export function useTwinMapFunction() {
   // ─── 링크 클릭 (테이블) → 지도 이동 ──────────────────────────
   const handleLink = useCallback(async (linkId: string, busanLinkData: any) => {
     setActiveLinkId(linkId);
-    
+
     // 먼저 현재 busanLinkData에서 찾기
     let matched = busanLinkData?.features?.find(
       (f: any) => f.properties?.link_id === linkId
     );
-    
+
     if (!matched) {
       // 현재 뷰포트에 없는 경우 - AllLink API로 전체 링크에서 찾기
       try {
-        console.log("🔍 뷰포트 밖 링크 검색:", linkId);
         const response = await fetch("/api/GIS/Busan/Link/AllLink");
         if (response.ok) {
           const allLinkData = await response.json();
@@ -109,12 +108,11 @@ export function useTwinMapFunction() {
         console.error("링크 검색 실패:", err);
       }
     }
-    
+
     if (matched) {
       const geometry = matched.geometry;
       const coords = geometry.coordinates;
       const [lng, lat] = coords[0];
-      console.log("📍 링크 위치로 이동:", linkId, [lng, lat]);
       setViewState(prev => ({
         ...prev,
         longitude: lng,

@@ -27,7 +27,7 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
   const pagedComments = comment.slice((currentPage - 1) * itemPerPage, currentPage * itemPerPage);
 
   useEffect(() => {
-    fetch(`/api/posts/addViewCount/${id}`, { method: "POST" }).catch(err => console.log("View Count 에러:", err));
+    fetch(`/api/posts/addViewCount/${id}`, { method: "POST" }).catch(err => console.error("View Count 에러:", err));
   }, []);
 
   useEffect(() => {

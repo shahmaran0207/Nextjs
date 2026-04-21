@@ -37,7 +37,8 @@ export function createPathLayer(
   isLinkSelectModeRef: any,
   handleLinkSelect: (lkId: string, busanLinkData: any) => void,
   busanLinkData: any,
-  selectableLinkIds: Set<string>
+  selectableLinkIds: Set<string>,
+  onHistoryClick?: (lkId: string, speed: number | null, screenX: number, screenY: number) => void
 ) {
 
   // Set을 배열로 변환하여 updateTriggers가 제대로 작동하도록
@@ -110,6 +111,10 @@ export function createPathLayer(
         if (selectableLinkIds.size === 0 || selectableLinkIds.has(info.object.lkId)) {
           handleLinkSelect(info.object.lkId, busanLinkData);
         }
+      } else if (info.object && !isLinkSelectModeRef.current && onHistoryClick) {
+        // 일반 모드: 속도 이력 팝업 열기
+        const spd = trafficMap.get(info.object.lkId) ?? null;
+        onHistoryClick(info.object.lkId, spd, info.x, info.y);
       }
       return true;
     },

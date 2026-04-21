@@ -145,8 +145,6 @@ export default function useChatState() {
 
             const data = await res.json();
 
-            console.log("addChat 응답:", data);
-
             imageUrl = data.imageUrl;
 
             setImage(null);
