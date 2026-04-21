@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const panel: React.CSSProperties = {
   position: "absolute",
@@ -66,6 +66,11 @@ export default function TimeFilterPanel({
   totalCount,
 }: TimeFilterPanelProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Convert Date to YYYY-MM-DD string for input
   const dateToString = (date: Date | null): string => {
@@ -112,7 +117,7 @@ export default function TimeFilterPanel({
           </p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          {hasActiveFilters && (
+          {isMounted && hasActiveFilters && (
             <span style={{
               background: "rgba(56,189,248,0.2)",
               color: "#38bdf8",
@@ -210,7 +215,7 @@ export default function TimeFilterPanel({
           </div>
 
           {/* Filter Stats */}
-          {hasActiveFilters && (
+          {isMounted && hasActiveFilters && (
             <div
               style={{
                 background: "rgba(56,189,248,0.08)",

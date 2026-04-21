@@ -52,7 +52,8 @@ export async function GET() {
   try {
     const allItems: any[] = [];
     let pageNo = 1;
-    // 공공데이터포털 API는 numOfRows 최대값이 제한될 수 있음 (안전하게 100)
+
+    // 링크소통정보 
     const numOfRows = 100;
     const maxItems = 100;
     const maxPages = 100;

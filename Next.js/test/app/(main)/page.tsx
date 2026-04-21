@@ -1,5 +1,7 @@
 "use client"
 
+import { useAuthGuard } from "@/app/hooks/useAuthGuard";
+
 const dark = {
   bg: "#0a0e1a",
   surface: "#1a1d27",
@@ -26,6 +28,8 @@ const navItems = [
 ];
 
 export default function Page() {
+  useAuthGuard();
+
   return (
     <div style={{
       minHeight: "100vh",
@@ -69,6 +73,35 @@ export default function Page() {
             </p>
           </div>
         </div>
+
+        {/* 로그아웃 버튼 */}
+        <button
+          onClick={() => {
+            localStorage.removeItem("token");
+            window.location.href = "/Login";
+          }}
+          style={{
+            padding: "6px 14px",
+            background: "rgba(56,189,248,0.08)",
+            border: "1px solid rgba(56,189,248,0.3)",
+            borderRadius: "8px",
+            color: "#38bdf8",
+            fontSize: "13px",
+            fontWeight: 500,
+            cursor: "pointer",
+            transition: "background 0.15s, border-color 0.15s",
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = "rgba(56,189,248,0.18)";
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "#38bdf8";
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = "rgba(56,189,248,0.08)";
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(56,189,248,0.3)";
+          }}
+        >
+          로그아웃
+        </button>
       </header>
 
       <div style={{ flex: 1, padding: "2rem 1rem" }}>

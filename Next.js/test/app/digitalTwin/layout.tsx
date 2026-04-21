@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { DataProvider, useDataContext } from "./DataContext";
+import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
+  useAuthGuard();
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const { dataStats } = useDataContext();
   const [weather, setWeather] = useState<any>(null);
@@ -235,7 +237,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 </div>
               </div>
             ))}
-            
+
             {/* 날씨 카드 */}
             {weather && weather.temperature !== null && (
               <div style={{
@@ -268,7 +270,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 </div>
               </div>
             )}
-            
+
             {/* 미세먼지 PM10 카드 */}
             {airQuality && airQuality.pm10 !== null && (() => {
               const pm10Grade = getPM10Grade(airQuality.pm10);
@@ -316,7 +318,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 </div>
               );
             })()}
-            
+
             {/* 초미세먼지 PM2.5 카드 */}
             {airQuality && airQuality.pm25 !== null && (() => {
               const pm25Grade = getPM25Grade(airQuality.pm25);
@@ -404,30 +406,33 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             >
               홈으로
             </a>
-            <a
-              href="/map"
+            <button
+              onClick={() => {
+                localStorage.removeItem("token");
+                window.location.href = "/Login";
+              }}
               style={{
-                fontSize: "13px",
-                color: "#8b90a7",
-                textDecoration: "none",
-                padding: "6px 12px",
+                padding: "6px 14px",
+                background: "rgba(56,189,248,0.08)",
+                border: "1px solid rgba(56,189,248,0.3)",
                 borderRadius: "8px",
-                border: "1px solid rgba(255,255,255,0.08)",
-                transition: "all 0.2s",
+                color: "#38bdf8",
+                fontSize: "13px",
+                fontWeight: 500,
+                cursor: "pointer",
+                transition: "background 0.15s, border-color 0.15s",
               }}
               onMouseEnter={e => {
-                (e.currentTarget as HTMLElement).style.color = "#e8eaf0";
-                (e.currentTarget as HTMLElement).style.borderColor = "rgba(56,189,248,0.3)";
-                (e.currentTarget as HTMLElement).style.background = "rgba(56,189,248,0.05)";
+                (e.currentTarget as HTMLButtonElement).style.background = "rgba(56,189,248,0.18)";
+                (e.currentTarget as HTMLButtonElement).style.borderColor = "#38bdf8";
               }}
               onMouseLeave={e => {
-                (e.currentTarget as HTMLElement).style.color = "#8b90a7";
-                (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)";
-                (e.currentTarget as HTMLElement).style.background = "transparent";
+                (e.currentTarget as HTMLButtonElement).style.background = "rgba(56,189,248,0.08)";
+                (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(56,189,248,0.3)";
               }}
             >
-              2D 지도
-            </a>
+              로그아웃
+            </button>
           </nav>
         </div>
       </header>
@@ -446,7 +451,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           pointerEvents: "none",
           boxShadow: "0 0 30px rgba(56,189,248,1), 0 0 60px rgba(56,189,248,0.8), 0 0 100px rgba(56,189,248,0.5)",
         }} />
-        
+
         {/* 스캔라인 글로우 효과 */}
         <div style={{
           position: "absolute",
@@ -460,7 +465,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           pointerEvents: "none",
           filter: "blur(30px)",
         }} />
-        
+
         {/* 전체 화면 펄스 효과 */}
         <div style={{
           position: "absolute",
@@ -473,7 +478,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           zIndex: 9997,
           pointerEvents: "none",
         }} />
-        
+
         {children}
       </main>
     </div>

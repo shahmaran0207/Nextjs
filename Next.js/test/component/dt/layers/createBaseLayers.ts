@@ -105,6 +105,13 @@ export function createPathLayer(
     visible: true,
     opacity: 0.7,
     billboard: false,
+    // 색상 전환 애니메이션 추가 (Task 7.3 - 요구사항 4.6)
+    transitions: {
+      getColor: {
+        duration: 300, // 0.3초
+        easing: (t: number) => t, // 선형 전환
+      },
+    },
     onClick: (info: any) => {
       if (info.object && isLinkSelectModeRef.current) {
         // 선택 가능한 링크만 클릭 처리

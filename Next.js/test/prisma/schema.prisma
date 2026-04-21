@@ -137,6 +137,8 @@ model users {
   id       Int     @id(map: "users_pkey1") @default(autoincrement())
   name     String? @db.VarChar(100)
   naver_id String? @db.VarChar(3000)
+  email    String? @unique
+  password String?          
 }
 
 // 수동 생성 테이블 — migrate 금지, generate만 사용

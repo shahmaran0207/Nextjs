@@ -10,12 +10,13 @@ import TwinLinkPanel from "@/component/dt/TwinLinkPanel";
 import TimeFilterPanel from "@/component/dt/panels/TimeFilterPanel";
 import DashboardPanel from "@/component/dt/panels/DashboardPanel";
 import RoadviewPanel from "@/component/dt/panels/RoadviewPanel";
+import TrafficHistoryPanel from "@/component/dt/panels/TrafficHistoryPanel";
 import WeatherHeader from "@/component/dt/WeatherHeader";
 import { TourismCarouselDisplay, ConstructionCarouselDisplay } from "@/component/CarouselInfoDisplay";
 import MapLegend from "@/component/MapLegend";
 import CctvPopup from "@/component/dt/popups/CctvPopup";
 import LinkSpeedHistoryPopup from "@/component/dt/popups/LinkSpeedHistoryPopup";
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { createBoundaryLayer, createPathLayer } from "@/component/dt/layers/createBaseLayers";
 import { createBitClusterLayers, createConstructionClusterLayers, createThemeTravelClusterLayers, createCctvClusterLayers } from "@/component/dt/layers/createClusterLayers";
 import { createRoadviewMarkerLayer } from "@/component/dt/layers/createRoadviewMarker";
@@ -130,6 +131,11 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
   });
   const [roadviewMarker, setRoadviewMarker] = useState<{ lat: number; lng: number } | null>(null);
 
+  // 교통 이력 패널 상태 (Task 7.1)
+  const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
+  const [isHistoryMode, setIsHistoryMode] = useState(false);
+  const [historyTrafficMap, setHistoryTrafficMap] = useState<Map<string, number>>(new Map());
+
   // Time Filter Hook
   const {
     config: timeFilterConfig, setStartDate, setEndDate,
@@ -167,6 +173,12 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
 
   // ─── 교통 속도 맵 ─────────────────────────────────────────────
   const trafficMap = useMemo(() => {
+    // 교통 이력 모드일 때는 historyTrafficMap 사용 (Task 7.2)
+    if (isHistoryMode && historyTrafficMap.size > 0) {
+      return historyTrafficMap;
+    }
+
+    // 실시간 모드: 기존 trafficData 사용
     const map = new Map<string, number>();
     let sampleItems = 0;
     trafficData.forEach((item: any) => {
@@ -182,7 +194,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
       }
     });
     return map;
-  }, [trafficData]);
+  }, [trafficData, isHistoryMode, historyTrafficMap]);
 
   // 클러스터링 Hook
   const { bitClusters, constructionClusters, themeTravelClusters, cctvClusters } = useTwinClusters({
@@ -294,6 +306,24 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
       isAvailable,
     }));
   };
+
+  // 교통 이력 패널 토글 (Task 7.1)
+  const toggleHistoryPanel = () => {
+    setIsHistoryPanelOpen(prev => !prev);
+  };
+
+  // 교통 이력 데이터 변경 핸들러 (Task 7.2)
+  const handleTrafficDataChange = useCallback((newTrafficMap: Map<string, number>) => {
+    // 빈 Map이면 실시간 모드로 전환
+    if (newTrafficMap.size === 0) {
+      setIsHistoryMode(false);
+      setHistoryTrafficMap(new Map());
+    } else {
+      // 교통 이력 데이터가 있으면 이력 모드로 전환
+      setIsHistoryMode(true);
+      setHistoryTrafficMap(newTrafficMap);
+    }
+  }, []);
 
   // MapLibre 인스턴스 ref
   const mapRef = useRef<any>(null);
@@ -610,6 +640,13 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
         onAvailabilityChange={handleRoadviewAvailabilityChange}
       />
 
+      {/* 교통 이력 패널 (Task 7.1) */}
+      <TrafficHistoryPanel
+        isOpen={isHistoryPanelOpen}
+        onClose={() => setIsHistoryPanelOpen(false)}
+        onTrafficDataChange={handleTrafficDataChange}
+      />
+
       {/* 로드뷰 토글 버튼 (Task 5.3) */}
       <button
         onClick={toggleRoadviewPanel}
@@ -650,6 +687,48 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
         }}
       >
         {roadviewState.isOpen ? "🗺️" : "👁️"}
+      </button>
+
+      {/* 교통 이력 토글 버튼 (Task 7.1) */}
+      <button
+        onClick={toggleHistoryPanel}
+        style={{
+          position: "fixed",
+          bottom: "92px",
+          right: "24px",
+          width: "56px",
+          height: "56px",
+          borderRadius: "50%",
+          background: isHistoryPanelOpen
+            ? "linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)"
+            : "linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)",
+          border: "2px solid rgba(139, 92, 246, 0.4)",
+          boxShadow: isHistoryPanelOpen
+            ? "0 4px 20px rgba(245, 158, 11, 0.4), 0 0 40px rgba(245, 158, 11, 0.2)"
+            : "0 4px 20px rgba(139, 92, 246, 0.4), 0 0 40px rgba(139, 92, 246, 0.2)",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "24px",
+          transition: "all 0.3s ease",
+          zIndex: 1001,
+        }}
+        aria-label={isHistoryPanelOpen ? "교통 이력 패널 닫기" : "교통 이력 패널 열기"}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "scale(1.1)";
+          e.currentTarget.style.boxShadow = isHistoryPanelOpen
+            ? "0 6px 30px rgba(245, 158, 11, 0.6), 0 0 60px rgba(245, 158, 11, 0.3)"
+            : "0 6px 30px rgba(139, 92, 246, 0.6), 0 0 60px rgba(139, 92, 246, 0.3)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "scale(1)";
+          e.currentTarget.style.boxShadow = isHistoryPanelOpen
+            ? "0 4px 20px rgba(245, 158, 11, 0.4), 0 0 40px rgba(245, 158, 11, 0.2)"
+            : "0 4px 20px rgba(139, 92, 246, 0.4), 0 0 40px rgba(139, 92, 246, 0.2)";
+        }}
+      >
+        {isHistoryPanelOpen ? "⏱️" : "⏱️"}
       </button>
 
       {/* 날씨 헤더 */}
