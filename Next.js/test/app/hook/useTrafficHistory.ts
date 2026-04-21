@@ -63,6 +63,7 @@ export function useTrafficHistory(
 
   /**
    * 특정 시점의 교통 데이터 조회
+   * 정확한 시간의 데이터가 없으면 시간 범위 내에서 가장 가까운 데이터를 조회
    * 요구사항: 1.1, 1.2, 1.3, 1.5
    */
   const fetchTrafficData = useCallback(async (time: Date) => {
@@ -70,7 +71,8 @@ export function useTrafficHistory(
     setError(null);
 
     try {
-      const response = await fetch(
+      // 먼저 정확한 시간으로 조회 시도
+      let response = await fetch(
         `/api/traffic/history?time=${time.toISOString()}`
       );
 
@@ -78,23 +80,56 @@ export function useTrafficHistory(
         throw new Error("데이터를 불러오는 중 오류가 발생했습니다");
       }
 
-      const result = await response.json();
+      let result = await response.json();
 
       // 응답 데이터를 Map<string, number> 형식으로 변환
-      const trafficMap = new Map<string, number>();
+      let trafficMap = new Map<string, number>();
       if (result.data && Array.isArray(result.data)) {
         result.data.forEach((item: { linkId: string; speed: number }) => {
           trafficMap.set(item.linkId, item.speed);
         });
       }
 
-      // 데이터가 없는 경우 처리 (요구사항 1.3)
+      // 데이터가 없는 경우, 시간 범위 내에서 가장 가까운 데이터 조회
       if (trafficMap.size === 0) {
-        throw new Error("해당 시점의 데이터가 없습니다");
+        console.log("[useTrafficHistory] 정확한 시간의 데이터 없음, 범위 내 검색 시도");
+        
+        // 시간 범위 내에서 가장 가까운 데이터 조회
+        response = await fetch(
+          `/api/traffic/history?time=${time.toISOString()}&findNearest=true&startTime=${startTime.toISOString()}&endTime=${endTime.toISOString()}`
+        );
+
+        if (!response.ok) {
+          throw new Error("데이터를 불러오는 중 오류가 발생했습니다");
+        }
+
+        result = await response.json();
+
+        // 가장 가까운 데이터 변환
+        trafficMap = new Map<string, number>();
+        if (result.data && Array.isArray(result.data)) {
+          result.data.forEach((item: { linkId: string; speed: number }) => {
+            trafficMap.set(item.linkId, item.speed);
+          });
+        }
+
+        // 여전히 데이터가 없으면 에러
+        if (trafficMap.size === 0) {
+          throw new Error("해당 시간 범위에 데이터가 없습니다");
+        }
+
+        // 실제 데이터의 시간으로 currentTime 업데이트
+        if (result.actualTime) {
+          setCurrentTime(new Date(result.actualTime));
+          console.log("[useTrafficHistory] 가장 가까운 데이터 사용:", result.actualTime);
+        } else {
+          setCurrentTime(time);
+        }
+      } else {
+        setCurrentTime(time);
       }
 
       setTrafficData(trafficMap);
-      setCurrentTime(time);
     } catch (err) {
       const errorObj = err instanceof Error ? err : new Error(String(err));
       setError(errorObj);
@@ -108,7 +143,7 @@ export function useTrafficHistory(
     } finally {
       setIsLoading(false);
     }
-  }, [options]);
+  }, [options, startTime, endTime]);
 
   /**
    * 시간 범위 설정 및 검증
