@@ -1,12 +1,10 @@
 "use client"
 
 import { useState, SyntheticEvent } from "react";
-import { useSession } from "next-auth/react";
+import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 
 export function usePostState(id: string, onDeleteSuccess?: () => void) {
-    const { data: session } = useSession();
-
-    const name = session?.user?.name || "";
+    const { email } = useAuthGuard();
 
     const [postLike, setPostLike] = useState(0);
     const [postHate, setPostHate] = useState(0);
@@ -66,7 +64,7 @@ export function usePostState(id: string, onDeleteSuccess?: () => void) {
             const formData = new FormData();
             formData.append("commentTitle", commentTitle);
             formData.append("commentContent", commentContent);
-            formData.append("writer", name);
+            formData.append("writer", email);
             await fetch(`/api/Comment/addComment/${id}`, { method: "POST", body: formData });
             setCommentTitle("");
             setCommentContent("");
@@ -140,11 +138,11 @@ export function usePostState(id: string, onDeleteSuccess?: () => void) {
 
     const handleCommentLike = async (commentId: string) => {
         try {
-            const data = await fetch(`/api/Comment/Like/getEachCommentLike/${commentId}?name=${name}`).then(r => r.json());
+            const data = await fetch(`/api/Comment/Like/getEachCommentLike/${commentId}?name=${email}`).then(r => r.json());
             if (data.length === 0) {
-                await fetch(`/api/Comment/Like/addCommentLike/${commentId}?name=${name}&postId=${id}`, { method: "POST" });
+                await fetch(`/api/Comment/Like/addCommentLike/${commentId}?name=${email}&postId=${id}`, { method: "POST" });
             } else {
-                await fetch(`/api/Comment/Like/removeEachCommentLike/${commentId}?name=${name}`, { method: "POST" });
+                await fetch(`/api/Comment/Like/removeEachCommentLike/${commentId}?name=${email}`, { method: "POST" });
             }
             reloadCommentLikeAndHate(id);
         } catch (err) {
@@ -154,11 +152,11 @@ export function usePostState(id: string, onDeleteSuccess?: () => void) {
 
     const handleCommentHate = async (commentId: string) => {
         try {
-            const data = await fetch(`/api/Comment/Hate/getEachCommentHate/${commentId}?name=${name}`).then(r => r.json());
+            const data = await fetch(`/api/Comment/Hate/getEachCommentHate/${commentId}?name=${email}`).then(r => r.json());
             if (data.length === 0) {
-                await fetch(`/api/Comment/Hate/addCommentHate/${commentId}?name=${name}&postId=${id}`, { method: "POST" });
+                await fetch(`/api/Comment/Hate/addCommentHate/${commentId}?name=${email}&postId=${id}`, { method: "POST" });
             } else {
-                await fetch(`/api/Comment/Hate/removeEachCommentHate/${commentId}?name=${name}`, { method: "POST" });
+                await fetch(`/api/Comment/Hate/removeEachCommentHate/${commentId}?name=${email}`, { method: "POST" });
             }
             reloadCommentLikeAndHate(id);
         } catch (err) {
@@ -168,11 +166,11 @@ export function usePostState(id: string, onDeleteSuccess?: () => void) {
 
     const handleLike = async () => {
         try {
-            const data = await fetch(`/api/posts/Like/getEachPostLike/${id}?name=${name}`).then(r => r.json());
+            const data = await fetch(`/api/posts/Like/getEachPostLike/${id}?name=${email}`).then(r => r.json());
             if (data.length === 0) {
-                await fetch(`/api/posts/Like/addPostLike/${id}?name=${name}`, { method: "POST" });
+                await fetch(`/api/posts/Like/addPostLike/${id}?name=${email}`, { method: "POST" });
             } else {
-                await fetch(`/api/posts/Like/removePostLike/${id}?name=${name}`, { method: "POST" });
+                await fetch(`/api/posts/Like/removePostLike/${id}?name=${email}`, { method: "POST" });
             }
             reloadPostLikeAndHate(id);
         } catch (err) {
@@ -182,12 +180,12 @@ export function usePostState(id: string, onDeleteSuccess?: () => void) {
 
     const handleHate = async () => {
         try {
-            const data = await fetch(`/api/posts/Hate/getEachPostHate?id=${id}&name=${name}`, { method: "POST" }).then(r => r.json());
+            const data = await fetch(`/api/posts/Hate/getEachPostHate?id=${id}&name=${email}`, { method: "POST" }).then(r => r.json());
 
             if (data.length === 0) {
-                await fetch(`/api/posts/Hate/addPostHate/${id}?name=${name}`, { method: "POST" });
+                await fetch(`/api/posts/Hate/addPostHate/${id}?name=${email}`, { method: "POST" });
             } else {
-                await fetch(`/api/posts/Hate/removePostHate/${id}?name=${name}`, { method: "POST" });
+                await fetch(`/api/posts/Hate/removePostHate/${id}?name=${email}`, { method: "POST" });
             }
             reloadPostLikeAndHate(id);
         } catch (err) {
