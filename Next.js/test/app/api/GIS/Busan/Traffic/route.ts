@@ -9,101 +9,112 @@
  *         description: 성공
  */
 
-// ─── 서버 메모리 캐시 (5분) ─────────────────────────────────────
-// rate limit 방지: 외부 API는 5분에 한 번만 호출
+// ─── 서버 메모리 캐시 (10분) ─────────────────────────────────────
+// rate limit 방지: 외부 API는 10분에 한 번만 호출
 let _cache: { data: any[]; timestamp: number } | null = null;
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5분
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10분
 
 export async function GET() {
+  const now = Date.now();
+
+  // 캐시 유효성 확인
+  if (_cache && now - _cache.timestamp < CACHE_TTL_MS) {
+    console.log(`[Traffic API] 캐시 반환 (${_cache.data.length}개)`);
+    return Response.json(_cache.data);
+  }
+
+  const serviceKey = process.env.BUSAN_TRAFFIC_KEY;
+  if (!serviceKey) {
+    console.error("[Traffic API] BUSAN_TRAFFIC_KEY 환경변수가 없습니다");
+    return Response.json([], { status: 200 });
+  }
+
   try {
-    const now = Date.now();
-    if (_cache && now - _cache.timestamp < CACHE_TTL_MS) {
-      console.log(`[Traffic API] 캐시 반환 (${_cache.data.length}개)`);
-      return Response.json(_cache.data);
-    }
-
-    const serviceKey = process.env.BUSAN_TRAFFIC_KEY;
-    if (!serviceKey) {
-      console.error("[Traffic API] BUSAN_TRAFFIC_KEY 환경변수가 없습니다");
-      return Response.json([], { status: 200 });
-    }
-
     const allItems: any[] = [];
     let pageNo = 1;
-    const numOfRows = 50; // 부산ITS API 최대 허용값
-    const maxItems = 5000; // 최대 5000개 수집 (약 100페이지)
+    // 공공데이터포털 API는 numOfRows 최대값이 제한될 수 있음 (안전하게 100)
+    const numOfRows = 100;
+    const maxItems = 100;
     const maxPages = 100;
     let totalCount: number | null = null;
 
     while (allItems.length < maxItems && pageNo <= maxPages) {
-      const url = `https://apis.data.go.kr/6260000/BusanITSLINKTraffic/LINKTrafficList?serviceKey=${serviceKey}&pageNo=${pageNo}&numOfRows=${numOfRows}&resultType=json`;
+      // serviceKey는 인코딩하지 않음 (공공데이터포털 plain key)
+      // _type=json 으로 JSON 응답 명시 요청
+      const url = `https://apis.data.go.kr/6260000/BusanITSLINKTraffic/LINKTrafficList?serviceKey=${serviceKey}&pageNo=${pageNo}&numOfRows=${numOfRows}&_type=json`;
 
-      if (pageNo === 1) console.log(`[Traffic API] 요청 URL 앞부분: ${url.slice(0, 100)}...`);
+      console.log(`[Traffic API] 요청 페이지 ${pageNo} (누적: ${allItems.length}개)`);
 
-      // Referer 헤더 추가 (일부 공공데이터포털 API는 Referer 체크)
       const res = await fetch(url, {
         cache: "no-store",
+        method: "GET",
         headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; NextJS/1.0)",
-          "Referer": process.env.NEXTAUTH_URL ?? "http://localhost:3000",
-          "Accept": "application/json",
+          "Accept": "application/json, text/plain, */*",
         },
       });
+
       const text = await res.text();
 
-      if (pageNo === 1) console.log(`[Traffic API] 응답 앞부분: ${text.slice(0, 150)}`);
+      // 응답 전문 로그 (처음 300자) - 디버그용
+      console.log(`[Traffic API] 페이지 ${pageNo} 응답 (앞 300자):`, text.slice(0, 300));
 
       let data: any;
       try {
         data = JSON.parse(text);
       } catch {
-        console.error("[Traffic API] JSON 파싱 실패, 응답:", text.slice(0, 300));
+        console.error("[Traffic API] JSON 파싱 실패 - XML 응답일 가능성:", text.slice(0, 200));
         break;
       }
 
+      // resultCode 체크
       if (data.resultCode && data.resultCode !== "00") {
-        console.error(`[Traffic API] 에러: [${data.resultCode}] ${data.resultMsg}`);
-        // 캐시 데이터 있으면 반환
-        if (_cache) {
-          console.log(`[Traffic API] 에러 - 만료된 캐시 반환 (${_cache.data.length}개)`);
-          return Response.json(_cache.data);
-        }
-        // 서비스키 오류 - 클라이언트가 직접 호출하도록 serviceKey 공개 URL 반환
-        return Response.json({
-          error: data.resultMsg,
-          code: data.resultCode,
-          clientFallbackUrl: `https://apis.data.go.kr/6260000/BusanITSLINKTraffic/LINKTrafficList?serviceKey=${serviceKey}&pageNo=1&numOfRows=1000&resultType=json`,
-        }, { status: 503 });
+        console.error(`[Traffic API] 에러 (페이지 ${pageNo}): [${data.resultCode}] ${data.resultMsg}`);
+        break;
       }
 
+      // 첫 페이지에서 totalCount 파악
       if (pageNo === 1 && data.content?.totalCount) {
         totalCount = parseInt(data.content.totalCount);
-        console.log(`[Traffic API] 전체: ${totalCount}개`);
+        console.log(`[Traffic API] ✅ 성공! 전체 데이터 수: ${totalCount}`);
       }
 
       const items = data.content?.items;
-      if (!items || items.length === 0) break;
+      if (!items || (Array.isArray(items) && items.length === 0)) {
+        console.log(`[Traffic API] 페이지 ${pageNo}에 데이터 없음 - 종료`);
+        break;
+      }
 
-      allItems.push(...(Array.isArray(items) ? items : [items]));
+      const itemArr = Array.isArray(items) ? items : [items];
+      allItems.push(...itemArr);
+      console.log(`[Traffic API] 페이지 ${pageNo} 수집: ${itemArr.length}개, 누적: ${allItems.length}개`);
 
+      // 전체 수집 완료 시 조기 종료
       if (totalCount !== null && allItems.length >= totalCount) break;
+
       pageNo++;
     }
 
     const result = allItems.slice(0, maxItems);
-    console.log(`[Traffic API] 수집: ${result.length}개`);
 
+    // 캐시 저장 (데이터가 있을 때만)
     if (result.length > 0) {
       _cache = { data: result, timestamp: now };
-      console.log(`[Traffic API] 캐시 저장 완료`);
+      console.log(`[Traffic API] 캐시 저장: ${result.length}개`);
     } else {
       console.warn("[Traffic API] 데이터 없음 - 캐시 저장 안 함");
+      // 만료된 캐시라도 있으면 반환 (graceful degradation)
+      if (_cache) {
+        console.warn(`[Traffic API] 만료 캐시 반환 (${_cache.data.length}개)`);
+        return Response.json(_cache.data);
+      }
     }
 
     return Response.json(result);
   } catch (err: any) {
-    console.error("[Traffic API] 에러:", err.message);
+    console.error("[Traffic API] 예외 발생:", err.message);
+    // 캐시가 있으면 만료됐더라도 반환 (graceful degradation)
     if (_cache) {
+      console.warn(`[Traffic API] 예외 발생 - 만료 캐시 반환 (${_cache.data.length}개)`);
       return Response.json(_cache.data);
     }
     return Response.json([], { status: 200 });

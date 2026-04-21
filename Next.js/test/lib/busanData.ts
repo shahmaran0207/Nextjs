@@ -74,7 +74,7 @@ export async function getBusanTraffic() {
     const allItems: any[] = [];
     let pageNo = 1;
     const numOfRows = 50;
-    const maxItems = 5000;
+    const maxItems = 3000;
     const maxPages = 100;
     let totalCount: number | null = null;
 
