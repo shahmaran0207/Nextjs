@@ -44,6 +44,21 @@ export function createPathLayer(
   const highlightedArray = Array.from(highlightedLinkIds);
   const selectableArray = Array.from(selectableLinkIds);
 
+  // 디버깅: 소통정보 매칭 확인
+  let matchedCount = 0;
+  let unmatchedCount = 0;
+  pathData.forEach((d: any) => {
+    if (trafficMap.has(d.lkId)) {
+      matchedCount++;
+    } else {
+      unmatchedCount++;
+    }
+  });
+  
+  if (pathData.length > 0) {
+    console.log(`[PathLayer] 링크 ${pathData.length}개 중 소통정보 매칭: ${matchedCount}개, 미매칭: ${unmatchedCount}개`);
+  }
+
   return new PathLayer({
     id: "path-layer",
     data: pathData,
@@ -68,6 +83,7 @@ export function createPathLayer(
         return [100, 100, 100, 80]; // 선택 불가: 어두운 회색
       }
 
+      // 소통정보 색상 적용
       const spd = trafficMap.get(d.lkId);
       return getSpeedRgba(spd);
     },

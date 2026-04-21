@@ -27,6 +27,9 @@ export function useViewportLinks({ viewState, enabled = true }: UseViewportLinks
   useEffect(() => {
     if (!enabled) return;
 
+    // 줌 레벨이 너무 낮으면 링크 요청 안 함 (의미없는 요청 방지)
+    if (viewState.zoom < 5) return;
+
     // 이전 타이머 취소
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
@@ -100,15 +103,30 @@ export function useViewportLinks({ viewState, enabled = true }: UseViewportLinks
 
 /**
  * 뷰포트 바운딩 박스 계산
- * deck.gl viewState에서 현재 보이는 영역의 경계 좌표 계산
+ * deck.gl viewState + 실제 화면 픽셀 크기를 기반으로 현재 보이는 영역의 경계 좌표 계산
+ *
+ * deck.gl/MapLibre zoom=0: 전체 지구가 256px 타일 1개에 해당
+ * zoom N: 256 * 2^N px 크기
+ * → 화면 너비/높이가 W, H px일 때 보이는 범위:
+ *   lngRange = (W / 256) * (360 / 2^zoom)
+ *   latRange = (H / 256) * (180 / 2^zoom)  (Mercator 보정 미적용 근사)
  */
 function calculateViewportBounds(viewState: any): ViewportBounds {
   const { longitude, latitude, zoom } = viewState;
 
-  // 줌 레벨에 따른 대략적인 범위 계산
-  // 줌이 높을수록 범위가 좁아짐
-  const latRange = 180 / Math.pow(2, zoom);
-  const lngRange = 360 / Math.pow(2, zoom);
+  // 실제 화면 크기 (SSR 안전 처리)
+  const screenW = typeof window !== "undefined" ? window.innerWidth : 1920;
+  const screenH = typeof window !== "undefined" ? window.innerHeight : 1080;
+
+  // 타일 해상도(256px) 기준, 1 타일당 경도/위도 범위
+  const tileRes = Math.pow(2, zoom);
+  const degPerTileX = 360 / tileRes;
+  const degPerTileY = 180 / tileRes;
+
+  // 화면에 보이는 경도/위도 범위 (margin 20% 추가로 경계 근처 링크도 미리 로드)
+  const margin = 1.2;
+  const lngRange = (screenW / 256) * degPerTileX * margin;
+  const latRange = (screenH / 256) * degPerTileY * margin;
 
   return {
     minLng: longitude - lngRange / 2,

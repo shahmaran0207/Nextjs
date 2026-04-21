@@ -8,14 +8,11 @@ export async function GET() {
     const serviceKey = process.env.BUSAN_AIR_QUALITY_KEY;
     const url = `https://apis.data.go.kr/6260000/AirQualityInfoService/getAirQualityInfoClassifiedByStation?serviceKey=${serviceKey}&pageNo=1&numOfRows=100&resultType=json`;
 
-    console.log("대기질 API 호출:", url.replace(serviceKey!, "***"));
-
     const response = await fetch(url, {
       next: { revalidate: 1800 }, // 30분 캐시
     });
 
     const text = await response.text();
-    console.log("대기질 API 응답:", text.substring(0, 500));
 
     if (!response.ok) {
       console.error("대기질 API 에러:", response.status, text);
@@ -50,8 +47,6 @@ export async function GET() {
     // pm10, pm25 값을 숫자로 변환 (문자열 "35.0" -> 35)
     const pm10Value = targetStation.pm10 ? Math.round(parseFloat(targetStation.pm10)) : null;
     const pm25Value = targetStation.pm25 ? Math.round(parseFloat(targetStation.pm25)) : null;
-
-    console.log(`대기질 데이터 파싱: ${targetStation.site} - PM10: ${pm10Value}, PM2.5: ${pm25Value}`);
 
     return NextResponse.json({
       pm10: pm10Value,

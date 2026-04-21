@@ -24,6 +24,7 @@ import { useMapNavigation } from "@/hooks/useMapNavigation";
 import { useCategoryFilter } from "@/hooks/useCategoryFilter";
 import { ConstructionPoint, ThemeTravelPoint } from "@/component/dt/modules/DashboardStatsModule";
 import { useTwinClusters } from "@/component/dt/hooks/useTwinClusters";
+import { useLinkClusters } from "@/component/dt/hooks/useLinkClusters";
 import { useTwinTooltip } from "@/component/dt/hooks/useTwinTooltip";
 import { useViewportLinks } from "@/component/dt/hooks/useViewportLinks";
 import { useTwinCarousels } from "@/component/dt/hooks/useTwinCarousels";
@@ -45,14 +46,14 @@ try {
 
 interface TwinMapProps {
   linkData: { features: any[] };
-  trafficData: any[];
+  trafficData: any[]; // 서버에서 초기값으로 넘겨받음 (비어있을 수 있음)
   bitData: any[];
   boundaryData: DistrictBoundary[];
   constructionData: ConstructionPoint[];
   themeTravelData: ThemeTravelPoint[];
 }
 
-export default function TwinMap({ linkData: initLinkData, trafficData, bitData, boundaryData, constructionData, themeTravelData }: TwinMapProps) {
+export default function TwinMap({ linkData: initLinkData, trafficData: initTrafficData, bitData, boundaryData, constructionData, themeTravelData }: TwinMapProps) {
   // Context를 안전하게 사용
   let setDataStats: any = () => { };
   try {
@@ -99,6 +100,10 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
   }, [isLinkSelectMode, allLinksData]);
 
   const isLinkSelectModeState = useRef(isLinkSelectMode);
+
+  // ─── 소통정보(교통 속도) 상태 ────────────────────────────────────
+  // 서버가 IP 제한으로 외부 API 호출 실패 시, 브라우저에서 직접 호출
+  const [trafficData, setTrafficData] = useState<any[]>(initTrafficData);
 
   // CCTV 상태
   const [cctvData, setCctvData] = useState<CCTVPoint[]>([]);
@@ -151,10 +156,39 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
     filteredTourismData, filteredConstructionByCategory, flyTo,
   });
 
+  // ─── 교통 속도 맵 ─────────────────────────────────────────────
+  const trafficMap = useMemo(() => {
+    const map = new Map<string, number>();
+    let sampleItems = 0;
+    trafficData.forEach((item: any) => {
+      // lkId가 숫자로 올 수도 있어 String 변환, spd도 문자열일 수 있어 Number 변환
+      const id = String(item.lkId ?? "").trim();
+      const spd = Number(item.spd);
+      if (id) {
+        map.set(id, isNaN(spd) ? 0 : spd);
+        // 처음 5개 샘플 로그
+        if (sampleItems < 5) {
+          console.log(`[TwinMap] 소통정보 샘플 ${sampleItems + 1}: lkId="${id}", spd=${spd}`);
+          sampleItems++;
+        }
+      }
+    });
+    console.log(`[TwinMap] trafficMap 생성: ${map.size}개 링크, 원본 데이터: ${trafficData.length}개`);
+    return map;
+  }, [trafficData]);
+
   // 클러스터링 Hook
   const { bitClusters, constructionClusters, themeTravelClusters, cctvClusters } = useTwinClusters({
     bitData, filteredConstructionByCategory,
     filteredTourismData, cctvData, viewState,
+  });
+
+  // 링크 클러스터링 Hook (줌 레벨이 낮을 때 주요 도로만 필터링)
+  const { shouldFilter: shouldFilterLinks, filteredLinks } = useLinkClusters({
+    linkData: busanLinkData,
+    trafficMap,
+    viewState,
+    enabled: !isLinkSelectMode, // 링크 선택 모드일 때는 비활성화
   });
 
   // 툴팁 Hook
@@ -309,6 +343,58 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
     isLinkSelectModeRef.current = isLinkSelectMode;
   }, [isLinkSelectMode, isLinkSelectModeRef]);
 
+  // 소통정보: 서버 API 실패 시 클라이언트에서 직접 외부 API 호출
+  useEffect(() => {
+    // 서버에서 데이터가 정상적으로 넘어왔으면 재요청 불필요
+    if (initTrafficData.length > 0) {
+      setTrafficData(initTrafficData);
+      return;
+    }
+
+    // 서버 API 호출 시도
+    fetch("/api/GIS/Busan/Traffic")
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setTrafficData(data);
+            return;
+          }
+          // 데이터 없음 + clientFallbackUrl: 직접 외부 API 호출
+          if (data?.clientFallbackUrl) {
+            console.log("[TwinMap] 서버 Traffic API 실패 - 클라이언트 직접 호출 시도");
+            return fetch(data.clientFallbackUrl)
+              .then(r => r.json())
+              .then(d => {
+                const items = d?.content?.items;
+                if (items && items.length > 0) {
+                  setTrafficData(Array.isArray(items) ? items : [items]);
+                  console.log(`[TwinMap] 클라이언트 직접 호출 성공: ${items.length}개`);
+                }
+              })
+              .catch(e => console.warn("[TwinMap] 클라이언트 직접 호출 실패:", e));
+          }
+        } else if (res.status === 503) {
+          const errData = await res.json().catch(() => ({}));
+          if (errData?.clientFallbackUrl) {
+            console.log("[TwinMap] 서버 503 - 클라이언트 직접 외부 API 호출");
+            return fetch(errData.clientFallbackUrl)
+              .then(r => r.json())
+              .then(d => {
+                const items = d?.content?.items;
+                if (items && items.length > 0) {
+                  setTrafficData(Array.isArray(items) ? items : [items]);
+                  console.log(`[TwinMap] 클라이언트 직접 호출 성공: ${items.length}개`);
+                }
+              })
+              .catch(e => console.warn("[TwinMap] 직접 호출 실패:", e));
+          }
+        }
+      })
+      .catch(e => console.warn("[TwinMap] Traffic API 호출 실패:", e));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initTrafficData]);
+
   // 도로 목록 초기 fetch
   useEffect(() => {
     fetch("/api/GIS/Busan/Road/getRoadList")
@@ -343,10 +429,6 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
     });
   }, [trafficData, constructionData, setDataStats]);
 
-  // ─── 교통 속도 맵 ─────────────────────────────────────────────
-  const trafficMap = new Map<string, number>();
-  trafficData.forEach((item: any) => trafficMap.set(item.lkId, item.spd));
-
   // ─── 선택 가능한 링크 ID 계산 ──────────────────────────────────
   const selectableLinkIds = useMemo(() => {
     if (!isLinkSelectMode) return new Set<string>();
@@ -354,20 +436,39 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
   }, [isLinkSelectMode, selectedLinks, busanLinkData, getSelectableLinkIds]);
 
   // ─── PathLayer 데이터 빌드 ────────────────────────────────────
-  const pathData = (busanLinkData?.features ?? []).map((feature: any) => {
-    const lkId: string = feature.properties?.link_id ?? "";
-    const coords = feature.geometry?.coordinates ?? [];
+  const pathData = useMemo(() => {
+    // 필터링된 링크가 있으면 사용, 없으면 원본 사용
+    const sourceData = shouldFilterLinks && filteredLinks ? filteredLinks : busanLinkData;
+    
+    const data = (sourceData?.features ?? []).map((feature: any) => {
+      // link_id를 String으로 변환해 trafficMap 키와 타입 통일
+      const lkId: string = String(feature.properties?.link_id ?? "").trim();
+      const coords = feature.geometry?.coordinates ?? [];
 
-    // LineString: coordinates = [[lng, lat], [lng, lat], ...]
-    return {
-      lkId,
-      path: coords, // 이미 [lng, lat] 형식의 배열
-    };
-  });
+      // LineString: coordinates = [[lng, lat], [lng, lat], ...]
+      return {
+        lkId,
+        path: coords, // 이미 [lng, lat] 형식의 배열
+      };
+    });
+    
+    // 처음 5개 링크 샘플 로그
+    if (data.length > 0 && data.length <= 5) {
+      data.forEach((item: any, idx: number) => {
+        console.log(`[TwinMap] 링크 샘플 ${idx + 1}: lkId="${item.lkId}", path length=${item.path.length}`);
+      });
+    }
+    
+    console.log(`[TwinMap] pathData 생성: ${data.length}개 링크, zoom: ${viewState.zoom.toFixed(2)}, 필터링: ${shouldFilterLinks ? 'ON' : 'OFF'}`);
+    return data;
+  }, [busanLinkData, shouldFilterLinks, filteredLinks, viewState.zoom]);
 
   // ─── 레이어 생성 ──────────────────────────────────────────────
   const boundaryLayer = createBoundaryLayer(boundaryData);
-  const pathLayer = createPathLayer(pathData, trafficMap, highlightedLinkIds, activeLinkId, isLinkSelectModeRef, handleLinkSelect, busanLinkData, selectableLinkIds);
+  
+  // 링크 레이어: 필터링 여부와 관계없이 PathLayer 사용 (소통정보 색상 유지)
+  const linkLayers = [createPathLayer(pathData, trafficMap, highlightedLinkIds, activeLinkId, isLinkSelectModeRef, handleLinkSelect, busanLinkData, selectableLinkIds)];
+  
   // isCctvOnly 모드 시 CCTV 레이어만 표시 (다른 마커 숨김)
   const bitLayers = isCctvOnly ? [] : createBitClusterLayers(bitClusters);
   const constructionLayers = isCctvOnly ? [] : createConstructionClusterLayers(constructionClusters);
@@ -405,7 +506,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData, bitData, 
           ...themeTravelLayers,
           ...cctvLayers,
           ...roadviewMarkerLayers,  // 로드뷰 마커 레이어 추가 (Task 5.5)
-          pathLayer,  // PathLayer를 맨 위로 이동 - 클릭 우선순위 최상위
+          ...linkLayers,  // 링크 레이어 (클러스터 또는 개별) - 클릭 우선순위 최상위
         ]}
         onHover={handleHover}
         onClick={handleMapClick}  // 지도 클릭 핸들러 추가 (Task 5.2)
