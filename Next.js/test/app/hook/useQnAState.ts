@@ -1,14 +1,13 @@
 "use client"
 
 import React, { useState, SyntheticEvent } from "react"
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 
 export function useQnAState(id: string) {
-    const router = useRouter();
+    const { email } = useAuthGuard();
 
-    const { data: session } = useSession();
-    const name = session?.user?.name || "";
+    const router = useRouter();
 
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
@@ -64,12 +63,12 @@ export function useQnAState(id: string) {
 
     const handleQuestionHate = async () => {
         try {
-            const data = await fetch(`/api/QnA/Question/Hate/getEachQuestionHate/${id}?name=${name}`);
+            const data = await fetch(`/api/QnA/Question/Hate/getEachQuestionHate/${id}?name=${email}`);
             const res = await data.json();
 
             if (res == null) {
                 try {
-                    await fetch(`/api/QnA/Question/Hate/addQuestionHate/${id}?name=${name}`, {
+                    await fetch(`/api/QnA/Question/Hate/addQuestionHate/${id}?name=${email}`, {
                         method: "POST"
                     });
                     getQuestionHate();
@@ -78,7 +77,7 @@ export function useQnAState(id: string) {
                 }
             } else {
                 try {
-                    await fetch(`/api/QnA/Question/Hate/removeEachQuestionHate/${id}?name=${name}`, {
+                    await fetch(`/api/QnA/Question/Hate/removeEachQuestionHate/${id}?name=${email}`, {
                         method: "POST"
                     })
                     getQuestionHate();
@@ -101,7 +100,7 @@ export function useQnAState(id: string) {
             const res = await fetch(`/api/QnA/Answer/Hate/getEachAnswerHate/${answerId}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name })
+                body: JSON.stringify({ email })
             });
             const data = await res.json();
 
@@ -110,7 +109,7 @@ export function useQnAState(id: string) {
                     await fetch(`/api/QnA/Answer/Hate/addEachAnswerHate/${answerId}`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ name })
+                        body: JSON.stringify({ email })
                     });
                     getAnswerHate(answerId);
                 } catch (err) {
@@ -121,7 +120,7 @@ export function useQnAState(id: string) {
                     await fetch(`/api/QnA/Answer/Hate/removeEachAnswerHate/${answerId}`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ name })
+                        body: JSON.stringify({ email })
                     });
                     getAnswerHate(answerId);
                 } catch (err) {
@@ -142,7 +141,7 @@ export function useQnAState(id: string) {
             const res = await fetch(`/api/QnA/Answer/Like/getEachAnswerLike/${answerId}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name })
+                body: JSON.stringify({ email })
             });
             const data = await res.json();
 
@@ -151,7 +150,7 @@ export function useQnAState(id: string) {
                     await fetch(`/api/QnA/Answer/Like/addEachAnswerLike/${answerId}`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ name })
+                        body: JSON.stringify({ email })
                     });
                     getAnswerLike(answerId);
                 } catch (err) {
@@ -162,7 +161,7 @@ export function useQnAState(id: string) {
                     await fetch(`/api/QnA/Answer/Like/removeEachAnswerLike/${answerId}`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ name })
+                        body: JSON.stringify({ email })
                     });
                     getAnswerLike(answerId);
                 } catch (err) {
@@ -176,12 +175,12 @@ export function useQnAState(id: string) {
 
     const handleQuestionLike = async () => {
         try {
-            const data = await fetch(`/api/QnA/Question/Like/getEachQuestionLike/${id}?name=${name}`);
+            const data = await fetch(`/api/QnA/Question/Like/getEachQuestionLike/${id}?name=${email}`);
             const res = await data.json();
 
             if (res === null) {
                 try {
-                    await fetch(`/api/QnA/Question/Like/addQuestionLike/${id}?name=${name}`, {
+                    await fetch(`/api/QnA/Question/Like/addQuestionLike/${id}?name=${email}`, {
                         method: "POST"
                     });
                     getQuestionLike();
@@ -190,7 +189,7 @@ export function useQnAState(id: string) {
                 }
             } else {
                 try {
-                    await fetch(`/api/QnA/Question/Like/removeEachQuestionLike/${id}?name=${name}`, {
+                    await fetch(`/api/QnA/Question/Like/removeEachQuestionLike/${id}?name=${email}`, {
                         method: "POST"
                     })
                     getQuestionLike();
