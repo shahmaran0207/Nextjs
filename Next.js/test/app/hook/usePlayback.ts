@@ -77,7 +77,12 @@ export function usePlayback(options: UsePlaybackOptions): UsePlaybackReturn {
       // currentTime 유효성 검사
       if (!opts.currentTime || isNaN(opts.currentTime.getTime())) {
         console.error("[usePlayback] Invalid currentTime:", opts.currentTime);
-        pause();
+        // 재생 정지
+        if (intervalIdRef.current !== null) {
+          clearInterval(intervalIdRef.current);
+          intervalIdRef.current = null;
+        }
+        setIsPlaying(false);
         return;
       }
 
@@ -88,7 +93,12 @@ export function usePlayback(options: UsePlaybackOptions): UsePlaybackReturn {
       // nextTime 유효성 검사
       if (isNaN(nextTime.getTime())) {
         console.error("[usePlayback] Invalid nextTime calculated from:", opts.currentTime);
-        pause();
+        // 재생 정지
+        if (intervalIdRef.current !== null) {
+          clearInterval(intervalIdRef.current);
+          intervalIdRef.current = null;
+        }
+        setIsPlaying(false);
         return;
       }
 
@@ -111,7 +121,7 @@ export function usePlayback(options: UsePlaybackOptions): UsePlaybackReturn {
         opts.onTimeChange(nextTime);
       }
     }, realTimeInterval);
-  }, [currentSpeed, currentInterval, pause]);
+  }, [currentSpeed, currentInterval]);
 
   /**
    * 재생 일시정지
