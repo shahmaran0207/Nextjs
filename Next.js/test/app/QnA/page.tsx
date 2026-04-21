@@ -139,7 +139,7 @@ export default function QnA() {
                     {/* 로그아웃 버튼 */}
                     <button
                         onClick={() => {
-                            localStorage.removeItem("token");
+                            sessionStorage.removeItem("token");
                             window.location.href = "/Login";
                         }}
                         style={{

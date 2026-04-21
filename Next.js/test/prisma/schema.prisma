@@ -31,6 +31,7 @@ model post {
   updatedat DateTime? @db.Timestamp(6)
   image     Bytes?
   postview  Int?      @default(0)
+  writer    String?   @db.VarChar(1000)
 }
 
 model qna {
@@ -41,15 +42,16 @@ model qna {
   image     Bytes?
   qnaview   Int?      @default(0)
   isend     Int?      @default(0)
+  writer    String?   @db.VarChar(1000)
 }
 
 model answer {
-  id          Int       @id @default(autoincrement())
-  title       String?   @db.VarChar(1000)
-  content     String?   @db.VarChar(1000)
-  createdat   DateTime? @db.Timestamp(6)
-  image       Bytes?
-  questionid  Int?
+  id         Int       @id @default(autoincrement())
+  title      String?   @db.VarChar(1000)
+  content    String?   @db.VarChar(1000)
+  createdat  DateTime? @db.Timestamp(6)
+  image      Bytes?
+  questionid Int?
 }
 
 model postcomment {
@@ -61,12 +63,12 @@ model postcomment {
 }
 
 model commentbycomment {
-  id            Int     @id @default(autoincrement())
-  upprcommentid Int?
-  commenttitle  String? @db.VarChar(1000)
+  id             Int     @id @default(autoincrement())
+  upprcommentid  Int?
+  commenttitle   String? @db.VarChar(1000)
   commentcontent String? @db.VarChar(1000)
-  commentwriter String? @db.VarChar(1000)
-  postid        Int?
+  commentwriter  String? @db.VarChar(1000)
+  postid         Int?
 }
 
 model postlike {
@@ -137,25 +139,23 @@ model users {
   id       Int     @id(map: "users_pkey1") @default(autoincrement())
   name     String? @db.VarChar(100)
   naver_id String? @db.VarChar(3000)
-  email    String? @unique
-  password String?          
+  email    String? @unique @db.VarChar(255)
+  password String? @db.VarChar(255)
 }
 
-// 수동 생성 테이블 — migrate 금지, generate만 사용
-// 실제 DB 컬럼: gid, emd_cd, col_adm_se, emd_nm, sgg_oid, geom(PostGIS MultiPolygon)
 model busanpolyline {
-  gid        Int     @id
-  emd_cd     String? @db.VarChar(5)
-  col_adm_se String? @db.VarChar(2)
-  emd_nm     String? @db.VarChar(50)
+  gid        Int                      @id @default(autoincrement())
+  emd_cd     String?                  @db.VarChar(8)
+  col_adm_se String?                  @db.VarChar(5)
+  emd_nm     String?                  @db.VarChar(100)
   sgg_oid    Int?
-  geom       Unsupported("geometry(MultiPolygon, 4326)")?
+  geom       Unsupported("geometry")?
 
   @@ignore
 }
 
 model busan_construction {
-  gid              Int       @id
+  gid              Int                      @id
   seq_no           BigInt?
   project_name     String?
   d_day            BigInt?
@@ -164,22 +164,22 @@ model busan_construction {
   progress_rate    Decimal?
   plan_rate        Decimal?
   achievement_rate Decimal?
-  field_code       String?   @db.VarChar(10)
+  field_code       String?                  @db.VarChar(10)
   location_text    String?
-  start_date       DateTime? @db.Date
-  end_date         DateTime? @db.Date
-  dept_code        String?   @db.VarChar(10)
+  start_date       DateTime?                @db.Date
+  end_date         DateTime?                @db.Date
+  dept_code        String?                  @db.VarChar(10)
   contact          String?
   budget_text      String?
   lat              Decimal?
   lon              Decimal?
-  geom             Unsupported("geometry(Point, 4326)")?
+  geom             Unsupported("geometry")?
 
   @@ignore
 }
 
 model busan_theme_travel {
-  gid             Int      @id
+  gid             Int                      @id
   fid             BigInt?
   content_id      BigInt?
   content_name    String?
@@ -204,50 +204,50 @@ model busan_theme_travel {
   image_url       String?
   thumbnail_url   String?
   detail_info     String?
-  geom            Unsupported("geometry(Point, 4326)")?
+  geom            Unsupported("geometry")?
 
   @@ignore
 }
 
 model busan_standard_node {
-  fid        Int     @id @default(autoincrement())
-  node_id    String? @db.VarChar(10)
-  node_type  String? @db.VarChar(3)
-  node_name  String? @db.VarChar(50)
-  turn_p     String? @db.VarChar(1)
-  updatedate String? @db.VarChar(8)
-  remark     String? @db.VarChar(30)
-  hist_type  String? @db.VarChar(8)
-  histremark String? @db.VarChar(30)
-  geom       Unsupported("geometry(Point, 4326)")?
+  fid        Int                      @id @default(autoincrement())
+  geom       Unsupported("geometry")?
+  node_id    String?                  @db.VarChar(10)
+  node_type  String?                  @db.VarChar(3)
+  node_name  String?                  @db.VarChar(50)
+  turn_p     String?                  @db.VarChar(1)
+  updatedate String?                  @db.VarChar(8)
+  remark     String?                  @db.VarChar(30)
+  hist_type  String?                  @db.VarChar(8)
+  histremark String?                  @db.VarChar(30)
 
   @@map("busan_standard_node")
 }
 
 model busan_standard_link {
-  fid        Int     @id @default(autoincrement())
-  link_id    String? @db.VarChar(10)
-  f_node     String? @db.VarChar(10)
-  t_node     String? @db.VarChar(10)
+  fid        Int                      @id @default(autoincrement())
+  geom       Unsupported("geometry")?
+  link_id    String?                  @db.VarChar(10)
+  f_node     String?                  @db.VarChar(10)
+  t_node     String?                  @db.VarChar(10)
   lanes      BigInt?
-  road_rank  String? @db.VarChar(3)
-  road_type  String? @db.VarChar(3)
-  road_no    String? @db.VarChar(5)
-  road_name  String? @db.VarChar(30)
-  road_use   String? @db.VarChar(1)
-  multi_link String? @db.VarChar(1)
-  connect    String? @db.VarChar(3)
+  road_rank  String?                  @db.VarChar(3)
+  road_type  String?                  @db.VarChar(3)
+  road_no    String?                  @db.VarChar(5)
+  road_name  String?                  @db.VarChar(30)
+  road_use   String?                  @db.VarChar(1)
+  multi_link String?                  @db.VarChar(1)
+  connect    String?                  @db.VarChar(3)
   max_spd    BigInt?
-  rest_veh   String? @db.VarChar(3)
+  rest_veh   String?                  @db.VarChar(3)
   rest_w     BigInt?
   rest_h     BigInt?
-  c_its      String? @db.VarChar(1)
+  c_its      String?                  @db.VarChar(1)
   length     Float?
-  updatedate String? @db.VarChar(8)
-  remark     String? @db.VarChar(30)
-  hist_type  String? @db.VarChar(8)
-  histremark String? @db.VarChar(30)
-  geom       Unsupported("geometry(LineString, 4326)")?
+  updatedate String?                  @db.VarChar(8)
+  remark     String?                  @db.VarChar(30)
+  hist_type  String?                  @db.VarChar(8)
+  histremark String?                  @db.VarChar(30)
 
   @@map("busan_standard_link")
 }
@@ -259,4 +259,99 @@ model link_speed_history {
   recorded_at DateTime @default(now()) @db.Timestamp(6)
 
   @@index([link_id, recorded_at])
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model busan_construction_raw {
+  fid               BigInt?
+  seq_no            BigInt?
+  construction_name String?
+  d_day             BigInt?
+  total_days        BigInt?
+  elapsed_days      BigInt?
+  progress_rate     Decimal?  @db.Decimal
+  plan_rate         Decimal?  @db.Decimal
+  achievement_rate  Decimal?  @db.Decimal
+  field_code        String?   @db.VarChar(10)
+  location_text     String?
+  start_date        DateTime? @db.Date
+  end_date          DateTime? @db.Date
+  summary           String?
+  dept_code         String?   @db.VarChar(10)
+  contact           String?
+  budget_text       String?
+  lat               Decimal?  @db.Decimal
+  lon               Decimal?  @db.Decimal
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model busan_theme_travel_raw {
+  y               Decimal? @db.Decimal
+  x               Decimal? @db.Decimal
+  fid             BigInt?
+  content_id      BigInt?
+  content_name    String?
+  district_name   String?
+  category_name   String?
+  lat             Decimal? @db.Decimal
+  lon             Decimal? @db.Decimal
+  place_name      String?
+  title           String?
+  subtitle        String?
+  main_content    String?
+  address         String?
+  address_detail  String?
+  phone           String?
+  homepage        String?
+  transport_info  String?
+  operating_days  String?
+  closed_days     String?
+  operating_hours String?
+  fee_info        String?
+  notice_info     String?
+  image_url       String?
+  thumbnail_url   String?
+  detail_info     String?
+
+  @@ignore
+}
+
+model code_construction_dept {
+  code String @id @db.VarChar(3)
+  name String
+}
+
+model code_construction_field {
+  code String @id @db.VarChar(3)
+  name String
+}
+
+model standard_link {
+  gid        Int                      @id @default(autoincrement())
+  link_id    String?
+  f_node     String?
+  t_node     String?
+  lanes      BigInt?
+  road_rank  String?                  @db.VarChar(3)
+  road_type  String?                  @db.VarChar(3)
+  road_no    String?                  @db.VarChar(5)
+  road_name  String?
+  road_use   String?                  @db.VarChar(1)
+  multi_link String?                  @db.VarChar(1)
+  connect    String?                  @db.VarChar(3)
+  max_spd    BigInt?
+  rest_veh   String?                  @db.VarChar(3)
+  rest_w     BigInt?
+  rest_h     BigInt?
+  c_its      String?                  @db.VarChar(1)
+  length     Decimal?                 @db.Decimal
+  updatedate String?                  @db.VarChar(8)
+  remark     String?
+  hist_type  String?                  @db.VarChar(8)
+  histremark String?
+  geom       Unsupported("geometry")?
+
+  @@index([geom], type: Gist)
 }

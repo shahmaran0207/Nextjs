@@ -2,8 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { SyntheticEvent, useState } from "react";
+import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 
 export default function useNoramlPost() {
+  const { email } = useAuthGuard();
+
   const router = useRouter();
 
   const [title, setTitle] = useState("");
@@ -30,6 +33,7 @@ export default function useNoramlPost() {
       const formData = new FormData();
       formData.append("title", title);
       formData.append("content", content);
+      formData.append("email", email);
       if (image) formData.append("image", image);
       await fetch("/api/posts/addPost", { method: "POST", body: formData });
       setTitle(""); setContent(""); setImage(null);
@@ -46,6 +50,6 @@ export default function useNoramlPost() {
 
   return {
     getList, posts, setPosts, handlePostImageChange, image, setImage,
-    handleWrite, title, setTitle, content, setContent, router
+    handleWrite, title, setTitle, content, setContent, router, useAuthGuard
   };
 }

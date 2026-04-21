@@ -2,14 +2,14 @@
 
 import postStyle from "../hook/postStyle";
 import useNoramlPost from "../hook/useNormalPost";
-import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 
 const PostForm = () => {
-  useAuthGuard();
 
   const { handlePostImageChange, image, handleWrite, title, setTitle, content,
-    setContent, router
+    setContent, router, useAuthGuard
   } = useNoramlPost();
+
+  useAuthGuard();
 
   const { labelStyle, inputStyle, dark } = postStyle();
 
@@ -100,7 +100,7 @@ const PostForm = () => {
           {/* 로그아웃 버튼 */}
           <button
             onClick={() => {
-              localStorage.removeItem("token");
+              sessionStorage.removeItem("token");
               window.location.href = "/Login";
             }}
             style={{

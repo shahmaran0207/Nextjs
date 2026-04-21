@@ -6,7 +6,7 @@ import { SyntheticEvent, useState } from "react";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 
 const QnAForm = () => {
-  useAuthGuard();
+  const { email } = useAuthGuard();
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -26,6 +26,7 @@ const QnAForm = () => {
       const formData = new FormData();
       formData.append("title", title);
       formData.append("content", content);
+      formData.append("email", email);
       if (image) formData.append("image", image);
       await fetch("/api/QnA/Question/addQuestion", { method: "POST", body: formData });
       setTitle(""); setContent(""); setImage(null);
@@ -123,7 +124,7 @@ const QnAForm = () => {
           {/* 로그아웃 버튼 */}
           <button
             onClick={() => {
-              localStorage.removeItem("token");
+              sessionStorage.removeItem("token");
               window.location.href = "/Login";
             }}
             style={{

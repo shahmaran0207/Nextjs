@@ -20,7 +20,7 @@ export default function Login() {
         const data = await res.json();
 
         if (data.token) {
-            localStorage.setItem("token", data.token);
+            sessionStorage.setItem("token", data.token);
             router.push("/"); // 로그인 성공 시 메인 페이지로 이동
         } else {
             alert("로그인 실패: " + (data.err ?? "알 수 없는 오류"));

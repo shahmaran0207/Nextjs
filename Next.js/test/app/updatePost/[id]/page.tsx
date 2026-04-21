@@ -140,7 +140,7 @@ export default function EditForm({ params }: { params: Promise<{ id: string }> }
           {/* 로그아웃 버튼 */}
           <button
             onClick={() => {
-              localStorage.removeItem("token");
+              sessionStorage.removeItem("token");
               window.location.href = "/Login";
             }}
             style={{

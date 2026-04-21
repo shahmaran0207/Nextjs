@@ -408,7 +408,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             </a>
             <button
               onClick={() => {
-                localStorage.removeItem("token");
+                sessionStorage.removeItem("token");
                 window.location.href = "/Login";
               }}
               style={{
