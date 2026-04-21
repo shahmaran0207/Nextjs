@@ -3,8 +3,11 @@
 import postStyle from "@/app/hook/postStyle";
 import { useRouter } from "next/navigation";
 import { SyntheticEvent, useState } from "react";
+import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 
 const QnAForm = () => {
+  useAuthGuard();
+
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [image, setImage] = useState<File | null>(null);

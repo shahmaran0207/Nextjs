@@ -1,7 +1,5 @@
 "use client"
 
-import { useAuthGuard } from "@/app/hooks/useAuthGuard";
-
 const dark = {
   bg: "#0a0e1a",
   surface: "#1a1d27",
@@ -28,7 +26,6 @@ const navItems = [
 ];
 
 export default function Page() {
-  useAuthGuard();
 
   return (
     <div style={{

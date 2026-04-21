@@ -11,6 +11,18 @@ export async function POST(request: Request) {
             return NextResponse.json({ err: "Missing fileds" }, { status: 400 })
         }
 
+        // 이름 중복 확인 (이름 먼저 검증)
+        const existingName = await prisma.users.findFirst({ where: { name: String(name) } });
+        if (existingName) {
+            return NextResponse.json({ err: "이미 사용 중인 이름입니다.", field: "name" }, { status: 409 });
+        }
+
+        // 이메일 중복 확인
+        const existingEmail = await prisma.users.findFirst({ where: { email: String(email) } });
+        if (existingEmail) {
+            return NextResponse.json({ err: "이미 사용 중인 이메일입니다.", field: "email" }, { status: 409 });
+        }
+
         await prisma.users.create({
             data: {
                 email: String(email),
@@ -18,6 +30,8 @@ export async function POST(request: Request) {
                 name: String(name),
             }
         });
+
+        return NextResponse.json({ result: "ok" });
 
     } catch (err: any) {
         console.error("User Register API Error:::::::::::::::", err);

@@ -6,8 +6,11 @@ import PostCard from "./_components/PostCard";
 import CommentForm from "./_components/CommentForm";
 import CommentTable from "./_components/CommentTable";
 import { usePostState } from "@/app/hook/usePostState";
+import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 
 const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
+  useAuthGuard();
+
   const { id } = use(params);
   const router = useRouter();
 

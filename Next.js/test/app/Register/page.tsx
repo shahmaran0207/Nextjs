@@ -7,7 +7,39 @@ export default function Login() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [name, setName] = useState("");
+    const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
     const router = useRouter();
+
+    // 중복 오류가 하나라도 있으면 버튼 비활성화
+    const hasError = !!(errors.name || errors.email);
+
+    // 이름 입력칸에서 포커스가 빠져나갈 때 이름 중복 검증
+    async function handleNameBlur() {
+        if (!name.trim()) return;
+
+        const res = await fetch(`/api/auth/CheckDuplicate?field=name&value=${encodeURIComponent(name)}`);
+        const data = await res.json();
+
+        if (data.isDuplicate) {
+            setErrors((prev) => ({ ...prev, name: "이미 사용 중인 이름입니다." }));
+        } else {
+            setErrors((prev) => ({ ...prev, name: undefined }));
+        }
+    }
+
+    // 이메일 입력칸에서 포커스가 빠져나갈 때 이메일 중복 검증
+    async function handleEmailBlur() {
+        if (!email.trim()) return;
+
+        const res = await fetch(`/api/auth/CheckDuplicate?field=email&value=${encodeURIComponent(email)}`);
+        const data = await res.json();
+
+        if (data.isDuplicate) {
+            setErrors((prev) => ({ ...prev, email: "이미 사용 중인 이메일입니다." }));
+        } else {
+            setErrors((prev) => ({ ...prev, email: undefined }));
+        }
+    }
 
     async function handleLogin(e: React.FormEvent) {
         e.preventDefault();
@@ -18,13 +50,18 @@ export default function Login() {
             body: JSON.stringify({ email, password, name }),
         });
 
-        const data = await res.json();
-
-        if (data.token) {
-            localStorage.setItem("token", data.token);
+        if (res.status === 200) {
             router.push("/"); // 로그인 성공 시 메인 페이지로 이동
+        } else if (res.status === 409) {
+            // onBlur에서 이미 잡히지만, 혹시 통과된 경우에도 처리
+            const data = await res.json();
+            if (data.field === "name") {
+                setErrors((prev) => ({ ...prev, name: data.err }));
+            } else if (data.field === "email") {
+                setErrors((prev) => ({ ...prev, email: data.err }));
+            }
         } else {
-            alert("로그인 실패: " + (data.err ?? "알 수 없는 오류"));
+            alert("회원가입 실패 ");
         }
     };
 
@@ -60,10 +97,25 @@ export default function Login() {
                             type="text"
                             placeholder="사용자 이름"
                             value={name}
-                            onChange={(e) => setName(e.target.value)}
+                            onChange={(e) => {
+                                setName(e.target.value);
+                                // 입력값이 바뀌면 이름 에러 초기화
+                                setErrors((prev) => ({ ...prev, name: undefined }));
+                            }}
+                            onBlur={handleNameBlur}
                             required
-                            className="w-full h-11 border border-slate-700/80 rounded-lg px-4 text-sm bg-slate-950/60 text-cyan-50 outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 placeholder:text-slate-600 transition-all shadow-inner"
+                            className={`w-full h-11 border rounded-lg px-4 text-sm bg-slate-950/60 text-cyan-50 outline-none focus:ring-1 placeholder:text-slate-600 transition-all shadow-inner ${
+                                errors.name
+                                    ? "border-red-500 focus:border-red-400 focus:ring-red-400/50"
+                                    : "border-slate-700/80 focus:border-cyan-400 focus:ring-cyan-400/50"
+                            }`}
                         />
+                        {/* 이름 중복 경고 */}
+                        {errors.name && (
+                            <p className="mt-1.5 text-xs text-red-400 flex items-center gap-1">
+                                <span>⚠</span> {errors.name}
+                            </p>
+                        )}
                     </div>
 
                     <div className="mb-5">
@@ -74,10 +126,25 @@ export default function Login() {
                             type="email"
                             placeholder="admin@system.local"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            onChange={(e) => {
+                                setEmail(e.target.value);
+                                // 입력값이 바뀌면 이메일 에러 초기화
+                                setErrors((prev) => ({ ...prev, email: undefined }));
+                            }}
+                            onBlur={handleEmailBlur}
                             required
-                            className="w-full h-11 border border-slate-700/80 rounded-lg px-4 text-sm bg-slate-950/60 text-cyan-50 outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 placeholder:text-slate-600 transition-all shadow-inner"
+                            className={`w-full h-11 border rounded-lg px-4 text-sm bg-slate-950/60 text-cyan-50 outline-none focus:ring-1 placeholder:text-slate-600 transition-all shadow-inner ${
+                                errors.email
+                                    ? "border-red-500 focus:border-red-400 focus:ring-red-400/50"
+                                    : "border-slate-700/80 focus:border-cyan-400 focus:ring-cyan-400/50"
+                            }`}
                         />
+                        {/* 이메일 중복 경고 */}
+                        {errors.email && (
+                            <p className="mt-1.5 text-xs text-red-400 flex items-center gap-1">
+                                <span>⚠</span> {errors.email}
+                            </p>
+                        )}
                     </div>
 
                     {/* 비밀번호 입력란 */}
@@ -97,7 +164,16 @@ export default function Login() {
 
 
                     {/* 로그인 버튼 */}
-                    <button type="submit" className="relative w-full h-12 bg-cyan-900/40 border border-cyan-500/50 hover:bg-cyan-500/20 hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(34,211,238,0.2)] active:scale-[0.98] text-cyan-400 hover:text-cyan-300 text-sm font-semibold tracking-wider rounded-lg transition-all overflow-hidden">
+                    {/* 중복 오류가 있으면 버튼 비활성화 */}
+                    <button
+                        type="submit"
+                        disabled={hasError}
+                        className={`relative w-full h-12 border text-sm font-semibold tracking-wider rounded-lg transition-all overflow-hidden ${
+                            hasError
+                                ? "bg-slate-800/40 border-slate-600/50 text-slate-500 cursor-not-allowed opacity-60"
+                                : "bg-cyan-900/40 border-cyan-500/50 hover:bg-cyan-500/20 hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(34,211,238,0.2)] active:scale-[0.98] text-cyan-400 hover:text-cyan-300 cursor-pointer"
+                        }`}
+                    >
                         <span className="relative z-10 block">회원 가입</span>
                     </button>
                 </form>

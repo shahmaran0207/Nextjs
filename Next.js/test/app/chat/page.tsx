@@ -2,19 +2,21 @@
 
 import { useEffect } from "react"
 import useChatState from "../hook/useChatState";
+import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 
 export default function ChatPage() {
-    
+    useAuthGuard();
+
     const { mode, setMode, messages, setMessages, recepientId, setRecipientId,
-            recipientLocked, setRecipientLocked, socketRef, userId, setMessage,
-            handleRoomSelect, connectWebSocket, sendMessage, message, chatRooms,
-            image, setImage, handleImageChange, handleExistingUser, idError, setIdError,
-            inputId, setInputId
-     } = useChatState();
+        recipientLocked, setRecipientLocked, socketRef, userId, setMessage,
+        handleRoomSelect, connectWebSocket, sendMessage, message, chatRooms,
+        image, setImage, handleImageChange, handleExistingUser, idError, setIdError,
+        inputId, setInputId
+    } = useChatState();
 
     useEffect(() => {
         return () => {
-            if(socketRef.current) socketRef.current.close();
+            if (socketRef.current) socketRef.current.close();
         };
     }, []);
 
@@ -30,7 +32,7 @@ export default function ChatPage() {
         accentDim: "rgba(56,189,248,0.1)",
     };
 
-    if(mode === 'roomList') return (
+    if (mode === 'roomList') return (
         <div style={{ minHeight: "100vh", background: dark.bg, display: "flex", flexDirection: "column" }}>
             {/* Digital Twin Header */}
             <header style={{
@@ -96,7 +98,7 @@ export default function ChatPage() {
             </header>
 
             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", padding: "2rem" }}>
-                {chatRooms.length === 0 
+                {chatRooms.length === 0
                     ? <p style={{ color: dark.textMuted, fontSize: "15px" }}>채팅 내역이 없습니다.</p>
                     : chatRooms.map((roomId) => (
                         <button
@@ -154,7 +156,7 @@ export default function ChatPage() {
         </div>
     );
 
-    if(mode === 'select') return (
+    if (mode === 'select') return (
         <div style={{ minHeight: "100vh", background: dark.bg, display: "flex", flexDirection: "column" }}>
             {/* Digital Twin Header */}
             <header style={{
@@ -220,7 +222,7 @@ export default function ChatPage() {
             </header>
 
             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem" }}>
-                <button 
+                <button
                     onClick={() => { setMode('new'); connectWebSocket(); }}
                     style={{
                         background: dark.accent,
@@ -235,7 +237,7 @@ export default function ChatPage() {
                 >
                     신규 회원
                 </button>
-                <button 
+                <button
                     onClick={() => setMode('existing')}
                     style={{
                         background: dark.surface,
@@ -254,13 +256,13 @@ export default function ChatPage() {
         </div>
     );
 
-    if(mode === 'new' && !userId) return (
+    if (mode === 'new' && !userId) return (
         <div style={{ minHeight: "100vh", background: dark.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <p style={{ color: dark.textMuted, fontSize: "15px" }}>연결 중...</p>
         </div>
     );
 
-    if(mode === 'existing') return (
+    if (mode === 'existing') return (
         <div style={{ minHeight: "100vh", background: dark.bg, display: "flex", flexDirection: "column" }}>
             {/* Digital Twin Header */}
             <header style={{
@@ -340,7 +342,7 @@ export default function ChatPage() {
                         outline: "none",
                         width: "280px",
                     }}
-                    placeholder="ID" 
+                    placeholder="ID"
                 />
                 {idError && <p style={{ color: "#f87171", fontSize: "13px" }}>{idError}</p>}
                 <button
@@ -479,10 +481,10 @@ export default function ChatPage() {
                             boxSizing: "border-box",
                         }}
                         placeholder="Recipient Id (leave empty for broadcast)"
-                        disabled={recipientLocked} 
+                        disabled={recipientLocked}
                     />
                 </div>
-                
+
                 <div style={{ marginBottom: "0.75rem" }}>
                     <label style={{
                         display: "block",
@@ -513,11 +515,11 @@ export default function ChatPage() {
                         <button
                             type="button"
                             onClick={() => setImage(null)}
-                            style={{ 
-                                marginTop: "6px", 
-                                fontSize: "12px", 
-                                color: "#f87171", 
-                                cursor: "pointer", 
+                            style={{
+                                marginTop: "6px",
+                                fontSize: "12px",
+                                color: "#f87171",
+                                cursor: "pointer",
                                 border: "none",
                                 background: "transparent",
                             }}
@@ -549,7 +551,7 @@ export default function ChatPage() {
                             fontSize: "14px",
                             outline: "none",
                         }}
-                        placeholder="Type a message...." 
+                        placeholder="Type a message...."
                     />
                     <button
                         disabled={recepientId === userId || (!message && !image)}

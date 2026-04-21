@@ -2,8 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react"
+import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 
 export default function QnA() {
+    useAuthGuard();
+
     const router = useRouter();
 
     const [questionList, setQuestionList] = useState<any[]>([]);

@@ -3,8 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import useNoramlPost from "../hook/useNormalPost";
+import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 
 const PostList = () => {
+
+  useAuthGuard();
+
   const { getList, posts } = useNoramlPost();
 
   const router = useRouter();
@@ -12,7 +16,7 @@ const PostList = () => {
   const itemPerPage = 5;
   const totalPages = Math.ceil(posts.length / itemPerPage);
   const pagedPosts = posts.slice((currentPage - 1) * itemPerPage, currentPage * itemPerPage);
-  
+
   useEffect(() => {
     getList();
   }, []);

@@ -8,8 +8,11 @@ import AnswerEditForm from "./component/AnswerEditForm";
 import Answer from "./component/Answer";
 import AnswerForm from "./component/AnswerForm";
 import { dark } from "@/app/list/[id]/_components/darkTheme";
+import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 
 export default function EachQnA({ params }: { params: Promise<{ id: string }> }) {
+    useAuthGuard();
+
     const { id } = use(params);
 
     const { title, setTitle, content, setContent, answer, handleRemoveAnswer, qEditMode,
