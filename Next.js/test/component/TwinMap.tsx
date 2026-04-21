@@ -168,12 +168,10 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
         map.set(id, isNaN(spd) ? 0 : spd);
         // 처음 5개 샘플 로그
         if (sampleItems < 5) {
-          console.log(`[TwinMap] 소통정보 샘플 ${sampleItems + 1}: lkId="${id}", spd=${spd}`);
           sampleItems++;
         }
       }
     });
-    console.log(`[TwinMap] trafficMap 생성: ${map.size}개 링크, 원본 데이터: ${trafficData.length}개`);
     return map;
   }, [trafficData]);
 
@@ -362,14 +360,12 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
           }
           // 데이터 없음 + clientFallbackUrl: 직접 외부 API 호출
           if (data?.clientFallbackUrl) {
-            console.log("[TwinMap] 서버 Traffic API 실패 - 클라이언트 직접 호출 시도");
             return fetch(data.clientFallbackUrl)
               .then(r => r.json())
               .then(d => {
                 const items = d?.content?.items;
                 if (items && items.length > 0) {
                   setTrafficData(Array.isArray(items) ? items : [items]);
-                  console.log(`[TwinMap] 클라이언트 직접 호출 성공: ${items.length}개`);
                 }
               })
               .catch(e => console.warn("[TwinMap] 클라이언트 직접 호출 실패:", e));
@@ -377,14 +373,12 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
         } else if (res.status === 503) {
           const errData = await res.json().catch(() => ({}));
           if (errData?.clientFallbackUrl) {
-            console.log("[TwinMap] 서버 503 - 클라이언트 직접 외부 API 호출");
             return fetch(errData.clientFallbackUrl)
               .then(r => r.json())
               .then(d => {
                 const items = d?.content?.items;
                 if (items && items.length > 0) {
                   setTrafficData(Array.isArray(items) ? items : [items]);
-                  console.log(`[TwinMap] 클라이언트 직접 호출 성공: ${items.length}개`);
                 }
               })
               .catch(e => console.warn("[TwinMap] 직접 호출 실패:", e));
@@ -392,7 +386,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
         }
       })
       .catch(e => console.warn("[TwinMap] Traffic API 호출 실패:", e));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initTrafficData]);
 
   // 도로 목록 초기 fetch
@@ -439,7 +433,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
   const pathData = useMemo(() => {
     // 필터링된 링크가 있으면 사용, 없으면 원본 사용
     const sourceData = shouldFilterLinks && filteredLinks ? filteredLinks : busanLinkData;
-    
+
     const data = (sourceData?.features ?? []).map((feature: any) => {
       // link_id를 String으로 변환해 trafficMap 키와 타입 통일
       const lkId: string = String(feature.properties?.link_id ?? "").trim();
@@ -451,24 +445,22 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
         path: coords, // 이미 [lng, lat] 형식의 배열
       };
     });
-    
+
     // 처음 5개 링크 샘플 로그
     if (data.length > 0 && data.length <= 5) {
       data.forEach((item: any, idx: number) => {
-        console.log(`[TwinMap] 링크 샘플 ${idx + 1}: lkId="${item.lkId}", path length=${item.path.length}`);
       });
     }
-    
-    console.log(`[TwinMap] pathData 생성: ${data.length}개 링크, zoom: ${viewState.zoom.toFixed(2)}, 필터링: ${shouldFilterLinks ? 'ON' : 'OFF'}`);
+
     return data;
   }, [busanLinkData, shouldFilterLinks, filteredLinks, viewState.zoom]);
 
   // ─── 레이어 생성 ──────────────────────────────────────────────
   const boundaryLayer = createBoundaryLayer(boundaryData);
-  
+
   // 링크 레이어: 필터링 여부와 관계없이 PathLayer 사용 (소통정보 색상 유지)
   const linkLayers = [createPathLayer(pathData, trafficMap, highlightedLinkIds, activeLinkId, isLinkSelectModeRef, handleLinkSelect, busanLinkData, selectableLinkIds)];
-  
+
   // isCctvOnly 모드 시 CCTV 레이어만 표시 (다른 마커 숨김)
   const bitLayers = isCctvOnly ? [] : createBitClusterLayers(bitClusters);
   const constructionLayers = isCctvOnly ? [] : createConstructionClusterLayers(constructionClusters);

@@ -29,7 +29,6 @@ export async function GET() {
     }
 
     const items = data.content?.items;
-    console.log("Incident 응답 전체:", JSON.stringify(data).slice(0, 300));
     if (!items) return Response.json([]);
 
     return Response.json(Array.isArray(items) ? items : [items]);

@@ -32,7 +32,7 @@ export function useLinkClusters({
   viewState,
   enabled,
 }: UseLinkClustersProps) {
-  
+
   const shouldFilter = enabled && viewState.zoom < 11;
 
   const filteredLinks = useMemo(() => {
@@ -48,8 +48,6 @@ export function useLinkClusters({
       return allowedRanks.includes(roadRank);
     });
 
-    console.log(`[useLinkClusters] zoom: ${viewState.zoom.toFixed(2)}, 허용 등급: [${allowedRanks.join(',')}], 필터링: ${linkData.features.length}개 → ${filtered.length}개`);
-    
     return {
       type: "FeatureCollection",
       features: filtered,

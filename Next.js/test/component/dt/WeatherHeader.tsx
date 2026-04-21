@@ -30,13 +30,11 @@ export default function WeatherHeader() {
 
         if (weatherRes.ok) {
           const weatherData = await weatherRes.json();
-          console.log("날씨 데이터:", weatherData);
           setWeather(weatherData);
         }
 
         if (airRes.ok) {
           const airData = await airRes.json();
-          console.log("대기질 데이터:", airData);
           setAirQuality(airData);
         }
       } catch (err) {

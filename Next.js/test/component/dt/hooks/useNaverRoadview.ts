@@ -130,11 +130,6 @@ export function useNaverRoadview({
           (Math.abs(currentPosition.lat() - lastPosition.lat()) > 0.00001 ||
             Math.abs(currentPosition.lng() - lastPosition.lng()) > 0.00001)) {
 
-          console.log("🔄 폴링으로 위치 변경 감지:", {
-            lat: currentPosition.lat(),
-            lng: currentPosition.lng()
-          });
-
           if (onPositionChange) {
             const pov = roadview.getPov();
             onPositionChange(

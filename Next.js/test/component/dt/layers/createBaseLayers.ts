@@ -54,10 +54,6 @@ export function createPathLayer(
       unmatchedCount++;
     }
   });
-  
-  if (pathData.length > 0) {
-    console.log(`[PathLayer] 링크 ${pathData.length}개 중 소통정보 매칭: ${matchedCount}개, 미매칭: ${unmatchedCount}개`);
-  }
 
   return new PathLayer({
     id: "path-layer",
