@@ -183,7 +183,7 @@ export async function getBusanConstruction() {
         location_text: string | null;
         budget_text: string | null;
         d_day: number | null;
-        summary: string | null;
+
         contact: string | null;
         field_code: string | null;
       }[]
@@ -202,7 +202,6 @@ export async function getBusanConstruction() {
          location_text,
          budget_text,
          d_day,
-         summary,
          contact,
          field_code
        FROM test.busan_construction

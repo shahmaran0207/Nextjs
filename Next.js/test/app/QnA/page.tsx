@@ -136,28 +136,34 @@ export default function QnA() {
                     >
                         게시판
                     </a>
-                    <a
-                        href="/map"
+                    {/* 로그아웃 버튼 */}
+                    <button
+                        onClick={() => {
+                            localStorage.removeItem("token");
+                            window.location.href = "/Login";
+                        }}
                         style={{
-                            fontSize: "13px",
-                            color: "#8b90a7",
-                            textDecoration: "none",
-                            padding: "6px 12px",
+                            padding: "6px 14px",
+                            background: "rgba(56,189,248,0.08)",
+                            border: "1px solid rgba(56,189,248,0.3)",
                             borderRadius: "8px",
-                            border: "1px solid rgba(255,255,255,0.08)",
-                            transition: "color 0.15s, border-color 0.15s",
+                            color: "#38bdf8",
+                            fontSize: "13px",
+                            fontWeight: 500,
+                            cursor: "pointer",
+                            transition: "background 0.15s, border-color 0.15s",
                         }}
                         onMouseEnter={e => {
-                            (e.currentTarget as HTMLElement).style.color = "#e8eaf0";
-                            (e.currentTarget as HTMLElement).style.borderColor = "rgba(56,189,248,0.3)";
+                            (e.currentTarget as HTMLButtonElement).style.background = "rgba(56,189,248,0.18)";
+                            (e.currentTarget as HTMLButtonElement).style.borderColor = "#38bdf8";
                         }}
                         onMouseLeave={e => {
-                            (e.currentTarget as HTMLElement).style.color = "#8b90a7";
-                            (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)";
+                            (e.currentTarget as HTMLButtonElement).style.background = "rgba(56,189,248,0.08)";
+                            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(56,189,248,0.3)";
                         }}
                     >
-                        지도
-                    </a>
+                        로그아웃
+                    </button>
                 </nav>
             </header>
 

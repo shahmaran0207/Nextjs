@@ -20,7 +20,6 @@ export interface ConstructionPoint {
   location_text: string | null;
   budget_text: string | null;
   d_day: number | null;
-  summary: string | null;
   contact: string | null;
   field_code: string | null;
 }
