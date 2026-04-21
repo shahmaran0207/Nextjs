@@ -120,8 +120,14 @@ export function useTrafficHistory(
 
         // 실제 데이터의 시간으로 currentTime 업데이트
         if (result.actualTime) {
-          setCurrentTime(new Date(result.actualTime));
-          console.log("[useTrafficHistory] 가장 가까운 데이터 사용:", result.actualTime);
+          const actualTimeDate = new Date(result.actualTime);
+          if (!isNaN(actualTimeDate.getTime())) {
+            setCurrentTime(actualTimeDate);
+            console.log("[useTrafficHistory] 가장 가까운 데이터 사용:", result.actualTime);
+          } else {
+            console.warn("[useTrafficHistory] Invalid actualTime:", result.actualTime);
+            setCurrentTime(time);
+          }
         } else {
           setCurrentTime(time);
         }
