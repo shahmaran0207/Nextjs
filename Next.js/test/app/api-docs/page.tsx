@@ -384,7 +384,7 @@ export default function ApiDocs() {
             </a>
             <button
               onClick={() => {
-                sessionStorage.removeItem("token");
+                localStorage.removeItem("token");
                 window.location.href = "/Login";
               }}
               style={{

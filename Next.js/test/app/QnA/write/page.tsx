@@ -28,7 +28,12 @@ const QnAForm = () => {
       formData.append("content", content);
       formData.append("email", email);
       if (image) formData.append("image", image);
-      await fetch("/api/QnA/Question/addQuestion", { method: "POST", body: formData });
+      const token = localStorage.getItem("token");
+      await fetch("/api/QnA/Question/addQuestion", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
       setTitle(""); setContent(""); setImage(null);
       router.push("/");
       router.refresh();
@@ -124,7 +129,7 @@ const QnAForm = () => {
           {/* 로그아웃 버튼 */}
           <button
             onClick={() => {
-              sessionStorage.removeItem("token");
+              localStorage.removeItem("token");
               window.location.href = "/Login";
             }}
             style={{

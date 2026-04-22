@@ -19,7 +19,10 @@ export default function QnA() {
     useEffect(() => {
         const getQnAList = async () => {
             try {
-                const res = await fetch(`/api/QnA/Question/getQnAList`);
+                const token = localStorage.getItem("token");
+                const res = await fetch(`/api/QnA/Question/getQnAList`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
                 const data = await res.json();
                 setQuestionList(data);
             } catch (err) {
@@ -139,7 +142,7 @@ export default function QnA() {
                     {/* 로그아웃 버튼 */}
                     <button
                         onClick={() => {
-                            sessionStorage.removeItem("token");
+                            localStorage.removeItem("token");
                             window.location.href = "/Login";
                         }}
                         style={{

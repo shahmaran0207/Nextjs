@@ -50,7 +50,7 @@ export default function PostCard({
           </div>
 
           {post.image !== null && (
-            <img src={`data:image/jpeg;base64,${post.image}`} alt="이미지"
+            <img src={`data:image/${post.imageType ?? "jpeg"};base64,${post.image}`} alt="이미지"
               style={{ width: "100%", borderRadius: "10px", marginTop: "1.25rem", border: `1px solid ${dark.border}` }} />
           )}
         </div>

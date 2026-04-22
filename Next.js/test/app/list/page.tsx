@@ -131,7 +131,7 @@ const PostList = () => {
           {/* 로그아웃 버튼 */}
           <button
             onClick={() => {
-              sessionStorage.removeItem("token");
+              localStorage.removeItem("token");
               window.location.href = "/Login";
             }}
             style={{

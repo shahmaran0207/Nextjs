@@ -27,7 +27,10 @@ export default function EditForm({ params }: { params: Promise<{ id: string }> }
     const fetchPost = async () => {
       const { id } = await params;
       setPostId(id);
-      const res = await fetch(`/api/posts/getPostList/${id}`);
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/posts/getPostList/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const data = await res.json();
       setPost(data);
     };
@@ -46,7 +49,12 @@ export default function EditForm({ params }: { params: Promise<{ id: string }> }
     formData.append("content", content || post.content);
     if (imageFile) formData.append("image", imageFile);
 
-    const submit = await fetch(`/api/posts/updatePost/${postId}`, { method: "POST", body: formData });
+    const token = localStorage.getItem("token");
+    const submit = await fetch(`/api/posts/updatePost/${postId}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData
+    });
     if (submit.status === 200) {
       alert("수정되었습니다.");
       router.push("/list");
@@ -140,7 +148,7 @@ export default function EditForm({ params }: { params: Promise<{ id: string }> }
           {/* 로그아웃 버튼 */}
           <button
             onClick={() => {
-              sessionStorage.removeItem("token");
+              localStorage.removeItem("token");
               window.location.href = "/Login";
             }}
             style={{

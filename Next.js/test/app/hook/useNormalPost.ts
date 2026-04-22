@@ -18,11 +18,23 @@ export default function useNoramlPost() {
 
   const getList = async () => {
     try {
-      const res = await fetch('/api/posts/getPostList');
+      const token = localStorage.getItem("token");
+      const res = await fetch('/api/posts/getPostList', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       const data = await res.json();
-      setPosts(data);
+      // 배열인지 확인 후 설정
+      if (Array.isArray(data)) {
+        setPosts(data);
+      } else {
+        console.error("API response is not an array:", data);
+        setPosts([]);
+      }
     } catch (err: any) {
       console.error("error::::::::::::", err);
+      setPosts([]);
     }
   };
 
@@ -35,7 +47,12 @@ export default function useNoramlPost() {
       formData.append("content", content);
       formData.append("email", email);
       if (image) formData.append("image", image);
-      await fetch("/api/posts/addPost", { method: "POST", body: formData });
+      const token = localStorage.getItem("token");
+      await fetch("/api/posts/addPost", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
       setTitle(""); setContent(""); setImage(null);
       router.push("/");
       router.refresh();

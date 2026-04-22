@@ -30,39 +30,46 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
   const pagedComments = comment.slice((currentPage - 1) * itemPerPage, currentPage * itemPerPage);
 
   useEffect(() => {
-    fetch(`/api/posts/addViewCount/${id}`, { method: "POST" }).catch(err => console.error("View Count 에러:", err));
+    const token = localStorage.getItem("token");
+    fetch(`/api/posts/addViewCount/${id}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` }
+    }).catch(err => console.error("View Count 에러:", err));
   }, []);
 
   useEffect(() => {
     const getPost = async () => {
       try {
+        const token = localStorage.getItem("token");
+        const authHeader = { Authorization: `Bearer ${token}` };
         const [downCommentData, postData, commentData, likeText, hateText] = await Promise.all([
-          fetch(`/api/Comment/DownComment/getEachComment/${id}`).then(r => r.json()),
-          fetch(`/api/posts/getPostList/${id}`).then(r => r.json()),
-          fetch(`/api/Comment/getEachComment/${id}`).then(r => r.json()),
-          fetch(`/api/posts/Like/getPostLike/${id}`).then(r => r.text()),
-          fetch(`/api/posts/Hate/getPostHate/${id}`).then(r => r.text()),
+          fetch(`/api/Comment/DownComment/getEachComment/${id}`, { headers: authHeader }).then(r => r.json()),
+          fetch(`/api/posts/getPostList/${id}`, { headers: authHeader }).then(r => r.json()),
+          fetch(`/api/Comment/getEachComment/${id}`, { headers: authHeader }).then(r => r.json()),
+          fetch(`/api/posts/Like/getPostLike/${id}`, { headers: authHeader }).then(r => r.text()),
+          fetch(`/api/posts/Hate/getPostHate/${id}`, { headers: authHeader }).then(r => r.text()),
         ]);
         setDownComments(Array.isArray(downCommentData) ? downCommentData : []);
         setPost(postData);
-        setComment(commentData);
+        const safeCommentData = Array.isArray(commentData) ? commentData : [];
+        setComment(safeCommentData);
         setPostLike(likeText ? JSON.parse(likeText)?.length ?? 0 : 0);
         setPostHate(hateText ? JSON.parse(hateText)?.length ?? 0 : 0);
 
         const commentLikes = await Promise.all(
-          commentData.map((c: any) => fetch(`/api/Comment/Like/getCommentLike/${c.id}`).then(r => r.json()))
+          safeCommentData.map((c: any) => fetch(`/api/Comment/Like/getCommentLike/${c.id}`, { headers: authHeader }).then(r => r.json()))
         );
 
         const likeCounts: { [key: number]: number } = {};
-        commentData.forEach((c: any, i: number) => { likeCounts[c.id] = commentLikes[i]?.length ?? 0; });
+        safeCommentData.forEach((c: any, i: number) => { likeCounts[c.id] = commentLikes[i]?.length ?? 0; });
         setCommentLikeCounts(likeCounts);
 
         const commentHates = await Promise.all(
-          commentData.map((c: any) => fetch(`/api/Comment/Hate/getCommentHate/${c.id}`).then(r => r.json()))
+          safeCommentData.map((c: any) => fetch(`/api/Comment/Hate/getCommentHate/${c.id}`, { headers: authHeader }).then(r => r.json()))
         );
 
         const hateCounts: { [key: number]: number } = {};
-        commentData.forEach((c: any, i: number) => { hateCounts[c.id] = commentHates[i]?.length ?? 0; });
+        safeCommentData.forEach((c: any, i: number) => { hateCounts[c.id] = commentHates[i]?.length ?? 0; });
         setCommentHateCounts(hateCounts);
       } catch (err) {
         console.error("error:", err);
@@ -166,7 +173,7 @@ const PostDetail = ({ params }: { params: Promise<{ id: string }> }) => {
           {/* 로그아웃 버튼 */}
           <button
             onClick={() => {
-              sessionStorage.removeItem("token");
+              localStorage.removeItem("token");
               window.location.href = "/Login";
             }}
             style={{

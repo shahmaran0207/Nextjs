@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { generateToken } from "@/utils/auth";
+import { generateAccessToken, generateRefreshToken } from "@/utils/auth";
+import { saveRefreshToken } from "@/lib/tokenStore";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -17,12 +18,45 @@ export async function POST(request: Request) {
             return NextResponse.json({ err: "Invalid credentials" }, { status: 401 });
         }
 
-        const token = generateToken({
+        // 액세스 토큰 생성 (15분)
+        const accessToken = generateAccessToken({
             id: String(user.id),
             email: user.email ?? "",
         });
 
-        return NextResponse.json({ token }, { status: 200 });
+        // 리프레시 토큰 생성 (7일)
+        const refreshToken = generateRefreshToken({
+            id: String(user.id),
+            tokenVersion: 1, // 기본 버전
+        });
+
+        // 리프레시 토큰을 데이터베이스에 저장
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7일 후
+        await saveRefreshToken(String(user.id), refreshToken, expiresAt);
+
+        // 응답 생성
+        const response = NextResponse.json(
+            {
+                accessToken,
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                },
+            },
+            { status: 200 }
+        );
+
+        // 리프레시 토큰을 HttpOnly 쿠키로 설정
+        response.cookies.set("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production", // 프로덕션에서만 HTTPS
+            sameSite: "strict",
+            path: "/",
+            maxAge: 7 * 24 * 60 * 60, // 7일 (초 단위)
+        });
+
+        return response;
 
     } catch (error) {
         console.error("[LOGIN ERROR]", error);

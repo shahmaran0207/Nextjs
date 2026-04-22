@@ -19,8 +19,10 @@ export default function Login() {
 
         const data = await res.json();
 
-        if (data.token) {
-            sessionStorage.setItem("token", data.token);
+        if (data.accessToken) {
+            // 새로운 토큰 시스템: accessToken을 localStorage에 저장
+            localStorage.setItem("token", data.accessToken);
+            // refreshToken은 자동으로 HttpOnly 쿠키에 저장됨
             router.push("/"); // 로그인 성공 시 메인 페이지로 이동
         } else {
             alert("로그인 실패: " + (data.err ?? "알 수 없는 오류"));
