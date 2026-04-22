@@ -214,20 +214,24 @@ export function usePostState(id: string, onDeleteSuccess?: () => void) {
 
     const handleHate = async () => {
         try {
+            const token = sessionStorage.getItem("token");
             const data = await fetch(`/api/posts/Hate/getEachPostHate?id=${id}&name=${email}`, {
                 method: "POST",
-                credentials: 'include'
+                credentials: 'include',
+                headers: { Authorization: `Bearer ${token}` }
             }).then(r => r.json());
 
             if (data.length === 0) {
                 await fetch(`/api/posts/Hate/addPostHate/${id}?name=${email}`, {
                     method: "POST",
-                    credentials: 'include'
+                    credentials: 'include',
+                    headers: { Authorization: `Bearer ${token}` }
                 });
             } else {
                 await fetch(`/api/posts/Hate/removePostHate/${id}?name=${email}`, {
                     method: "POST",
-                    credentials: 'include'
+                    credentials: 'include',
+                    headers: { Authorization: `Bearer ${token}` }
                 });
             }
             reloadPostLikeAndHate(id);

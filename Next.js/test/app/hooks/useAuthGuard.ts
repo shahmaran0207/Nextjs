@@ -22,8 +22,31 @@ export function useAuthGuard() {
         credentials: 'include',
       });
 
+      // accessToken 만료 시 refresh 시도
       if (res.status === 401) {
-        window.location.href = "/Login";
+        const refreshRes = await fetch("/api/auth/refresh", {
+          method: "POST",
+          credentials: 'include',
+        });
+
+        if (!refreshRes.ok) {
+          // refresh도 실패하면 로그인 페이지로
+          window.location.href = "/Login";
+          return;
+        }
+
+        // refresh 성공 → 다시 Me 호출
+        const retryRes = await fetch("/api/auth/Me", {
+          credentials: 'include',
+        });
+
+        if (!retryRes.ok) {
+          window.location.href = "/Login";
+          return;
+        }
+
+        const retryData = await retryRes.json();
+        setEmail(retryData.email);
         return;
       }
 

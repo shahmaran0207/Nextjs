@@ -49,11 +49,11 @@ export default function EachQnA({ params }: { params: Promise<{ id: string }> })
         }}>
             <PageHeader
                 icon="❓"
-                title="문의사항 목록"
-                subtitle="문의사항 목록 페이지"
+                title="문의사항 "
+                subtitle="문의사항 세부 페이지"
 
                 navLinks={[
-                    { href: "/", label: "홈으로" },
+                    { href: "/", label: "메인 페이지" },
                 ]}
             />
 

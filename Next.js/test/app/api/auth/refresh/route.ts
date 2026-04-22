@@ -12,6 +12,7 @@ import {
     detectTokenReuse,
     revokeAllUserTokens,
 } from "@/lib/tokenStore";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
     try {
@@ -65,29 +66,37 @@ export async function POST(request: Request) {
         // 5. 이전 리프레시 토큰 삭제 (토큰 로테이션)
         await revokeRefreshToken(refreshToken);
 
-        // 6. 새로운 액세스 토큰 생성
+        // 6. DB에서 사용자 정보 조회 (email, ROLE 포함)
+        const user = await prisma.users.findUnique({ where: { id: Number(payload.id) } });
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized: User not found" }, { status: 401 });
+        }
+
+        // 7. 새로운 액세스 토큰 생성
         const newAccessToken = generateAccessToken({
             id: payload.id,
-            email: "", // 리프레시 토큰에는 이메일이 없으므로 빈 문자열
+            email: user.email ?? "",
+            ROLE: user.ROLE ?? "",
         });
 
-        // 7. 새로운 리프레시 토큰 생성
+        // 8. 새로운 리프레시 토큰 생성
         const newRefreshToken = generateRefreshToken({
             id: payload.id,
             tokenVersion: payload.tokenVersion,
+            ROLE: user.ROLE ?? "",
         });
 
-        // 8. 새 리프레시 토큰을 데이터베이스에 저장
+        // 9. 새 리프레시 토큰을 데이터베이스에 저장
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7일 후
         await saveRefreshToken(payload.id, newRefreshToken, expiresAt);
 
-        // 9. 응답 생성
+        // 10. 응답 생성
         const response = NextResponse.json(
             { accessToken: newAccessToken },
             { status: 200 }
         );
 
-        // 10. 새 액세스 토큰을 HttpOnly 쿠키로 설정 (15분)
+        // 11. 새 액세스 토큰을 HttpOnly 쿠키로 설정 (15분)
         response.cookies.set("accessToken", newAccessToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
@@ -96,7 +105,7 @@ export async function POST(request: Request) {
             maxAge: 15 * 60, // 15분 (초 단위)
         });
 
-        // 11. 새 리프레시 토큰을 HttpOnly 쿠키로 설정 (7일)
+        // 12. 새 리프레시 토큰을 HttpOnly 쿠키로 설정 (7일)
         response.cookies.set("refreshToken", newRefreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
