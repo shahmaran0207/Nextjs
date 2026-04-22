@@ -174,14 +174,18 @@ export function useQnAState(id: string) {
     };
 
     const handleQuestionLike = async () => {
+        const token = sessionStorage.getItem("token");
         try {
-            const data = await fetch(`/api/QnA/Question/Like/getEachQuestionLike/${id}?name=${email}`);
+            const data = await fetch(`/api/QnA/Question/Like/getEachQuestionLike/${id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
             const res = await data.json();
 
             if (res === null) {
                 try {
-                    await fetch(`/api/QnA/Question/Like/addQuestionLike/${id}?name=${email}`, {
-                        method: "POST"
+                    await fetch(`/api/QnA/Question/Like/addQuestionLike/${id}`, {
+                        method: "POST",
+                        headers: { Authorization: `Bearer ${token}` }
                     });
                     getQuestionLike();
                 } catch (err) {
@@ -189,8 +193,9 @@ export function useQnAState(id: string) {
                 }
             } else {
                 try {
-                    await fetch(`/api/QnA/Question/Like/removeEachQuestionLike/${id}?name=${email}`, {
-                        method: "POST"
+                    await fetch(`/api/QnA/Question/Like/removeEachQuestionLike/${id}`, {
+                        method: "POST",
+                        headers: { Authorization: `Bearer ${token}` }
                     })
                     getQuestionLike();
                 } catch (err) {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { verifyToken } from "@/utils/auth";
 
 export async function POST(request: Request) {
     try {
@@ -8,7 +9,12 @@ export async function POST(request: Request) {
         const content = formData.get("content") as string;
         const imageFile = formData.get("image") as File;
         const questionId = formData.get("QuestionId") as String;
-        const writer = formData.get("writer") as string;
+        const token = request.headers.get("Authorization")?.split(" ")[1];
+        const user = token ? verifyToken(token) as { email: string } | null : null;
+
+        if (!user) {
+            return NextResponse.json({ error: "인증되지 않은 사용자입니다." }, { status: 401 });
+        }
 
         const now = new Date();
         const kstOffset = 9 * 60 * 1000;
@@ -25,7 +31,7 @@ export async function POST(request: Request) {
                 title: title,
                 content: content,
                 createdat: kstDate,
-                writer: writer,
+                writer: user.email,
                 questionid: Number(questionId),
                 ...(imageBuffer && { image: imageBuffer }),
             },

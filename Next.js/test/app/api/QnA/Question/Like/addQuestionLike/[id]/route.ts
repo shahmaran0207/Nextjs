@@ -1,16 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { useAuthGuard } from "@/app/hooks/useAuthGuard";
+import { verifyToken } from "@/utils/auth";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const { email } = useAuthGuard();
+    const token = request.headers.get("Authorization")?.split(" ")[1];
+    const user = token ? verifyToken(token) as { email: string } | null : null;
+
+    if (!user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     try {
         await prisma.questionlike.create({
             data: {
                 questionid: Number(id),
-                userid: email
+                userid: user.email
             }
         });
 
