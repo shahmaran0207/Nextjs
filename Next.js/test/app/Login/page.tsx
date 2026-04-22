@@ -83,13 +83,6 @@ export default function Login() {
                         />
                     </div>
 
-                    {/* 로그인 유지 및 비밀번호 찾기 */}
-                    <div className="flex justify-between items-center mb-8">
-                        <button type="button" className="text-sm text-cyan-500 hover:text-cyan-400 hover:underline hover:underline-offset-4 transition-all">
-                            권한 복구 (비밀번호 찾기)
-                        </button>
-                    </div>
-
                     {/* 로그인 버튼 */}
                     <button type="submit" className="relative w-full h-12 bg-cyan-900/40 border border-cyan-500/50 hover:bg-cyan-500/20 hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(34,211,238,0.2)] active:scale-[0.98] text-cyan-400 hover:text-cyan-300 text-sm font-semibold tracking-wider rounded-lg transition-all overflow-hidden">
                         <span className="relative z-10 block">로그인</span>

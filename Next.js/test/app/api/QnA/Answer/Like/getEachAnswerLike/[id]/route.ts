@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const { name } = await request.json();
+    const { email } = useAuthGuard();
 
     try {
         const res = await prisma.answerlike.findFirst({
-            where: { answerid: Number(id), userid: String(name) }
+            where: { answerid: Number(id), userid: email }
         });
 
         return NextResponse.json(res);

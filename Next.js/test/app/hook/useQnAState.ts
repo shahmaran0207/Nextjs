@@ -281,6 +281,7 @@ export function useQnAState(id: string) {
             formData.append("title", title);
             formData.append("content", content);
             formData.append("QuestionId", id);
+            formData.append("writer", email);
             if (image) formData.append("image", image);
             await fetch(`/api/QnA/Question/updateEnd/${id}`, { method: "POST" });
             await fetch('/api/QnA/Answer/addAnswer', { method: "POST", body: formData });

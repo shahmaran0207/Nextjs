@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/util/database";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(
@@ -8,19 +7,19 @@ export async function GET(
 ) {
     const { userId } = await params;
 
-    if(!userId) {
+    if (!userId) {
         return NextResponse.json({ error: "userId가 없습니다." }, { status: 400 });
     }
 
     try {
         const result = await prisma.chat.findMany({
-            where: { 
+            where: {
                 OR: [
                     { recepient: userId },
                     { sender: userId },
                 ]
             },
-            orderBy: { id:  "asc"}
+            orderBy: { id: "asc" }
         });
 
         const data = result.map((row) => ({
@@ -28,7 +27,7 @@ export async function GET(
             to: row.recepient,
             messsage: row.content,
             imageUrl: row.image ?
-                `data:image/jpeg;base64,${Buffer.from(row.image).toString("base64")}`:null,
+                `data:image/jpeg;base64,${Buffer.from(row.image).toString("base64")}` : null,
         }));
 
         return NextResponse.json(data);

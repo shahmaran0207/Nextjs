@@ -52,6 +52,7 @@ model answer {
   createdat  DateTime? @db.Timestamp(6)
   image      Bytes?
   questionid Int?
+  writer     String?   @db.VarChar(1000)
 }
 
 model postcomment {

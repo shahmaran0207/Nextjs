@@ -1,17 +1,18 @@
+import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export async function POST(request: Request, { params } : {params: Promise<{id: string}>}) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const name = new URL(request.url).searchParams.get("name");
+    const { email } = useAuthGuard();
 
     try {
         await prisma.commenthate.deleteMany({
-            where: { commentid: Number(id), userid: String(name)},
+            where: { commentid: Number(id), userid: email },
         });
-        return NextResponse.json({ result: "ok"});
-    } catch(err: any) {
+        return NextResponse.json({ result: "ok" });
+    } catch (err: any) {
         console.error("댓글 싫어요 제거 API 에러::::::::::::::", err);
-        return NextResponse.json({error: err.message}, { status: 500});
+        return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }

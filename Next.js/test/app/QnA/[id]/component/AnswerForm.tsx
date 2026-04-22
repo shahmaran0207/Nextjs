@@ -44,13 +44,13 @@ export default function AnswerForm({
             placeholder="제목을 입력하세요"
             required
             style={{
-              width: "100%", 
-              padding: "10px 14px", 
+              width: "100%",
+              padding: "10px 14px",
               borderRadius: "10px",
-              background: dark.surface2, 
+              background: dark.surface2,
               border: `1px solid ${dark.border}`,
-              color: dark.textPrimary, 
-              fontSize: "14px", 
+              color: dark.textPrimary,
+              fontSize: "14px",
               outline: "none",
               boxSizing: "border-box",
             }}
@@ -69,16 +69,16 @@ export default function AnswerForm({
             required
             rows={12}
             style={{
-              width: "100%", 
-              padding: "10px 14px", 
+              width: "100%",
+              padding: "10px 14px",
               borderRadius: "10px",
-              background: dark.surface2, 
+              background: dark.surface2,
               border: `1px solid ${dark.border}`,
-              color: dark.textPrimary, 
-              fontSize: "14px", 
+              color: dark.textPrimary,
+              fontSize: "14px",
               outline: "none",
-              resize: "vertical", 
-              lineHeight: "1.7", 
+              resize: "vertical",
+              lineHeight: "1.7",
               boxSizing: "border-box",
             }}
           />
@@ -92,36 +92,36 @@ export default function AnswerForm({
             이미지
           </label>
           <label htmlFor="image" style={{
-            display: "inline-flex", 
-            alignItems: "center", 
+            display: "inline-flex",
+            alignItems: "center",
             gap: "10px",
-            padding: "10px 14px", 
+            padding: "10px 14px",
             borderRadius: "10px",
-            background: dark.surface2, 
+            background: dark.surface2,
             border: `1px solid ${dark.border}`,
-            color: dark.accent, 
-            fontSize: "13px", 
+            color: dark.accent,
+            fontSize: "13px",
             cursor: "pointer",
           }}>
             {image ? image.name : "이미지를 선택하세요"}
           </label>
-          <input 
-            type="file" 
-            id="image" 
-            accept="image/*" 
-            onChange={onImageChange} 
-            style={{ display: "none" }} 
+          <input
+            type="file"
+            id="image"
+            accept="image/*"
+            onChange={onImageChange}
+            style={{ display: "none" }}
           />
         </div>
 
         <button type="submit" style={{
-          padding: "10px 24px", 
+          padding: "10px 24px",
           borderRadius: "10px",
-          background: dark.accent, 
+          background: dark.accent,
           border: "none",
-          color: "#fff", 
-          fontSize: "14px", 
-          fontWeight: 600, 
+          color: "#fff",
+          fontSize: "14px",
+          fontWeight: 600,
           cursor: "pointer",
         }}>
           저장

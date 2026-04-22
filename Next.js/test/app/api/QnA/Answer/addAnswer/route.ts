@@ -8,15 +8,16 @@ export async function POST(request: Request) {
         const content = formData.get("content") as string;
         const imageFile = formData.get("image") as File;
         const questionId = formData.get("QuestionId") as String;
+        const writer = formData.get("writer") as string;
 
         const now = new Date();
         const kstOffset = 9 * 60 * 1000;
         const kstDate = new Date(now.getTime() + kstOffset);
 
-        let imageBuffer: Uint8Array<ArrayBuffer> | null = null;
+        let imageBuffer: Buffer | null = null;
         if (imageFile) {
             const arrayBuffer = await imageFile.arrayBuffer();
-            imageBuffer = new Uint8Array(arrayBuffer as ArrayBuffer);
+            imageBuffer = Buffer.from(arrayBuffer);
         };
 
         await prisma.answer.create({
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
                 title: title,
                 content: content,
                 createdat: kstDate,
+                writer: writer,
                 questionid: Number(questionId),
                 ...(imageBuffer && { image: imageBuffer }),
             },

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -7,14 +8,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         const formData = await request.formData();
         const title = formData.get("commentTitle") as string;
         const content = formData.get("commentContent") as string;
-        const commentWriter = formData.get("writer") as string;
+        const { email } = useAuthGuard();
 
         await prisma.postcomment.create({
             data: {
                 postid: Number(id),
                 commenttitle: title,
                 commentcontent: content,
-                commentwriter: commentWriter
+                commentwriter: email
             }
         });
 

@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { email } = useAuthGuard();
     const { id } = await params;
     const { name } = await request.json();
 

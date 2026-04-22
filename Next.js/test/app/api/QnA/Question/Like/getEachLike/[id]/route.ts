@@ -1,18 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(request: Request, { params } : { params: Promise<{id: string}>}) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const url = new URL(request.url);
-    const name = url.searchParams.get("name");
 
     try {
         const res = await prisma.questionlike.findMany({
-            where: { questionid: Number(id)}
+            where: { questionid: Number(id) }
         })
 
         return NextResponse.json(res);
-    } catch(err: any) {
+    } catch (err: any) {
         console.error("getEachLike API Error:::::::::::::::", err);
         return NextResponse.json({ error: err.message }, { status: 500 })
     }

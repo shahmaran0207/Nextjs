@@ -1,21 +1,22 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 
-export async function POST(request: Request, { params } : { params: Promise<{id: string}>}) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const name = new URL(request.url).searchParams.get("name");
+    const { email } = useAuthGuard();
 
     try {
         await prisma.questionhate.create({
             data: {
                 questionid: Number(id),
-                userid: String(name)
+                userid: email
             }
         });
 
         return NextResponse.json({ result: "ok" })
-    } catch ( err: any ) {
+    } catch (err: any) {
         console.error("Question hate Add API Error:::::::::::::", err);
-        return NextResponse.json({ error: err.message }, { status: 500})
+        return NextResponse.json({ error: err.message }, { status: 500 })
     }
 }

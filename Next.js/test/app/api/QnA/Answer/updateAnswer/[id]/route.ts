@@ -10,7 +10,7 @@ export async function POST(request: Request, { params } : { params: Promise<{id:
         const content = formData.get("content") as string;
         const imageFile = formData.get("image") as File | null;
 
-        let imageBuffer: Uint8Array<ArrayBuffer> | null = null;
+        let imageBuffer: Uint8Array | null = null;
 
         if (imageFile) {
             const arrayBuffer = await imageFile.arrayBuffer();
