@@ -27,9 +27,8 @@ export default function EditForm({ params }: { params: Promise<{ id: string }> }
     const fetchPost = async () => {
       const { id } = await params;
       setPostId(id);
-      const token = localStorage.getItem("token");
       const res = await fetch(`/api/posts/getPostList/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        credentials: 'include'
       });
       const data = await res.json();
       setPost(data);
@@ -49,10 +48,9 @@ export default function EditForm({ params }: { params: Promise<{ id: string }> }
     formData.append("content", content || post.content);
     if (imageFile) formData.append("image", imageFile);
 
-    const token = localStorage.getItem("token");
     const submit = await fetch(`/api/posts/updatePost/${postId}`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      credentials: 'include',
       body: formData
     });
     if (submit.status === 200) {
@@ -147,8 +145,11 @@ export default function EditForm({ params }: { params: Promise<{ id: string }> }
           </a>
           {/* 로그아웃 버튼 */}
           <button
-            onClick={() => {
-              localStorage.removeItem("token");
+            onClick={async () => {
+              await fetch("/api/auth/logout", {
+                method: "POST",
+                credentials: 'include'
+              });
               window.location.href = "/Login";
             }}
             style={{

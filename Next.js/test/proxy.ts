@@ -5,9 +5,16 @@ import { verifyAccessToken } from "@/utils/auth";
 export default function proxy(request: NextRequest) {
     const path = request.nextUrl.pathname;
 
-    // 보호된 라우트 패턴
+    // 관리자 전용 페이지 (ROLE: ADMIN 필수)
+    const adminPages = ["/ADMIN", "/list"];
+
+    // 관리자 전용 API (ROLE: ADMIN 필수)
+    const adminApis = ["/api/admin"];
+
+    // 보호된 라우트 패턴 (인증 필요, ROLE 무관)
     const protectedPaths = [
         "/api/post",
+        "/api/posts",
         "/api/qna",
         "/api/Comment",
         "/api/Chat",
@@ -40,11 +47,87 @@ export default function proxy(request: NextRequest) {
         return NextResponse.next();
     }
 
-    // 보호된 라우트 검증
+    // 관리자 페이지 접근 검증
+    if (adminPages.some((p) => path.startsWith(p))) {
+        const token = request.cookies.get("accessToken")?.value;
+
+        if (!token) {
+            console.error("[PROXY] No token for admin page:", path);
+            return NextResponse.redirect(new URL("/Login", request.url));
+        }
+
+        const payload = verifyAccessToken(token);
+
+        if (!payload) {
+            console.error("[PROXY] Invalid token for admin page:", path);
+            return NextResponse.redirect(new URL("/Login", request.url));
+        }
+
+        if (payload.role !== "ADMIN") {
+            console.error("[PROXY] Access denied - not admin:", payload.email);
+            return NextResponse.redirect(new URL("/forbidden", request.url));
+        }
+
+        console.log("[PROXY] Admin page access granted:", payload.email);
+        return NextResponse.next();
+    }
+
+    // 관리자 API 접근 검증
+    if (adminApis.some((p) => path.startsWith(p))) {
+        let token = request.cookies.get("accessToken")?.value;
+
+        if (!token) {
+            const authHeader = request.headers.get("Authorization");
+            token = authHeader?.split(" ")[1];
+        }
+
+        if (!token) {
+            console.error("[PROXY] No token for admin API:", path);
+            return NextResponse.json(
+                { error: "Unauthorized: No token provided" },
+                { status: 401 }
+            );
+        }
+
+        const payload = verifyAccessToken(token);
+
+        if (!payload) {
+            console.error("[PROXY] Invalid token for admin API:", path);
+            return NextResponse.json(
+                { error: "Unauthorized: Invalid or expired token" },
+                { status: 401 }
+            );
+        }
+
+        if (payload.role !== "ADMIN") {
+            console.error("[PROXY] Access denied - not admin:", payload.email);
+            return NextResponse.json(
+                { error: "Forbidden: Admin access required" },
+                { status: 403 }
+            );
+        }
+
+        console.log("[PROXY] Admin API access granted:", payload.email);
+        const requestHeaders = new Headers(request.headers);
+        requestHeaders.set("X-User-Id", payload.id);
+        requestHeaders.set("X-User-Email", payload.email);
+        requestHeaders.set("X-User-Role", payload.role);
+
+        return NextResponse.next({
+            request: {
+                headers: requestHeaders,
+            },
+        });
+    }
+
+    // 보호된 라우트 검증 (일반 인증)
     if (protectedPaths.some((p) => path.startsWith(p))) {
-        // Authorization 헤더에서 액세스 토큰 추출
-        const authHeader = request.headers.get("Authorization");
-        const token = authHeader?.split(" ")[1];
+        let token = request.cookies.get("accessToken")?.value;
+
+        if (!token) {
+            const authHeader = request.headers.get("Authorization");
+            token = authHeader?.split(" ")[1];
+        }
 
         if (!token) {
             console.error("[PROXY] No token provided for:", path);
@@ -54,7 +137,6 @@ export default function proxy(request: NextRequest) {
             );
         }
 
-        // 액세스 토큰 검증
         const payload = verifyAccessToken(token);
 
         if (!payload) {
@@ -65,10 +147,10 @@ export default function proxy(request: NextRequest) {
             );
         }
 
-        // 검증된 사용자 정보를 헤더에 추가 (선택적)
         const requestHeaders = new Headers(request.headers);
         requestHeaders.set("X-User-Id", payload.id);
         requestHeaders.set("X-User-Email", payload.email);
+        requestHeaders.set("X-User-Role", payload.role);
 
         return NextResponse.next({
             request: {
@@ -82,5 +164,5 @@ export default function proxy(request: NextRequest) {
 }
 
 export const config = {
-    matcher: "/api/:path*",
+    matcher: ["/api/:path*", "/ADMIN/:path*"],
 };

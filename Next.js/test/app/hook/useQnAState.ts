@@ -32,31 +32,26 @@ export function useQnAState(id: string) {
     };
 
     const getQuestionLike = async () => {
-        const token = localStorage.getItem("token");
         const res = await fetch(`/api/QnA/Question/Like/getEachLike/${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
+            credentials: 'include'
         });
         const test = res ? (await res.json())?.length ?? 0 : 0;
         setQuestionLike(test);
     };
 
     const getQuestionHate = async () => {
-        const token = localStorage.getItem("token");
         const res = await fetch(`/api/QnA/Question/Hate/getEachHate/${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
+            credentials: 'include'
         });
         const test = res ? (await res.json())?.length ?? 0 : 0;
         setQuestionHate(test);
     };
 
-    // answerId를 직접 파라미터로 받아 클로저 문제 방지
-    // answer 상태 대신 실제 데이터를 직접 전달받음
     const getAnswerLike = async (answerId?: string) => {
         const targetId = answerId ?? answer[0]?.id;
         if (!targetId) return;
-        const token = localStorage.getItem("token");
         const res = await fetch(`/api/QnA/Answer/Like/getEachLike/${targetId}`, {
-            headers: { Authorization: `Bearer ${token}` }
+            credentials: 'include'
         });
         const test = res ? (await res.json())?.length ?? 0 : 0;
         setAnswerLike(test);
@@ -65,19 +60,17 @@ export function useQnAState(id: string) {
     const getAnswerHate = async (answerId?: string) => {
         const targetId = answerId ?? answer[0]?.id;
         if (!targetId) return;
-        const token = localStorage.getItem("token");
         const res = await fetch(`/api/QnA/Answer/Hate/getEachHate/${targetId}`, {
-            headers: { Authorization: `Bearer ${token}` }
+            credentials: 'include'
         });
         const test = res ? (await res.json())?.length ?? 0 : 0;
         setAnswerHate(test);
     };
 
     const handleQuestionHate = async () => {
-        const token = localStorage.getItem("token");
         try {
             const data = await fetch(`/api/QnA/Question/Hate/getEachQuestionHate/${id}?name=${email}`, {
-                headers: { Authorization: `Bearer ${token}` }
+                credentials: 'include'
             });
             const res = await data.json();
 
@@ -85,7 +78,7 @@ export function useQnAState(id: string) {
                 try {
                     await fetch(`/api/QnA/Question/Hate/addQuestionHate/${id}?name=${email}`, {
                         method: "POST",
-                        headers: { Authorization: `Bearer ${token}` }
+                        credentials: 'include'
                     });
                     getQuestionHate();
                 } catch (error) {
@@ -95,7 +88,7 @@ export function useQnAState(id: string) {
                 try {
                     await fetch(`/api/QnA/Question/Hate/removeEachQuestionHate/${id}?name=${email}`, {
                         method: "POST",
-                        headers: { Authorization: `Bearer ${token}` }
+                        credentials: 'include'
                     })
                     getQuestionHate();
                 } catch (err) {
@@ -109,7 +102,6 @@ export function useQnAState(id: string) {
     };
 
     const handleAnswerHate = async () => {
-        const token = localStorage.getItem("token");
         if (answer.length === 0) return;
         const answerId = answer[0]?.id;
         if (!answerId) return;
@@ -117,9 +109,9 @@ export function useQnAState(id: string) {
         try {
             const res = await fetch(`/api/QnA/Answer/Hate/getEachAnswerHate/${answerId}`, {
                 method: "POST",
+                credentials: 'include',
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`
                 },
                 body: JSON.stringify({ email })
             });
@@ -129,9 +121,9 @@ export function useQnAState(id: string) {
                 try {
                     await fetch(`/api/QnA/Answer/Hate/addEachAnswerHate/${answerId}`, {
                         method: "POST",
+                        credentials: 'include',
                         headers: {
                             "Content-Type": "application/json",
-                            Authorization: `Bearer ${token}`
                         },
                         body: JSON.stringify({ email })
                     });
@@ -143,9 +135,9 @@ export function useQnAState(id: string) {
                 try {
                     await fetch(`/api/QnA/Answer/Hate/removeEachAnswerHate/${answerId}`, {
                         method: "POST",
+                        credentials: 'include',
                         headers: {
                             "Content-Type": "application/json",
-                            Authorization: `Bearer ${token}`
                         },
                         body: JSON.stringify({ email })
                     });
@@ -160,7 +152,6 @@ export function useQnAState(id: string) {
     };
 
     const handleAnswerLike = async () => {
-        const token = localStorage.getItem("token");
         if (answer.length === 0) return;
         const answerId = answer[0]?.id;
         if (!answerId) return;
@@ -168,9 +159,9 @@ export function useQnAState(id: string) {
         try {
             const res = await fetch(`/api/QnA/Answer/Like/getEachAnswerLike/${answerId}`, {
                 method: "POST",
+                credentials: 'include',
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`
                 },
                 body: JSON.stringify({ email })
             });
@@ -180,9 +171,9 @@ export function useQnAState(id: string) {
                 try {
                     await fetch(`/api/QnA/Answer/Like/addEachAnswerLike/${answerId}`, {
                         method: "POST",
+                        credentials: 'include',
                         headers: {
                             "Content-Type": "application/json",
-                            Authorization: `Bearer ${token}`
                         },
                         body: JSON.stringify({ email })
                     });
@@ -194,9 +185,9 @@ export function useQnAState(id: string) {
                 try {
                     await fetch(`/api/QnA/Answer/Like/removeEachAnswerLike/${answerId}`, {
                         method: "POST",
+                        credentials: 'include',
                         headers: {
                             "Content-Type": "application/json",
-                            Authorization: `Bearer ${token}`
                         },
                         body: JSON.stringify({ email })
                     });
@@ -211,10 +202,9 @@ export function useQnAState(id: string) {
     };
 
     const handleQuestionLike = async () => {
-        const token = localStorage.getItem("token");
         try {
             const data = await fetch(`/api/QnA/Question/Like/getEachQuestionLike/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
+                credentials: 'include'
             });
             const res = await data.json();
 
@@ -222,7 +212,7 @@ export function useQnAState(id: string) {
                 try {
                     await fetch(`/api/QnA/Question/Like/addQuestionLike/${id}`, {
                         method: "POST",
-                        headers: { Authorization: `Bearer ${token}` }
+                        credentials: 'include'
                     });
                     getQuestionLike();
                 } catch (err) {
@@ -232,7 +222,7 @@ export function useQnAState(id: string) {
                 try {
                     await fetch(`/api/QnA/Question/Like/removeEachQuestionLike/${id}`, {
                         method: "POST",
-                        headers: { Authorization: `Bearer ${token}` }
+                        credentials: 'include'
                     })
                     getQuestionLike();
                 } catch (err) {
@@ -253,7 +243,6 @@ export function useQnAState(id: string) {
     };
 
     const handleUpdAnswer = async () => {
-        const token = localStorage.getItem("token");
         try {
             const formData = new FormData();
             formData.append("title", title);
@@ -262,7 +251,7 @@ export function useQnAState(id: string) {
 
             await fetch(`/api/QnA/Answer/updateAnswer/${id}`, {
                 method: "POST",
-                headers: { Authorization: `Bearer ${token}` },
+                credentials: 'include',
                 body: formData
             });
             handleCancel();
@@ -273,7 +262,6 @@ export function useQnAState(id: string) {
     };
 
     const handleUpdQuestion = async () => {
-        const token = localStorage.getItem("token");
         try {
             const formData = new FormData();
             formData.append("title", title);
@@ -282,7 +270,7 @@ export function useQnAState(id: string) {
 
             await fetch(`/api/QnA/Question/updateQuestion/${id}`, {
                 method: "POST",
-                headers: { Authorization: `Bearer ${token}` },
+                credentials: 'include',
                 body: formData
             });
             handleCancel();
@@ -293,9 +281,8 @@ export function useQnAState(id: string) {
     };
 
     const getAnswer = async () => {
-        const token = localStorage.getItem("token");
         const res = await fetch(`/api/QnA/Answer/getAnswer/${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
+            credentials: 'include'
         });
         const data = await res.json();
         if (data.error === "Not Found") {
@@ -314,16 +301,14 @@ export function useQnAState(id: string) {
     };
 
     const getEachQnA = async () => {
-        const token = localStorage.getItem("token");
         const res = await fetch(`/api/QnA/Question/getQnAList/${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
+            credentials: 'include'
         });
         const data = await res.json();
         setQna(data);
     };
 
     const handleSubmit = async (e: SyntheticEvent) => {
-        const token = localStorage.getItem("token");
         e.preventDefault();
 
         if (!confirm("저장하시겠습니까?")) return;
@@ -336,11 +321,11 @@ export function useQnAState(id: string) {
             if (image) formData.append("image", image);
             await fetch(`/api/QnA/Question/updateEnd/${id}`, {
                 method: "POST",
-                headers: { Authorization: `Bearer ${token}` }
+                credentials: 'include'
             });
             await fetch('/api/QnA/Answer/addAnswer', {
                 method: "POST",
-                headers: { Authorization: `Bearer ${token}` },
+                credentials: 'include',
                 body: formData
             });
             setTitle("");
@@ -354,17 +339,16 @@ export function useQnAState(id: string) {
     };
 
     const handleRemoveAnswer = async () => {
-        const token = localStorage.getItem("token");
         if (!confirm("답변을 삭제하시겠습니까?")) return;
 
         try {
             await fetch(`/api/QnA/Question/reUpdateEnd/${id}`, {
                 method: "POST",
-                headers: { Authorization: `Bearer ${token}` }
+                credentials: 'include'
             });
             await fetch(`/api/QnA/Answer/removeAnswer/${id}`, {
                 method: "POST",
-                headers: { Authorization: `Bearer ${token}` }
+                credentials: 'include'
             });
             getEachQnA();
             getAnswer();
@@ -374,25 +358,23 @@ export function useQnAState(id: string) {
     };
 
     const viewCount = async () => {
-        const token = localStorage.getItem("token");
         await fetch(`/api/QnA/Question/addViewCount/${id}`, {
             method: "POST",
-            headers: { Authorization: `Bearer ${token}` }
+            credentials: 'include'
         });
     };
 
     const deleteQuestion = async () => {
-        const token = localStorage.getItem("token");
         if (!confirm("해당 문의사항을 삭제하시겠습니까?")) return;
 
         try {
             const [removeAnswer, removeAnswerLike, removeAnswerHate, removeQuestionHate, removeQuestionLike, removeQuestion] = await Promise.all([
-                fetch(`/api/QnA/Answer/removeAnswer/${id}`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
-                fetch(`/api/QnA/Answer/Like/removeAnswerLike/${id}`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
-                fetch(`/api/QnA/Answer/Hate/removeAnswerHate/${id}`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
-                fetch(`/api/QnA/Question/Hate/removeQuestionHate/${id}`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
-                fetch(`/api/QnA/Question/Like/removeQuestionLike/${id}`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
-                fetch(`/api/QnA/Question/removeQuestion/${id}`, { method: "POST", headers: { Authorization: `Bearer ${token}` } })
+                fetch(`/api/QnA/Answer/removeAnswer/${id}`, { method: "POST", credentials: 'include' }),
+                fetch(`/api/QnA/Answer/Like/removeAnswerLike/${id}`, { method: "POST", credentials: 'include' }),
+                fetch(`/api/QnA/Answer/Hate/removeAnswerHate/${id}`, { method: "POST", credentials: 'include' }),
+                fetch(`/api/QnA/Question/Hate/removeQuestionHate/${id}`, { method: "POST", credentials: 'include' }),
+                fetch(`/api/QnA/Question/Like/removeQuestionLike/${id}`, { method: "POST", credentials: 'include' }),
+                fetch(`/api/QnA/Question/removeQuestion/${id}`, { method: "POST", credentials: 'include' })
             ]);
 
             if (removeAnswer.status === 200 && removeAnswerLike.status === 200 && removeAnswerHate.status === 200 && removeQuestionHate.status === 200 && removeQuestionLike.status === 200 && removeQuestion.status === 200) {
@@ -412,7 +394,6 @@ export function useQnAState(id: string) {
     };
 
     const handleUpdateQuestion = async () => {
-        const token = localStorage.getItem("token");
         try {
             const formData = new FormData();
             formData.append("title", title);
@@ -421,7 +402,7 @@ export function useQnAState(id: string) {
 
             await fetch(`/api/QnA/Question/updateQuestion/${id}`, {
                 method: "POST",
-                headers: { Authorization: `Bearer ${token}` },
+                credentials: 'include',
                 body: formData
             });
 

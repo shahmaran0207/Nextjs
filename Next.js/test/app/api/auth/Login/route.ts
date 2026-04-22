@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
     try {
-        const { email, password } = await request.json();
+        const { email, password, role } = await request.json();
 
         if (!email || !password) {
             return NextResponse.json({ err: "Missing fields" }, { status: 400 });
@@ -22,12 +22,14 @@ export async function POST(request: Request) {
         const accessToken = generateAccessToken({
             id: String(user.id),
             email: user.email ?? "",
+            ROLE: user.ROLE ?? "",
         });
 
         // 리프레시 토큰 생성 (7일)
         const refreshToken = generateRefreshToken({
             id: String(user.id),
             tokenVersion: 1, // 기본 버전
+            ROLE: user.ROLE ?? "",
         });
 
         // 리프레시 토큰을 데이터베이스에 저장
@@ -42,12 +44,22 @@ export async function POST(request: Request) {
                     id: user.id,
                     email: user.email,
                     name: user.name,
+                    ROLE: user.ROLE,
                 },
             },
             { status: 200 }
         );
 
-        // 리프레시 토큰을 HttpOnly 쿠키로 설정
+        // 액세스 토큰을 HttpOnly 쿠키로 설정 (15분)
+        response.cookies.set("accessToken", accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            path: "/",
+            maxAge: 15 * 60, // 15분 (초 단위)
+        });
+
+        // 리프레시 토큰을 HttpOnly 쿠키로 설정 (7일)
         response.cookies.set("refreshToken", refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production", // 프로덕션에서만 HTTPS

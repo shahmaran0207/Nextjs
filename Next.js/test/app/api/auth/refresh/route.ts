@@ -87,7 +87,16 @@ export async function POST(request: Request) {
             { status: 200 }
         );
 
-        // 10. 새 리프레시 토큰을 HttpOnly 쿠키로 설정
+        // 10. 새 액세스 토큰을 HttpOnly 쿠키로 설정 (15분)
+        response.cookies.set("accessToken", newAccessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            path: "/",
+            maxAge: 15 * 60, // 15분 (초 단위)
+        });
+
+        // 11. 새 리프레시 토큰을 HttpOnly 쿠키로 설정 (7일)
         response.cookies.set("refreshToken", newRefreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",

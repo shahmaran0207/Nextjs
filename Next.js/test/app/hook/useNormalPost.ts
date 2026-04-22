@@ -18,11 +18,8 @@ export default function useNoramlPost() {
 
   const getList = async () => {
     try {
-      const token = localStorage.getItem("token");
       const res = await fetch('/api/posts/getPostList', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // 쿠키 포함
       });
       const data = await res.json();
       // 배열인지 확인 후 설정
@@ -47,10 +44,9 @@ export default function useNoramlPost() {
       formData.append("content", content);
       formData.append("email", email);
       if (image) formData.append("image", image);
-      const token = localStorage.getItem("token");
       await fetch("/api/posts/addPost", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include', // 쿠키 포함
         body: formData
       });
       setTitle(""); setContent(""); setImage(null);

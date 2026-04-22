@@ -19,7 +19,16 @@ export async function POST(request: Request) {
             { status: 200 }
         );
 
-        // 4. 쿠키 만료 (Max-Age=0)
+        // 4. 액세스 토큰 쿠키 만료
+        response.cookies.set("accessToken", "", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            path: "/",
+            maxAge: 0, // 즉시 만료
+        });
+
+        // 5. 리프레시 토큰 쿠키 만료
         response.cookies.set("refreshToken", "", {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",

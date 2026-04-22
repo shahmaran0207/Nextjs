@@ -18,17 +18,8 @@ export function useAuthGuard() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        window.location.href = "/Login";
-        return;
-      }
-
       const res = await fetch("/api/auth/Me", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: 'include',
       });
 
       if (res.status === 401) {

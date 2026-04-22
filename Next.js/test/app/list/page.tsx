@@ -130,9 +130,16 @@ const PostList = () => {
           </a>
           {/* 로그아웃 버튼 */}
           <button
-            onClick={() => {
-              localStorage.removeItem("token");
-              window.location.href = "/Login";
+            onClick={async () => {
+              try {
+                await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+                localStorage.removeItem("token");
+                window.location.href = "/Login";
+              } catch (err) {
+                console.error("로그아웃 실패:", err);
+                localStorage.removeItem("token");
+                window.location.href = "/Login";
+              }
             }}
             style={{
               padding: "6px 14px",

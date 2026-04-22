@@ -7,6 +7,7 @@ const REFRESH_SECRET = process.env.REFRESH_SECRET!;
 export interface AccessTokenPayload {
     id: string;
     email: string;
+    role: string;
     iat: number;
     exp: number;
 }
@@ -16,6 +17,7 @@ export interface RefreshTokenPayload {
     tokenVersion: number;
     iat: number;
     exp: number;
+    ROLE: string;
 }
 
 // ============================================
@@ -27,9 +29,9 @@ export interface RefreshTokenPayload {
  * @param user - 사용자 정보 (id, email)
  * @returns JWT 액세스 토큰
  */
-export function generateAccessToken(user: { id: string; email: string }): string {
+export function generateAccessToken(user: { id: string; email: string; ROLE: string }): string {
     return jwt.sign(
-        { id: user.id, email: user.email },
+        { id: user.id, email: user.email, role: user.ROLE },
         SECRET_KEY,
         { expiresIn: "15m" } // 15분
     );
@@ -40,7 +42,7 @@ export function generateAccessToken(user: { id: string; email: string }): string
  * @param user - 사용자 정보 (id, tokenVersion)
  * @returns JWT 리프레시 토큰
  */
-export function generateRefreshToken(user: { id: string; tokenVersion: number }): string {
+export function generateRefreshToken(user: { id: string; tokenVersion: number, ROLE: string }): string {
     return jwt.sign(
         { id: user.id, tokenVersion: user.tokenVersion },
         REFRESH_SECRET,
@@ -95,7 +97,7 @@ export async function hashToken(token: string): Promise<string> {
 /**
  * @deprecated 하위 호환성을 위해 유지. generateAccessToken() 사용 권장
  */
-export function generateToken(user: { id: string; email: string }): string {
+export function generateToken(user: { id: string; email: string, ROLE: string }): string {
     return generateAccessToken(user);
 }
 
