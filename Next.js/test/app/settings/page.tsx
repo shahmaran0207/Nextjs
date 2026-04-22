@@ -26,7 +26,7 @@ export default function Settings() {
                         "Authorization": `Bearer ${token}`
                     }
                 });
-                
+
                 if (response.ok) {
                     const userData = await response.json();
                     setUser(userData);
@@ -40,7 +40,7 @@ export default function Settings() {
                 router.push("/Login");
                 return;
             }
-            
+
             setLoading(false);
         };
 
@@ -48,7 +48,7 @@ export default function Settings() {
         const params = new URLSearchParams(window.location.search);
         const success = params.get("success");
         const error = params.get("error");
-        
+
         if (success) {
             setMessage("네이버 계정이 연동되었습니다!");
             setIsLinked(true);
@@ -63,7 +63,7 @@ export default function Settings() {
         try {
             setLoading(true);
             setMessage("");
-            
+
             // 네이버 OAuth URL로 리다이렉트 (연동 모드)
             // state 파라미터에 현재 사용자 ID를 포함
             const token = localStorage.getItem("token");
@@ -76,7 +76,7 @@ export default function Settings() {
             try {
                 const payload = JSON.parse(atob(token.split('.')[1]));
                 const userId = payload.id;
-                
+
                 // 네이버 OAuth 시작 - 사용자 ID를 파라미터로 전달
                 window.location.href = `/api/auth/naver/link?userId=${userId}`;
             } catch (error) {
@@ -84,7 +84,7 @@ export default function Settings() {
                 setMessage("유효하지 않은 토큰입니다");
                 return;
             }
-            
+
         } catch (error) {
             console.error("[LINK NAVER ERROR]", error);
             setMessage("네이버 계정 연동에 실패했습니다");
@@ -102,7 +102,7 @@ export default function Settings() {
         <div className="min-h-screen bg-slate-950 p-8">
             <div className="max-w-2xl mx-auto">
                 <h1 className="text-3xl font-bold text-white mb-8">계정 설정</h1>
-                
+
                 <div className="bg-slate-900/70 backdrop-blur-xl border border-cyan-900/50 rounded-2xl p-8">
                     <div className="mb-6">
                         <h3 className="text-lg font-semibold text-white mb-2">계정 정보</h3>
@@ -123,39 +123,39 @@ export default function Settings() {
                     )}
 
                     {/* 네이버 연동 상태 표시 */}
-                    {isLinked ? (
-                        <div className="p-4 bg-green-900/30 border border-green-500/50 rounded-lg text-green-400">
-                            ✓ 네이버 계정이 연동되었습니다
-                        </div>
+                    {isLinked ? (<></>
                     ) : (
                         <button
                             onClick={handleLinkNaver}
                             disabled={loading}
                             className="w-full h-12 bg-[#03C75A] hover:bg-[#02b350] disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
                         >
-                            {loading ? (
-                                "연동 중..."
-                            ) : (
-                                <>
-                                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M13.3333 10.8333L6.66667 0H0V20H6.66667V9.16667L13.3333 20H20V0H13.3333V10.8333Z" fill="white"/>
-                                    </svg>
-                                    <span>네이버 계정 연동하기</span>
-                                </>
-                            )}
+                            {
+                                loading ? (
+                                    "연동 중..."
+                                ) : (
+                                    <>
+                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M13.3333 10.8333L6.66667 0H0V20H6.66667V9.16667L13.3333 20H20V0H13.3333V10.8333Z" fill="white" />
+                                        </svg>
+                                        <span>네이버 계정 연동하기</span>
+                                    </>
+                                )}
                         </button>
-                    )}
+                    )
+                    }
 
-                    {message && (
-                        <div className={`mt-4 p-3 rounded-lg text-sm ${
-                            message.includes("성공") || message.includes("연동되었습니다")
+                    {
+                        message && (
+                            <div className={`mt-4 p-3 rounded-lg text-sm ${message.includes("성공") || message.includes("연동되었습니다")
                                 ? "bg-green-900/30 border border-green-500/50 text-green-400"
                                 : "bg-red-900/30 border border-red-500/50 text-red-400"
-                        }`}>
-                            {message}
-                        </div>
-                    )}
-                </div>
+                                }`}>
+                                {message}
+                            </div>
+                        )
+                    }
+                </div >
 
                 <button
                     onClick={() => router.push("/")}
@@ -163,7 +163,7 @@ export default function Settings() {
                 >
                     ← 홈으로 돌아가기
                 </button>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }

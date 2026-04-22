@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { SignalData } from "@/types/signal";
 import { useCrossRoad } from "@/hooks/useCrossRoad";
 import { useSignalPolling } from "@/hooks/useSignalPooling";
+import { PageHeader } from "@/component/PageHeader";
 
 const DIRECTIONS = [
   { label: '북', key: 'nt' },
@@ -18,7 +19,7 @@ const DIRECTIONS = [
 
 type DirectionKey = typeof DIRECTIONS[number]['key'];
 
-function getDirectionSignals(signal: SignalData, key: DirectionKey ) {
+function getDirectionSignals(signal: SignalData, key: DirectionKey) {
   return {
     직진: signal[`${key}StsgStatNm`],
     좌회전: signal[`${key}LtsgStatNm`],
@@ -30,15 +31,15 @@ function getDirectionSignals(signal: SignalData, key: DirectionKey ) {
 };
 
 function formatTime(trsmTm: string) {
-  const h = trsmTm.slice(0,2);
-  const m = trsmTm.slice(2,4);
-  const s = trsmTm.slice(4,6);
+  const h = trsmTm.slice(0, 2);
+  const m = trsmTm.slice(2, 4);
+  const s = trsmTm.slice(4, 6);
   return `${h}:${m}:${s}`
 };
 
 export default function KakaoMap() {
-  const [ mapReady, setMapReady ] = useState(false);
-  const [ selectedItstId, setSelectedItstId ] = useState<string | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [selectedItstId, setSelectedItstId] = useState<string | null>(null);
   const { crossRoads, fetchIfMoved } = useCrossRoad();
   const signal = useSignalPolling(selectedItstId);
   const mapRef = useRef<HTMLDivElement>(null);
@@ -58,7 +59,7 @@ export default function KakaoMap() {
 
   function getMarkerColor(signal: any): string {
     if (!signal) return 'gray';
-    
+
     const vals = [
       signal.ntStsgStatNm, signal.stStsgStatNm,
       signal.etStsgStatNm, signal.wtStsgStatNm,
@@ -88,7 +89,7 @@ export default function KakaoMap() {
     return new window.kakao.maps.MarkerImage(url, size);
   };
 
-  
+
   const kakaoMapRef = useRef<any>(null);
 
   useEffect(() => {
@@ -145,117 +146,67 @@ export default function KakaoMap() {
       });
     };
 
-    
+
     init();
   }, []);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: dark.bg }}>
       {/* Digital Twin Header */}
-      <header style={{
-        background: "rgba(10, 14, 26, 0.95)",
-        borderBottom: `1px solid ${dark.border}`,
-        padding: "0.75rem 1.5rem",
-        backdropFilter: "blur(12px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        zIndex: 100,
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{
-            width: "32px",
-            height: "32px",
-            background: "linear-gradient(135deg, #38bdf8, #0ea5e9)",
-            borderRadius: "8px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 0 16px rgba(56,189,248,0.4)",
-            fontSize: "16px",
-          }}>
-            🚇
-          </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#e8eaf0", lineHeight: 1 }}>
-              서울 TOD
-            </h1>
-            <p style={{ margin: 0, fontSize: "11px", color: "#38bdf8", lineHeight: 1.4, marginTop: "2px" }}>
-              실시간 교통 신호 정보
-            </p>
-          </div>
-        </div>
+      <PageHeader
+        icon="🚦"
+        title="서울 TOD"
+        subtitle="실시간 교통 신호 정보"
 
-        <nav style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <a
-            href="/"
-            style={{
-              fontSize: "13px",
-              color: "#8b90a7",
-              textDecoration: "none",
-              padding: "6px 12px",
-              borderRadius: "8px",
-              border: "1px solid rgba(255,255,255,0.08)",
-              transition: "color 0.15s, border-color 0.15s",
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.color = "#e8eaf0";
-              (e.currentTarget as HTMLElement).style.borderColor = "rgba(56,189,248,0.3)";
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.color = "#8b90a7";
-              (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)";
-            }}
-          >
-            홈으로
-          </a>
-        </nav>
-      </header>
+        navLinks={[
+          { href: "/", label: "메인 페이지" },
+        ]}
+      />
 
       <div style={{ position: "relative", width: "100%", flex: 1, minHeight: 0 }}>
-      <div ref={mapRef} style={{ width: "100%", height: "100vh" }} />
+        <div ref={mapRef} style={{ width: "100%", height: "100vh" }} />
 
-      {signal && (
-        <div style={{
-          position: "absolute", top: "1rem", right: "1rem",
-          background: dark.surface, 
-          border: `1px solid ${dark.border}`,
-          borderRadius: "14px", padding: "1rem", width: "280px",
-          zIndex: 10, overflowY: "auto", maxHeight: "80vh",
-          boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-            <span style={{ fontWeight: 600, fontSize: "13px", color: dark.textPrimary }}>{signal.itstId}</span>
-            <span style={{ fontSize: "11px", color: dark.textMuted }}>{formatTime(signal.trsmTm)}</span>
-          </div>
+        {signal && (
+          <div style={{
+            position: "absolute", top: "1rem", right: "1rem",
+            background: dark.surface,
+            border: `1px solid ${dark.border}`,
+            borderRadius: "14px", padding: "1rem", width: "280px",
+            zIndex: 10, overflowY: "auto", maxHeight: "80vh",
+            boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+              <span style={{ fontWeight: 600, fontSize: "13px", color: dark.textPrimary }}>{signal.itstId}</span>
+              <span style={{ fontSize: "11px", color: dark.textMuted }}>{formatTime(signal.trsmTm)}</span>
+            </div>
 
-          {DIRECTIONS.map(({ label, key }) => {
-            const sigs = getDirectionSignals(signal, key);
-            const hasData = Object.values(sigs).some(v => v && v !== '');
-            if (!hasData) return null;
+            {DIRECTIONS.map(({ label, key }) => {
+              const sigs = getDirectionSignals(signal, key);
+              const hasData = Object.values(sigs).some(v => v && v !== '');
+              if (!hasData) return null;
 
-            return (
-              <div key={key} style={{ marginBottom: "0.625rem", borderBottom: `1px solid ${dark.border}`, paddingBottom: "0.625rem" }}>
-                <p style={{ fontSize: "11px", fontWeight: 600, color: dark.textSecondary, marginBottom: "6px" }}>{label}</p>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                  {Object.entries(sigs).map(([name, val]) =>
-                    val ? (
-                      <span key={name} style={{
-                        fontSize: "11px", padding: "2px 8px", borderRadius: "20px",
-                        background: val === '녹색' ? "#0d2e20" : val === '적색' ? "#2e1212" : dark.surface2,
-                        color: val === '녹색' ? "#3ecf8e" : val === '적색' ? "#f87171" : dark.textSecondary,
-                        border: `1px solid ${val === '녹색' ? "#14532d" : val === '적색' ? "#7f1d1d" : dark.border}`,
-                      }}>
-                        {name} {val}
-                      </span>
-                    ) : null
-                  )}
+              return (
+                <div key={key} style={{ marginBottom: "0.625rem", borderBottom: `1px solid ${dark.border}`, paddingBottom: "0.625rem" }}>
+                  <p style={{ fontSize: "11px", fontWeight: 600, color: dark.textSecondary, marginBottom: "6px" }}>{label}</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                    {Object.entries(sigs).map(([name, val]) =>
+                      val ? (
+                        <span key={name} style={{
+                          fontSize: "11px", padding: "2px 8px", borderRadius: "20px",
+                          background: val === '녹색' ? "#0d2e20" : val === '적색' ? "#2e1212" : dark.surface2,
+                          color: val === '녹색' ? "#3ecf8e" : val === '적색' ? "#f87171" : dark.textSecondary,
+                          border: `1px solid ${val === '녹색' ? "#14532d" : val === '적색' ? "#7f1d1d" : dark.border}`,
+                        }}>
+                          {name} {val}
+                        </span>
+                      ) : null
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
