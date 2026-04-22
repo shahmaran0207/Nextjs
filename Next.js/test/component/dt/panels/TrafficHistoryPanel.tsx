@@ -4,7 +4,7 @@ import React, { useEffect, useCallback, useMemo } from "react";
 import TimeSlider from "./TimeSlider";
 import PlaybackController from "./PlaybackController";
 import { useTrafficHistory } from "@/app/hook/useTrafficHistory";
-import { usePlayback, PlaybackSpeed, TimeInterval } from "@/app/hook/usePlayback";
+import { usePlayback, PlaybackSpeed } from "@/app/hook/usePlayback";
 import { useHistoryCache } from "@/app/hook/useHistoryCache";
 
 interface TrafficHistoryPanelProps {
@@ -31,7 +31,6 @@ export default function TrafficHistoryPanel({
 
   // 재생 설정 상태
   const [playbackSpeed, setPlaybackSpeed] = React.useState<PlaybackSpeed>(1);
-  const [timeInterval, setTimeInterval] = React.useState<TimeInterval>(5);
 
   // useTrafficHistory Hook
   const {
@@ -85,13 +84,41 @@ export default function TrafficHistoryPanel({
     [cache, fetchTrafficData, onTrafficDataChange, setCurrentTime]
   );
 
+  // 재생 가능한 시간 목록 상태
+  const [availableTimes, setAvailableTimes] = React.useState<Date[]>([]);
+
+  // 시간 범위가 변경되면 가용한 시간 목록 조회
+  React.useEffect(() => {
+    const fetchAvailableTimes = async () => {
+      try {
+        const response = await fetch(
+          `/api/traffic/history/times?startTime=${startTime.toISOString()}&endTime=${endTime.toISOString()}`
+        );
+        
+        if (!response.ok) {
+          console.error("[TrafficHistoryPanel] 시간 목록 조회 실패");
+          return;
+        }
+
+        const result = await response.json();
+        const times = result.times.map((t: string) => new Date(t));
+        setAvailableTimes(times);
+        console.log("[TrafficHistoryPanel] 재생 가능한 시간:", times.length, "개");
+      } catch (err) {
+        console.error("[TrafficHistoryPanel] 시간 목록 조회 에러:", err);
+      }
+    };
+
+    fetchAvailableTimes();
+  }, [startTime, endTime]);
+
   // usePlayback Hook
   const playback = usePlayback({
     startTime,
     endTime,
     currentTime,
     playbackSpeed,
-    timeInterval,
+    availableTimes,
     onTimeChange: (time) => {
       fetchWithCache(time);
     },
@@ -112,23 +139,21 @@ export default function TrafficHistoryPanel({
 
   // 재생 중 프리페칭 (요구사항 7.1)
   useEffect(() => {
-    if (playback.isPlaying) {
-      // 다음 3개 시점 미리 조회
-      const nextTimes: Date[] = [];
-      for (let i = 1; i <= 3; i++) {
-        const nextTime = new Date(
-          currentTime.getTime() + i * timeInterval * 60 * 1000
-        );
-        if (nextTime <= endTime) {
-          nextTimes.push(nextTime);
+    if (playback.isPlaying && availableTimes.length > 0) {
+      // 현재 인덱스 찾기
+      const currentIdx = availableTimes.findIndex(
+        t => t.getTime() >= currentTime.getTime()
+      );
+      
+      if (currentIdx >= 0) {
+        // 다음 3개 시점 미리 조회
+        const nextTimes = availableTimes.slice(currentIdx + 1, currentIdx + 4);
+        if (nextTimes.length > 0) {
+          cache.prefetch(nextTimes);
         }
       }
-
-      if (nextTimes.length > 0) {
-        cache.prefetch(nextTimes);
-      }
     }
-  }, [playback.isPlaying, currentTime, timeInterval, endTime, cache]);
+  }, [playback.isPlaying, currentTime, availableTimes, cache]);
 
   // TimeSlider onChange 핸들러 (useCallback으로 최적화 - Task 9.2)
   const handleTimeChange = useCallback(
@@ -307,17 +332,12 @@ export default function TrafficHistoryPanel({
       <PlaybackController
         isPlaying={playback.isPlaying}
         playbackSpeed={playbackSpeed}
-        timeInterval={timeInterval}
         onPlay={playback.play}
         onPause={playback.pause}
         onStop={playback.stop}
         onSpeedChange={(speed) => {
           setPlaybackSpeed(speed);
           playback.setSpeed(speed);
-        }}
-        onIntervalChange={(interval) => {
-          setTimeInterval(interval);
-          playback.setInterval(interval);
         }}
         disabled={isLoading}
       />

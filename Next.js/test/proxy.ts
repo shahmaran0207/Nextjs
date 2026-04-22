@@ -6,7 +6,7 @@ export default function proxy(request: NextRequest) {
     const path = request.nextUrl.pathname;
 
     // 관리자 전용 페이지 (ROLE: ADMIN 필수)
-    const adminPages = ["/ADMIN", "/list"];
+    const adminPages = ["/ADMIN"];
 
     // 관리자 전용 API (ROLE: ADMIN 필수)
     const adminApis = ["/api/admin"];
