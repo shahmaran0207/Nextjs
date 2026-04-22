@@ -1,5 +1,7 @@
 "use client"
 
+import { useState, useEffect } from "react";
+
 const dark = {
   bg: "#0a0e1a",
   surface: "#1a1d27",
@@ -12,7 +14,7 @@ const dark = {
   accentDim: "rgba(56,189,248,0.1)",
 };
 
-const navItems = [
+const baseNavItems = [
   { href: "/list", label: "게시글 목록", icon: "📋", desc: "전체 게시글을 확인하세요" },
   { href: "/map", label: "지도", icon: "🗺️", desc: "지도 기반 정보를 탐색하세요" },
   { href: "/digitalTwin", label: "디지털트윈", icon: "🏙️", desc: "디지털 트윈 시뮬레이션" },
@@ -21,12 +23,41 @@ const navItems = [
   { href: "/chat", label: "웹소켓 채팅", icon: "💬", desc: "실시간 채팅에 참여하세요" },
   { href: "/QnA", label: "QnA", icon: "❓", desc: "질문과 답변을 확인하세요" },
   { href: "/SeoulTod", label: "서울 TOD", icon: "🚇", desc: "서울 대중교통 정보" },
-  { href: "/NaverLogin", label: "네이버 로그인", icon: "🌐", desc: "네이버 로그인" },
   { href: "/api-docs", label: "API 문서", icon: "📃", desc: "Swagger 파일" },
   { href: "/ADMIN", label: "ADMIN PAGE", icon: "🔒", desc: "ADMIN PAGE" },
 ];
 
+const naverLinkItem = { href: "/settings", label: "네이버 계정 연동", icon: "🍀", desc: "NAVER" };
+
 export default function Page() {
+  const [navItems, setNavItems] = useState(baseNavItems);
+
+  useEffect(() => {
+    // 사용자 정보 확인하여 네이버 연동 여부 체크
+    const checkUserInfo = async () => {
+      const token = localStorage.getItem("token");
+      if (token) {
+        try {
+          const response = await fetch("/api/auth/Me", {
+            headers: {
+              "Authorization": `Bearer ${token}`
+            }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            // 네이버 ID가 없으면 네이버 계정 연동 메뉴 추가
+            if (!data.naver_id) {
+              setNavItems([...baseNavItems, naverLinkItem]);
+            }
+          }
+        } catch (error) {
+          console.error("사용자 정보 확인 실패:", error);
+        }
+      }
+    };
+    
+    checkUserInfo();
+  }, []);
 
   return (
     <div style={{

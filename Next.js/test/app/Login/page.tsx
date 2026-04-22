@@ -1,17 +1,60 @@
 'use client'
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import postStyle from "../hook/postStyle";
 
 export default function Login() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [userInfo, setUserInfo] = useState<any>(null);
+    const [showNaverLogin, setShowNaverLogin] = useState(true);
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { labelStyle, inputStyle, dark } = postStyle();
+
+    // 사용자 정보 확인 (네이버 연동 여부 체크)
+    useEffect(() => {
+        const checkUserInfo = async () => {
+            const token = localStorage.getItem("token");
+            if (token) {
+                try {
+                    const response = await fetch("/api/auth/Me", {
+                        headers: {
+                            "Authorization": `Bearer ${token}`
+                        }
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        setUserInfo(data);
+                        // 네이버 ID가 있으면 네이버 로그인 버튼 숨기기
+                        setShowNaverLogin(!data.naver_id);
+                    }
+                } catch (error) {
+                    console.error("사용자 정보 확인 실패:", error);
+                }
+            }
+        };
+        
+        checkUserInfo();
+    }, []);
+
+    // URL 파라미터에서 오류 메시지 확인
+    useEffect(() => {
+        const errorParam = searchParams.get("error");
+        if (errorParam) {
+            if (errorParam.includes("연동된 계정이 없습니다")) {
+                setError("연동된 계정이 없습니다. 먼저 일반 로그인 후 설정에서 네이버 계정을 연동하세요.");
+            } else {
+                setError(errorParam);
+            }
+        }
+    }, [searchParams]);
 
     async function handleLogin(e: React.FormEvent) {
         e.preventDefault();
+        setError("");
 
         const res = await fetch("/api/auth/Login", {
             method: "POST",
@@ -25,11 +68,25 @@ export default function Login() {
             // 새로운 토큰 시스템: accessToken을 localStorage에 저장
             localStorage.setItem("token", data.accessToken);
             // refreshToken은 자동으로 HttpOnly 쿠키에 저장됨
+            
+            // 네이버 연동 여부에 따라 네이버 로그인 버튼 표시/숨김
+            setShowNaverLogin(!data.user.hasNaverLink);
             router.push("/"); // 로그인 성공 시 메인 페이지로 이동
         } else {
-            alert("로그인 실패: " + (data.err ?? "알 수 없는 오류"));
+            setError("로그인 실패: " + (data.err ?? "알 수 없는 오류"));
         }
-    };
+    }
+
+    async function handleNaverLogin() {
+        try {
+            setError("");
+            // 직접 구현한 네이버 OAuth로 리다이렉트
+            window.location.href = `/api/auth/naver/signin?callbackUrl=${encodeURIComponent("/api/auth/callback/naver")}`;
+        } catch (error) {
+            console.error("[NAVER LOGIN ERROR]", error);
+            setError("네이버 로그인에 실패했습니다");
+        }
+    }
 
     return (
         <>
@@ -148,18 +205,48 @@ export default function Login() {
                             />
                         </div>
 
-                        {/* 로그인 버튼 */}
+                    {/* 로그인 버튼 */}
                         <button type="submit" className="relative w-full h-12 bg-cyan-900/40 border border-cyan-500/50 hover:bg-cyan-500/20 hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(34,211,238,0.2)] active:scale-[0.98] text-cyan-400 hover:text-cyan-300 text-sm font-semibold tracking-wider rounded-lg transition-all overflow-hidden">
                             <span className="relative z-10 block">로그인</span>
                         </button>
                     </form>
 
+                    {/* 오류 메시지 */}
+                    {error && (
+                        <div className="mt-4 p-3 bg-red-900/30 border border-red-500/50 rounded-lg text-red-400 text-sm">
+                            {error}
+                        </div>
+                    )}
+
                     {/* 구분선 */}
-                    <div className="flex items-center gap-4 my-6 mt-6">
-                        <div className="flex-1 h-px bg-linear-to-r from-transparent to-slate-700" />
+                    <div className="flex items-center gap-4 my-6">
+                        <div className="flex-1 h-px bg-slate-700" />
                         <span className="text-xs font-mono text-slate-500 uppercase tracking-widest">or</span>
-                        <div className="flex-1 h-px bg-linear-to-l from-transparent to-slate-700" />
+                        <div className="flex-1 h-px bg-slate-700" />
                     </div>
+
+                    {/* 네이버 로그인 버튼 - 네이버 계정이 연동되지 않은 경우에만 표시 */}
+                    {showNaverLogin && (
+                        <>
+                            <button 
+                                type="button"
+                                onClick={handleNaverLogin}
+                                className="relative w-full h-12 bg-[#03C75A] hover:bg-[#02b350] active:scale-[0.98] text-white text-sm font-semibold rounded-lg transition-all overflow-hidden flex items-center justify-center gap-2 shadow-lg"
+                            >
+                                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M13.3333 10.8333L6.66667 0H0V20H6.66667V9.16667L13.3333 20H20V0H13.3333V10.8333Z" fill="white"/>
+                                </svg>
+                                <span>네이버로 로그인</span>
+                            </button>
+
+                            {/* 구분선 */}
+                            <div className="flex items-center gap-4 my-6 mt-6">
+                                <div className="flex-1 h-px bg-linear-to-r from-transparent to-slate-700" />
+                                <span className="text-xs font-mono text-slate-500 uppercase tracking-widest">or</span>
+                                <div className="flex-1 h-px bg-linear-to-r from-slate-700 to-transparent" />
+                            </div>
+                        </>
+                    )}
 
                     {/* 회원가입 */}
                     <p className="text-center text-sm text-slate-400">

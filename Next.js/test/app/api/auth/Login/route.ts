@@ -45,6 +45,7 @@ export async function POST(request: Request) {
                     email: user.email,
                     name: user.name,
                     ROLE: user.ROLE,
+                    hasNaverLink: !!user.naver_id, // 네이버 연동 여부만 불린값으로
                 },
             },
             { status: 200 }
