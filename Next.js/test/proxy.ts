@@ -16,9 +16,11 @@ export default function proxy(request: NextRequest) {
         "/api/post",
         "/api/posts",
         "/api/qna",
+        "/api/QnA",       // 대문자 경로 추가
         "/api/Comment",
         "/api/Chat",
         "/api/answer",
+        "/api/Answer",    // 대문자 경로 추가
         "/api/postcomment",
         "/api/commentbycomment",
         "/api/postlike",
