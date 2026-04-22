@@ -25,7 +25,7 @@ export async function GET(
         const data = result.map((row) => ({
             from: row.sender,
             to: row.recepient,
-            messsage: row.content,
+            message: row.content,
             imageUrl: row.image ?
                 `data:image/jpeg;base64,${Buffer.from(row.image).toString("base64")}` : null,
         }));

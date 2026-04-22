@@ -21,7 +21,6 @@ const navItems = [
   { href: "/chat", label: "웹소켓 채팅", icon: "💬", desc: "실시간 채팅에 참여하세요" },
   { href: "/QnA", label: "QnA", icon: "❓", desc: "질문과 답변을 확인하세요" },
   { href: "/SeoulTod", label: "서울 TOD", icon: "🚇", desc: "서울 대중교통 정보" },
-  { href: "/email", label: "이메일 인증", icon: "📧", desc: "이메일 인증" },
   { href: "/NaverLogin", label: "네이버 로그인", icon: "🌐", desc: "네이버 로그인" },
   { href: "/api-docs", label: "API 문서", icon: "📃", desc: "Swagger 파일" },
   { href: "/ADMIN", label: "ADMIN PAGE", icon: "🔒", desc: "ADMIN PAGE" },
@@ -140,7 +139,6 @@ export default function Page() {
               </a>
             ))}
           </div>
-
         </div>
       </div>
     </div>

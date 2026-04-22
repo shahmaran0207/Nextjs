@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePostState } from "@/app/hook/usePostState";
 import postStyle from "@/app/hook/postStyle";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
+import { LogoutButton } from "@/component/LogoutButton";
 
 export default function EditForm({ params }: { params: Promise<{ id: string }> }) {
   useAuthGuard();
@@ -143,37 +144,7 @@ export default function EditForm({ params }: { params: Promise<{ id: string }> }
           >
             게시판
           </a>
-          {/* 로그아웃 버튼 */}
-          <button
-            onClick={async () => {
-              await fetch("/api/auth/logout", {
-                method: "POST",
-                credentials: 'include'
-              });
-              window.location.href = "/Login";
-            }}
-            style={{
-              padding: "6px 14px",
-              background: "rgba(56,189,248,0.08)",
-              border: "1px solid rgba(56,189,248,0.3)",
-              borderRadius: "8px",
-              color: "#38bdf8",
-              fontSize: "13px",
-              fontWeight: 500,
-              cursor: "pointer",
-              transition: "background 0.15s, border-color 0.15s",
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(56,189,248,0.18)";
-              (e.currentTarget as HTMLButtonElement).style.borderColor = "#38bdf8";
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(56,189,248,0.08)";
-              (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(56,189,248,0.3)";
-            }}
-          >
-            로그아웃
-          </button>
+          <LogoutButton />
         </nav>
       </header>
 

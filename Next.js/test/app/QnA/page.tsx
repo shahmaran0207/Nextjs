@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react"
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
+import { LogoutButton } from "@/component/LogoutButton";
 
 export default function QnA() {
     useAuthGuard();
@@ -139,41 +140,7 @@ export default function QnA() {
                     >
                         게시판
                     </a>
-                    {/* 로그아웃 버튼 */}
-                    <button
-                        onClick={async () => {
-                            try {
-                                await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-                                localStorage.removeItem("token");
-                                window.location.href = "/Login";
-                            } catch (err) {
-                                console.error("로그아웃 실패:", err);
-                                localStorage.removeItem("token");
-                                window.location.href = "/Login";
-                            }
-                        }}
-                        style={{
-                            padding: "6px 14px",
-                            background: "rgba(56,189,248,0.08)",
-                            border: "1px solid rgba(56,189,248,0.3)",
-                            borderRadius: "8px",
-                            color: "#38bdf8",
-                            fontSize: "13px",
-                            fontWeight: 500,
-                            cursor: "pointer",
-                            transition: "background 0.15s, border-color 0.15s",
-                        }}
-                        onMouseEnter={e => {
-                            (e.currentTarget as HTMLButtonElement).style.background = "rgba(56,189,248,0.18)";
-                            (e.currentTarget as HTMLButtonElement).style.borderColor = "#38bdf8";
-                        }}
-                        onMouseLeave={e => {
-                            (e.currentTarget as HTMLButtonElement).style.background = "rgba(56,189,248,0.08)";
-                            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(56,189,248,0.3)";
-                        }}
-                    >
-                        로그아웃
-                    </button>
+                    <LogoutButton />
                 </nav>
             </header>
 

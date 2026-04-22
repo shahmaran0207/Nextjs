@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface ChatMessage {
     text: string;
@@ -10,57 +10,59 @@ interface ChatMessage {
     imageUrl?: string;
 }
 
-export default function useChatState() {
-    const [mode, setMode] = useState<'select' | 'new' | 'existing' | 'connected' | 'roomList'>('select');
+interface ChatUser {
+    email: string;
+    name: string | null;
+}
+
+// email: 로그인된 내 이메일 (useAuthGuard에서 전달)
+export default function useChatState(email: string) {
+    // roomList: 채팅방 목록, newChat: 새 상대 선택, connected: 채팅 중
+    const [mode, setMode] = useState<'roomList' | 'newChat' | 'connected'>('roomList');
 
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [chatRooms, setChatRooms] = useState<string[]>([]);
 
     const [recepientId, setRecipientId] = useState("");
     const [message, setMessage] = useState("");
-    const [inputId, setInputId] = useState("");
-    const [idError, setIdError] = useState("");
 
     const [recipientLocked, setRecipientLocked] = useState(false);
 
     const socketRef = useRef<WebSocket | null>(null);
 
-    const [userId, setUserId] = useState<string | null>(null);
+    // 내 userId는 항상 로그인 이메일
+    const userId = email;
+
     const [image, setImage] = useState<File | null>(null);
 
-    // const connectWebSocket = async () => {
-    //     await fetch('/api/Chat/ws');
-    //     const ws = new WebSocket(`wss://${window.location.host}/ws`);
+    // 새 채팅 상대 선택용: users 테이블에서 나를 제외한 유저 목록
+    const [userList, setUserList] = useState<ChatUser[]>([]);
+    const [userListError, setUserListError] = useState("");
 
-    //     ws.onopen = () => { console.log("WebSocket Connection established"); };
-    //         ws.onmessage = (event) => {
-    //         const data = JSON.parse(event.data);
+    // 페이지 진입 시 내 채팅방 목록 불러오기
+    useEffect(() => {
+        if (!email) return;
 
-    //         if (data.type === "id") {
-    //             setUserId(data.id);
-    //             setMode('connected');
-    //         } else if (data.type === 'private' || data.type === 'broadcast') {
-    //             setMessages((prev) => [
-    //                 ...prev,
-    //                 { text: data.message, isSent: false, from: data.from, imageUrl: data.imageUrl }
-    //             ]);
-    //             if(data.type === 'private') {
-    //                 setRecipientId(data.from);
-    //                 setRecipientLocked(true);
-    //             };
-    //         }
-    //     };
+        const loadRooms = async () => {
+            try {
+                const res = await fetch(`/api/Chat/getChat/${encodeURIComponent(email)}`);
+                if (!res.ok) return;
 
-    //     ws.onerror = (error) => {
-    //         console.error('WebSocket error:', error);
-    //     };
+                const data = await res.json();
 
-    //     ws.onclose = () => {
-    //         console.log("WebSocket connection closed");
-    //     };
+                // 나와 대화한 상대방 이메일 목록 (중복 제거)
+                const rooms = [...new Set(data.map((chat: any) =>
+                    chat.from === email ? chat.to : chat.from
+                ))] as string[];
 
-    //     socketRef.current = ws;
-    // };
+                setChatRooms(rooms);
+            } catch (err) {
+                console.error("채팅방 목록 로드 에러:", err);
+            }
+        };
+
+        loadRooms();
+    }, [email]);
 
     const connectWebSocket = async () => {
         await fetch('/api/Chat/ws');
@@ -71,13 +73,14 @@ export default function useChatState() {
 
         ws.onopen = () => {
             console.log("WebSocket Connection established");
+            // 서버에 내 이메일(userId)을 등록
+            ws.send(JSON.stringify({ type: 'register', userId: email }));
         };
 
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
 
             if (data.type === "id") {
-                setUserId(data.id);
                 setMode('connected');
             } else if (data.type === 'private' || data.type === 'broadcast') {
                 setMessages((prev) => [
@@ -102,17 +105,18 @@ export default function useChatState() {
         socketRef.current = ws;
     };
 
+    // 기존 채팅방 선택
     const handleRoomSelect = async (targetId: string) => {
-        const res = await fetch(`/api/Chat/getChat/${userId}`);
+        const res = await fetch(`/api/Chat/getChat/${encodeURIComponent(email)}`);
         const data = await res.json();
 
         const loadedMessages: ChatMessage[] = data
             .filter((chat: any) =>
-                (chat.from === userId && chat.to === targetId) ||
-                (chat.from === targetId && chat.to === userId))
+                (chat.from === email && chat.to === targetId) ||
+                (chat.from === targetId && chat.to === email))
             .map((chat: any) => ({
                 text: chat.message,
-                isSent: chat.from === userId,
+                isSent: chat.from === email,
                 from: chat.from,
                 to: chat.to,
                 imageUrl: chat.imageUrl
@@ -123,6 +127,41 @@ export default function useChatState() {
         setRecipientLocked(true);
         await connectWebSocket();
         setMode('connected');
+    };
+
+    // 새 채팅 시작: users 테이블에서 나를 제외한 유저 목록 불러오기
+    const handleNewChat = async () => {
+        setUserListError("");
+        try {
+            const res = await fetch(`/api/Chat/getUsers?excludeEmail=${encodeURIComponent(email)}`);
+            if (!res.ok) {
+                setUserListError("유저 목록을 불러올 수 없습니다.");
+                return;
+            }
+            const data: ChatUser[] = await res.json();
+            if (data.length === 0) {
+                setUserListError("채팅 가능한 다른 유저가 없습니다.");
+                return;
+            }
+            setUserList(data);
+            setMode('newChat');
+        } catch (err) {
+            setUserListError("유저 목록을 불러올 수 없습니다.");
+        }
+    };
+
+    // 새 채팅 상대 선택
+    const handleSelectNewRecipient = async (targetEmail: string) => {
+        setMessages([]);
+        setRecipientId(targetEmail);
+        setRecipientLocked(true);
+        await connectWebSocket();
+        setMode('connected');
+
+        // 혹시 기존 채팅방 목록에 없으면 추가
+        setChatRooms((prev) =>
+            prev.includes(targetEmail) ? prev : [...prev, targetEmail]
+        );
     };
 
     const sendMessage = async (e: React.FormEvent) => {
@@ -178,38 +217,23 @@ export default function useChatState() {
         };
     };
 
-    const handleExistingUser = async () => {
-        if (!inputId) return;
-
-        try {
-            const res = await fetch(`/api/Chat/getChat/${inputId}`);
-
-            if (!res.ok) {
-                setIdError("존재하지 않는 아이디입니다.");
-                return;
-            }
-
-            const data = await res.json();
-
-            const rooms = [...new Set(data.map((chat: any) =>
-                chat.from === inputId ? chat.to : chat.from
-            ))] as string[];
-
-            setUserId(inputId);
-            setChatRooms(rooms);
-            setMode('roomList');
-
-            setUserId(inputId);
-        } catch (err) {
-            setIdError("존재하지 않는 아이디입니다.");
-        }
-    };
-
     return {
-        mode, setMode, messages, setMessages, recepientId, setRecipientId,
-        recipientLocked, setRecipientLocked, socketRef, userId, setUserId,
-        handleRoomSelect, connectWebSocket, sendMessage, message, setMessage,
-        image, setImage, handleImageChange, handleExistingUser, idError, setIdError,
-        inputId, setInputId, chatRooms, setChatRooms
+        mode, setMode,
+        messages, setMessages,
+        recepientId, setRecipientId,
+        recipientLocked, setRecipientLocked,
+        socketRef,
+        userId,
+        handleRoomSelect,
+        handleNewChat,
+        handleSelectNewRecipient,
+        connectWebSocket,
+        sendMessage,
+        message, setMessage,
+        image, setImage,
+        handleImageChange,
+        chatRooms, setChatRooms,
+        userList,
+        userListError,
     };
 };
