@@ -21,11 +21,19 @@ export default function useNoramlPost() {
       const res = await fetch('/api/posts/getPostList', {
         credentials: 'include' // 쿠키 포함
       });
+      
+      // 인증 실패는 정상적인 흐름이므로 조용히 처리
+      if (res.status === 401) {
+        setPosts([]);
+        return;
+      }
+
       const data = await res.json();
       // 배열인지 확인 후 설정
       if (Array.isArray(data)) {
         setPosts(data);
       } else {
+        // 401이 아닌 다른 에러만 로그 출력
         console.error("API response is not an array:", data);
         setPosts([]);
       }

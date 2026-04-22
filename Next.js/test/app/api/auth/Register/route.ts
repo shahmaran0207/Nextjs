@@ -28,6 +28,7 @@ export async function POST(request: Request) {
                 email: String(email),
                 password: await bcrypt.hash(password, 10),
                 name: String(name),
+                ROLE: "USER"
             }
         });
 
