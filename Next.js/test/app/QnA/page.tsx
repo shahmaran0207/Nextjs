@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react"
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
-import { LogoutButton } from "@/component/LogoutButton";
+import { PageHeader } from "@/component/PageHeader";
 
 export default function QnA() {
     useAuthGuard();
@@ -35,114 +35,17 @@ export default function QnA() {
 
     return (
         <div style={{ minHeight: "100vh", background: "#0a0e1a", display: "flex", flexDirection: "column" }}>
-            {/* 다크 상단 헤더 */}
-            <header style={{
-                background: "rgba(10, 14, 26, 0.95)",
-                borderBottom: "1px solid rgba(56,189,248,0.15)",
-                padding: "0.75rem 1.5rem",
-                position: "sticky",
-                top: 0,
-                zIndex: 200,
-                backdropFilter: "blur(12px)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-            }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    {/* 글로우 로고 */}
-                    <div style={{
-                        width: "32px",
-                        height: "32px",
-                        background: "linear-gradient(135deg, #38bdf8, #0ea5e9)",
-                        borderRadius: "8px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        boxShadow: "0 0 16px rgba(56,189,248,0.4)",
-                        fontSize: "16px",
-                    }}>
-                        💬
-                    </div>
-                    <div>
-                        <h1 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#e8eaf0", lineHeight: 1 }}>
-                            Q&A
-                        </h1>
-                        <p style={{ margin: 0, fontSize: "11px", color: "#38bdf8", lineHeight: 1.4, marginTop: "2px" }}>
-                            질문과 답변
-                        </p>
-                    </div>
-                </div>
+            <PageHeader
+                icon="💬"
+                title="Q&A"
+                subtitle="질문과 답변"
 
-                <nav style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                    <a
-                        href="/"
-                        style={{
-                            fontSize: "13px",
-                            color: "#8b90a7",
-                            textDecoration: "none",
-                            padding: "6px 12px",
-                            borderRadius: "8px",
-                            border: "1px solid rgba(255,255,255,0.08)",
-                            transition: "color 0.15s, border-color 0.15s",
-                        }}
-                        onMouseEnter={e => {
-                            (e.currentTarget as HTMLElement).style.color = "#e8eaf0";
-                            (e.currentTarget as HTMLElement).style.borderColor = "rgba(56,189,248,0.3)";
-                        }}
-                        onMouseLeave={e => {
-                            (e.currentTarget as HTMLElement).style.color = "#8b90a7";
-                            (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)";
-                        }}
-                    >
-                        홈으로
-                    </a>
-                    <a
-                        href="/QnA/write"
-                        style={{
-                            fontSize: "13px",
-                            color: "#0a0e1a",
-                            textDecoration: "none",
-                            padding: "6px 12px",
-                            borderRadius: "8px",
-                            border: "none",
-                            background: "#38bdf8",
-                            fontWeight: 600,
-                            transition: "background 0.15s",
-                        }}
-                        onMouseEnter={e => {
-                            (e.currentTarget as HTMLElement).style.background = "#0ea5e9";
-                        }}
-                        onMouseLeave={e => {
-                            (e.currentTarget as HTMLElement).style.background = "#38bdf8";
-                        }}
-                    >
-                        ✏️ 문의하기
-                    </a>
-                    <a
-                        href="/list"
-                        style={{
-                            fontSize: "13px",
-                            color: "#8b90a7",
-                            textDecoration: "none",
-                            padding: "6px 12px",
-                            borderRadius: "8px",
-                            border: "1px solid rgba(255,255,255,0.08)",
-                            transition: "color 0.15s, border-color 0.15s",
-                        }}
-                        onMouseEnter={e => {
-                            (e.currentTarget as HTMLElement).style.color = "#e8eaf0";
-                            (e.currentTarget as HTMLElement).style.borderColor = "rgba(56,189,248,0.3)";
-                        }}
-                        onMouseLeave={e => {
-                            (e.currentTarget as HTMLElement).style.color = "#8b90a7";
-                            (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)";
-                        }}
-                    >
-                        게시판
-                    </a>
-                    <LogoutButton />
-                </nav>
-            </header>
+                navLinks={[
+                    { href: "/", label: "메인 페이지" },
+                    { href: "/QnA/write", label: "✏️ 문의하기" },
+                    { href: "/list", label: "게시판" },
+                ]}
+            />
 
             <main style={{ flex: 1, padding: "2rem 1rem", overflow: "auto" }}>
                 <div style={{ maxWidth: "760px", margin: "0 auto" }}>
