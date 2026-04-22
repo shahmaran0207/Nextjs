@@ -57,6 +57,7 @@ export function usePostState(id: string, onDeleteSuccess?: () => void) {
     };
 
     const handleSubmit = async (e: SyntheticEvent) => {
+        const token = sessionStorage.getItem("token");
 
         e.preventDefault();
         if (!confirm("댓글을 작성하시겠습니까?")) return;
@@ -65,7 +66,11 @@ export function usePostState(id: string, onDeleteSuccess?: () => void) {
             formData.append("commentTitle", commentTitle);
             formData.append("commentContent", commentContent);
             formData.append("writer", email);
-            await fetch(`/api/Comment/addComment/${id}`, { method: "POST", body: formData });
+            await fetch(`/api/Comment/addComment/${id}`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+                body: formData
+            });
             setCommentTitle("");
             setCommentContent("");
             reloadComment(id);
@@ -75,16 +80,17 @@ export function usePostState(id: string, onDeleteSuccess?: () => void) {
     };
 
     const handleDelete = async () => {
+        const token = sessionStorage.getItem("token");
         if (!window.confirm("정말 삭제하시겠습니까?")) return;
         try {
             const results = await Promise.all([
-                fetch(`/api/Comment/DownComment/removeAllDownComment/${id}`, { method: "POST" }),
-                fetch(`/api/Comment/Hate/removeAllCommentHate/${id}`, { method: "POST" }),
-                fetch(`/api/Comment/Like/removeAllCommentLike/${id}`, { method: "POST" }),
-                fetch(`/api/Comment/removeAllComment/${id}`, { method: "POST" }),
-                fetch(`/api/posts/Hate/removeAllHate/${id}`, { method: "POST" }),
-                fetch(`/api/posts/Like/removeAllLike/${id}`, { method: "POST" }),
-                fetch(`/api/posts/removePost/${id}`, { method: "POST" }),
+                fetch(`/api/Comment/DownComment/removeAllDownComment/${id}`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
+                fetch(`/api/Comment/Hate/removeAllCommentHate/${id}`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
+                fetch(`/api/Comment/Like/removeAllCommentLike/${id}`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
+                fetch(`/api/Comment/removeAllComment/${id}`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
+                fetch(`/api/posts/Hate/removeAllHate/${id}`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
+                fetch(`/api/posts/Like/removeAllLike/${id}`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
+                fetch(`/api/posts/removePost/${id}`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
             ]);
             if (results.every(r => r.status === 200)) {
                 alert("삭제 되었습니다.");
@@ -96,6 +102,7 @@ export function usePostState(id: string, onDeleteSuccess?: () => void) {
     };
 
     const handleAddReply = async (upperCommentId: number, title: string, content: string) => {
+        const token = sessionStorage.getItem("token");
         try {
             const formData = new FormData();
             formData.append("replyTitle", title);
@@ -103,7 +110,9 @@ export function usePostState(id: string, onDeleteSuccess?: () => void) {
             formData.append("upperCommentId", String(upperCommentId));
 
             await fetch(`/api/Comment/DownComment/addDownComment/${id}`, {
-                method: "POST", body: formData
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+                body: formData
             });
             reloadComment(id);
         } catch (err) {
@@ -112,11 +121,12 @@ export function usePostState(id: string, onDeleteSuccess?: () => void) {
     };
 
     const removeComment = async (commentId: string) => {
+        const token = sessionStorage.getItem("token");
         try {
             const [likeRes, hateRes, deleteRes] = await Promise.all([
-                fetch(`/api/Comment/Like/removeCommentLike/${commentId}`, { method: "POST" }),
-                fetch(`/api/Comment/Hate/removeCommentHate/${commentId}`, { method: "POST" }),
-                fetch(`/api/Comment/removeComment/${commentId}`, { method: "POST" }),
+                fetch(`/api/Comment/Like/removeCommentLike/${commentId}`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
+                fetch(`/api/Comment/Hate/removeCommentHate/${commentId}`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
+                fetch(`/api/Comment/removeComment/${commentId}`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
             ]);
             if (likeRes.status === 200 && hateRes.status === 200 && deleteRes.status === 200) {
                 alert("댓글 삭제 되었습니다.");
@@ -128,8 +138,12 @@ export function usePostState(id: string, onDeleteSuccess?: () => void) {
     };
 
     const handleRemoveReply = async (downCommentId: number) => {
+        const token = sessionStorage.getItem("token");
         try {
-            const res = await fetch(`/api/Comment/DownComment/removeComment/${downCommentId}`, { method: "POST" });
+            const res = await fetch(`/api/Comment/DownComment/removeComment/${downCommentId}`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` }
+            });
             if (res.status === 200) reloadComment(id);
         } catch (err) {
             console.error("대댓글 삭제 에러:", err);
@@ -137,12 +151,21 @@ export function usePostState(id: string, onDeleteSuccess?: () => void) {
     };
 
     const handleCommentLike = async (commentId: string) => {
+        const token = sessionStorage.getItem("token");
         try {
-            const data = await fetch(`/api/Comment/Like/getEachCommentLike/${commentId}?name=${email}`).then(r => r.json());
+            const data = await fetch(`/api/Comment/Like/getEachCommentLike/${commentId}?name=${email}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            }).then(r => r.json());
             if (data.length === 0) {
-                await fetch(`/api/Comment/Like/addCommentLike/${commentId}?name=${email}&postId=${id}`, { method: "POST" });
+                await fetch(`/api/Comment/Like/addCommentLike/${commentId}?name=${email}&postId=${id}`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}` }
+                });
             } else {
-                await fetch(`/api/Comment/Like/removeEachCommentLike/${commentId}?name=${email}`, { method: "POST" });
+                await fetch(`/api/Comment/Like/removeEachCommentLike/${commentId}?name=${email}`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}` }
+                });
             }
             reloadCommentLikeAndHate(id);
         } catch (err) {
@@ -151,12 +174,21 @@ export function usePostState(id: string, onDeleteSuccess?: () => void) {
     };
 
     const handleCommentHate = async (commentId: string) => {
+        const token = sessionStorage.getItem("token");
         try {
-            const data = await fetch(`/api/Comment/Hate/getEachCommentHate/${commentId}?name=${email}`).then(r => r.json());
+            const data = await fetch(`/api/Comment/Hate/getEachCommentHate/${commentId}?name=${email}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            }).then(r => r.json());
             if (data.length === 0) {
-                await fetch(`/api/Comment/Hate/addCommentHate/${commentId}?name=${email}&postId=${id}`, { method: "POST" });
+                await fetch(`/api/Comment/Hate/addCommentHate/${commentId}?name=${email}&postId=${id}`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}` }
+                });
             } else {
-                await fetch(`/api/Comment/Hate/removeEachCommentHate/${commentId}?name=${email}`, { method: "POST" });
+                await fetch(`/api/Comment/Hate/removeEachCommentHate/${commentId}?name=${email}`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}` }
+                });
             }
             reloadCommentLikeAndHate(id);
         } catch (err) {
@@ -165,12 +197,21 @@ export function usePostState(id: string, onDeleteSuccess?: () => void) {
     };
 
     const handleLike = async () => {
+        const token = sessionStorage.getItem("token");
         try {
-            const data = await fetch(`/api/posts/Like/getEachPostLike/${id}?name=${email}`).then(r => r.json());
+            const data = await fetch(`/api/posts/Like/getEachPostLike/${id}?name=${email}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            }).then(r => r.json());
             if (data.length === 0) {
-                await fetch(`/api/posts/Like/addPostLike/${id}?name=${email}`, { method: "POST" });
+                await fetch(`/api/posts/Like/addPostLike/${id}?name=${email}`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}` }
+                });
             } else {
-                await fetch(`/api/posts/Like/removePostLike/${id}?name=${email}`, { method: "POST" });
+                await fetch(`/api/posts/Like/removePostLike/${id}?name=${email}`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}` }
+                });
             }
             reloadPostLikeAndHate(id);
         } catch (err) {
@@ -179,13 +220,23 @@ export function usePostState(id: string, onDeleteSuccess?: () => void) {
     };
 
     const handleHate = async () => {
+        const token = sessionStorage.getItem("token");
         try {
-            const data = await fetch(`/api/posts/Hate/getEachPostHate?id=${id}&name=${email}`, { method: "POST" }).then(r => r.json());
+            const data = await fetch(`/api/posts/Hate/getEachPostHate?id=${id}&name=${email}`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` }
+            }).then(r => r.json());
 
             if (data.length === 0) {
-                await fetch(`/api/posts/Hate/addPostHate/${id}?name=${email}`, { method: "POST" });
+                await fetch(`/api/posts/Hate/addPostHate/${id}?name=${email}`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}` }
+                });
             } else {
-                await fetch(`/api/posts/Hate/removePostHate/${id}?name=${email}`, { method: "POST" });
+                await fetch(`/api/posts/Hate/removePostHate/${id}?name=${email}`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}` }
+                });
             }
             reloadPostLikeAndHate(id);
         } catch (err) {
