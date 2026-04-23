@@ -25,6 +25,8 @@ const baseNavItems = [
   { href: "/SeoulTod", label: "서울 TOD", icon: "🚇", desc: "서울 대중교통 정보" },
   { href: "/api-docs", label: "API 문서", icon: "📃", desc: "Swagger 파일" },
   { href: "/ADMIN", label: "ADMIN PAGE", icon: "🔒", desc: "ADMIN PAGE" },
+  { href: "/payment", label: "결제", icon: "💸", desc: "결제 테스트" },
+  { href: "/Shopping", label: "상품", icon: "🎁", desc: "상품 페이지" },
 ];
 
 const naverLinkItem = { href: "/settings", label: "네이버 계정 연동", icon: "🍀", desc: "NAVER" };
@@ -55,7 +57,7 @@ export default function Page() {
         }
       }
     };
-    
+
     checkUserInfo();
   }, []);
 

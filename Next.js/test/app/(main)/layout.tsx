@@ -1,3 +1,5 @@
+<script src="https://cdn.iamport.kr/v2/iamport.js" />
+
 export default function MainLayout({
   children,
 }: {
