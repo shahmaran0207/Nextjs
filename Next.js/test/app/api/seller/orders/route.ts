@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAccessToken } from "@/utils/auth";
 import { cookies } from "next/headers";
+import { createNotification } from "@/lib/notify";
 
 export async function GET(req: Request) {
     try {
@@ -109,6 +110,20 @@ export async function PATCH(req: Request) {
             where: { id: Number(item.order_id) },
             data: { order_status: "SHIPPED" }
         });
+
+        // 구매자에게 배송 시작 알림
+        const order = await prisma.orders.findUnique({
+            where: { id: Number(item.order_id) },
+            select: { user_id: true, order_number: true }
+        });
+        if (order) {
+            await createNotification(
+                Number(order.user_id),
+                "상품이 발송되었습니다 🚚",
+                `주문(${order.order_number})의 상품이 출발했습니다. 운송장: ${tracking_number}`,
+                `/orders/${item.order_id}`
+            );
+        }
 
         return NextResponse.json({ success: true, item: updated });
     } catch (err: any) {

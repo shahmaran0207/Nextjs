@@ -7,6 +7,7 @@ import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 import { dark } from "../QnA/[id]/component/theme";
 import { DarkTheme } from "@/types/shoppingType";
 import "./shopping.css";
+import { NotificationBell } from "@/component/NotificationBell";
 
 // 확장된 Product 타입 (rating, reviewCount, category 추가됨)
 interface Product {
@@ -35,6 +36,7 @@ export default function ShoppingPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState("latest");
+  const [recentProducts, setRecentProducts] = useState<Product[]>([]);
 
   const fetchProducts = async () => {
     try {
@@ -76,6 +78,22 @@ export default function ShoppingPage() {
     fetchWishlists();
   }, [email]);
 
+  // 최근 본 상품 (sessionStorage 기반)
+  useEffect(() => {
+    const ids = JSON.parse(sessionStorage.getItem("recently_viewed") || "[]") as number[];
+    if (ids.length === 0) return;
+    fetch(`/api/Shopping/Products?ids=${ids.join(",")}`)
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        // 평순서를 적역순으로 정렬
+        const ordered = ids
+          .map(id => (Array.isArray(data) ? data : []).find((p: Product) => Number(p.id) === id))
+          .filter(Boolean) as Product[];
+        setRecentProducts(ordered);
+      })
+      .catch(() => {});
+  }, []);
+
   const toggleWishlist = async (e: React.MouseEvent, productId: number) => {
     e.stopPropagation();
     if (!email) {
@@ -114,8 +132,9 @@ export default function ShoppingPage() {
             <p className="header-subtitle text-accent">최신 상품을 만나보세요</p>
           </div>
         </div>
-        <nav className="flex-row gap-xs">
+        <nav className="flex-row gap-xs" style={{ alignItems: "center" }}>
           <Link href="/" className="nav-link">홈으로</Link>
+          <NotificationBell />
         </nav>
       </header>
 
@@ -226,6 +245,35 @@ export default function ShoppingPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* 최근 본 상품 섹션 */}
+          {recentProducts.length > 0 && (
+            <div className="mt-1rem">
+              <div className="title-banner shop-surface border-default border-left-accent mb-sm" style={{ padding: "0.75rem 1rem" }}>
+                <h3 className="margin-0 text-primary text-14-bold">👁️ 최근 본 상품</h3>
+              </div>
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                {recentProducts.slice(0, 5).map(product => (
+                  <div
+                    key={product.id}
+                    onClick={() => router.push(`/Shopping/${product.id}`)}
+                    className="card-container shop-surface border-default"
+                    style={{ width: "160px", cursor: "pointer", padding: "12px", flexShrink: 0, transition: "border-color 0.2s" }}
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(56,189,248,0.5)")}
+                    onMouseLeave={e => (e.currentTarget.style.borderColor = "")}
+                  >
+                    {product.has_image ? (
+                      <img src={`/api/images/products/${product.id}`} alt={product.name} style={{ width: "100%", height: "100px", objectFit: "cover", borderRadius: "6px", marginBottom: "8px" }} />
+                    ) : (
+                      <div style={{ width: "100%", height: "100px", background: "rgba(56,189,248,0.1)", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px", marginBottom: "8px" }}>📦</div>
+                    )}
+                    <div className="text-13-bold text-primary" style={{ overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{product.name}</div>
+                    <div className="text-12-money text-green" style={{ marginTop: "4px" }}>₩{Number(product.price).toLocaleString()}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

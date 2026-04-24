@@ -130,6 +130,15 @@ export default function ProductDetailPage() {
     if (id) {
       fetchProduct();
       fetchReviews();
+
+      // \ucd5c\uadfc \ubcf8 \uc0c1\ud488 sessionStorage \uc800\uc7a5
+      const MAX_RECENT = 10;
+      const key = "recently_viewed";
+      const existing = JSON.parse(sessionStorage.getItem(key) || "[]") as number[];
+      const numId = Number(id);
+      const filtered = existing.filter(pid => pid !== numId);
+      const updated = [numId, ...filtered].slice(0, MAX_RECENT);
+      sessionStorage.setItem(key, JSON.stringify(updated));
     }
   }, [id]);
 

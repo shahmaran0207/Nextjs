@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "@/lib/notify";
 
 export async function POST(req: Request) {
   try {
@@ -147,6 +148,14 @@ export async function POST(req: Request) {
 
       return order;
     });
+
+    // 주문 접수 알림 (트랜잭션 밖에서 발송 - 실패해도 주문은 성공)
+    await createNotification(
+      user.id,
+      "주문이 접수되었습니다 📦",
+      `주문번호 ${merchant_uid}의 결제가 완료되었습니다.`,
+      `/orders/${result.id}`
+    );
 
     return NextResponse.json({ success: true, order: result });
   } catch (err: any) {

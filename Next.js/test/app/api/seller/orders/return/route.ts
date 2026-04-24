@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "@/lib/notify";
 
 export async function POST(req: Request) {
   try {
@@ -44,6 +45,20 @@ export async function POST(req: Request) {
 
       // (실제 서비스에서는 이 시점에 포트원 부분 환불 API를 호출해야 하나, 현재는 부분 환불 대신 전체 주문 취소만 연동되어 있으므로 재고 복구까지만 구현합니다)
     });
+
+    // 구매자에게 반품 승인 알림
+    const orderForNotify = await prisma.orders.findUnique({
+      where: { id: Number(orderItem.order_id) },
+      select: { user_id: true, order_number: true }
+    });
+    if (orderForNotify) {
+      await createNotification(
+        Number(orderForNotify.user_id),
+        "반품이 승인되었습니다 ✅",
+        `주문(${orderForNotify.order_number})의 반품 요청이 승인되었습니다. 재고가 복구되었습니다.`,
+        `/orders/${orderItem.order_id}`
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

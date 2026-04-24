@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "@/lib/notify";
 
 export async function GET(
   req: Request,
@@ -108,6 +109,13 @@ export async function PATCH(
         });
         return o;
       });
+      // 구매 확정 알림
+      await createNotification(
+        user.id,
+        "구매 확정 완료 ✅",
+        `주문(${orderId})의 구매가 확정되었습니다. 이용해 주셔서 감사합니다.`,
+        `/orders/${orderId}`
+      );
       return NextResponse.json({ success: true, order: updated });
     }
 
@@ -127,6 +135,13 @@ export async function PATCH(
         });
         return o;
       });
+      // 반품 요청 알림 (구매자 본인)
+      await createNotification(
+        user.id,
+        "반품 요청이 접수되었습니다",
+        `주문(${orderId})의 반품 요청이 판매자에게 전달되었습니다.`,
+        `/orders/${orderId}`
+      );
       return NextResponse.json({ success: true, order: updated });
     }
 

@@ -8,7 +8,33 @@ export async function GET(req: Request) {
         const { searchParams } = new URL(req.url);
         const search = searchParams.get("search") || "";
         const category = searchParams.get("category") || "";
-        const sort = searchParams.get("sort") || "latest"; // latest, price_desc, price_asc, popular
+        const sort = searchParams.get("sort") || "latest";
+        const idsParam = searchParams.get("ids"); // 최근 본 상품 batch 조회
+
+        // ids 파라미터가 있으면 해당 상품만 반환
+        if (idsParam) {
+            const idList = idsParam.split(",").map(Number).filter(Boolean);
+            const products = await prisma.products.findMany({
+                where: { id: { in: idList }, is_active: true },
+            });
+            const reviews = await prisma.product_reviews.findMany({
+                where: { product_id: { in: idList } }
+            });
+            const ratingMap: Record<number, { sum: number; count: number }> = {};
+            for (const review of reviews) {
+                const pId = Number(review.product_id);
+                if (!ratingMap[pId]) ratingMap[pId] = { sum: 0, count: 0 };
+                ratingMap[pId].sum += review.rating;
+                ratingMap[pId].count += 1;
+            }
+            const result = products.map(p => ({
+                ...p,
+                has_image: !!(p as any).image_data,
+                rating: ratingMap[Number(p.id)] ? (ratingMap[Number(p.id)].sum / ratingMap[Number(p.id)].count).toFixed(1) : "0.0",
+                reviewCount: ratingMap[Number(p.id)]?.count ?? 0,
+            }));
+            return NextResponse.json(result);
+        }
 
         const where: any = {};
         if (search) {
