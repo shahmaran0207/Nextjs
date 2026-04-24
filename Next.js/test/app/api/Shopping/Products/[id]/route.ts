@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAccessToken } from "@/utils/auth";
 import { cookies } from "next/headers";
+import { createNotification } from "@/lib/notify";
+
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
 
@@ -87,60 +89,47 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             updateData.image_type = image.type;
         }
 
+        const oldPrice = Number(existingProduct.price);
+        const newPrice = Number(price);
+
         const updatedProduct = await prisma.products.update({
             where: { id: Number(id) },
             data: updateData
         });
 
-        const optionsStr = formData.get("options") as string | null;
-        if (optionsStr) {
-            try {
-                const parsedOptions = JSON.parse(optionsStr);
-                
-                // 기존 옵션을 모두 inactive 로 처리 (간단한 동기화 방식)
-                await prisma.product_options.updateMany({
-                    where: { product_id: Number(id) },
-                    data: { is_active: false }
-                });
+        // 가격 이력 기록
+        await prisma.product_price_history.create({
+            data: { product_id: Number(id), price: newPrice }
+        });
 
-                if (Array.isArray(parsedOptions) && parsedOptions.length > 0) {
-                    for (const opt of parsedOptions) {
-                        // 기존에 같은 이름의 옵션이 있다면 활성화 및 업데이트, 없다면 생성
-                        const existingOpt = await prisma.product_options.findFirst({
-                            where: { product_id: Number(id), option_name: opt.option_name }
-                        });
-
-                        if (existingOpt) {
-                            await prisma.product_options.update({
-                                where: { id: existingOpt.id },
-                                data: {
-                                    stock: Number(opt.stock),
-                                    add_price: Number(opt.add_price) || 0,
-                                    is_active: true
-                                }
-                            });
-                        } else {
-                            await prisma.product_options.create({
-                                data: {
-                                    product_id: Number(id),
-                                    option_name: opt.option_name,
-                                    stock: Number(opt.stock),
-                                    add_price: Number(opt.add_price) || 0,
-                                    is_active: true
-                                }
-                            });
-                        }
-                    }
-                }
-            } catch (e) {
-                console.error("Option parsing error on update:", e);
-            }
-        } else {
-             // 옵션이 없을 경우 모두 비활성화
-             await prisma.product_options.updateMany({
-                where: { product_id: Number(id) },
-                data: { is_active: false }
+        // 가격 하락 시 위시리스트 + 장바구니 사용자에게 알림
+        if (newPrice < oldPrice) {
+            const wishlists = await prisma.wishlists.findMany({
+                where: { product_id: Number(id) }
             });
+            // cart_items → cart_id → carts → user_id 로 별도 조회
+            const cartItemsList = await prisma.cart_items.findMany({
+                where: { product_id: Number(id) },
+                select: { cart_id: true }
+            });
+            const cartIds = [...new Set(cartItemsList.map(ci => Number(ci.cart_id)))];
+            const carts = cartIds.length > 0 ? await prisma.carts.findMany({
+                where: { id: { in: cartIds } },
+                select: { user_id: true }
+            }) : [];
+
+            const allUserIds = new Set<number>();
+            for (const w of wishlists) allUserIds.add(Number(w.user_id));
+            for (const c of carts) allUserIds.add(Number(c.user_id));
+
+            for (const userId of allUserIds) {
+                await createNotification(
+                    userId,
+                    `가격이 낮아졌어요! 💸`,
+                    `위시리스트 상품 "${existingProduct.name}"의 가격이 ${oldPrice.toLocaleString()}원에서 ${newPrice.toLocaleString()}원으로 낮아졌습니다.`,
+                    `/Shopping/${id}`
+                );
+            }
         }
 
         return NextResponse.json({ success: true, productId: Number(updatedProduct.id) });

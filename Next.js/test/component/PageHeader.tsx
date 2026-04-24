@@ -1,4 +1,5 @@
 import { LogoutButton } from "./LogoutButton";
+import { NotificationBell } from "./NotificationBell";
 
 interface NavLink {
     href: string;
@@ -86,7 +87,10 @@ export function PageHeader({
                         {label}
                     </a>
                 ))}
-                <LogoutButton />
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "4px" }}>
+                    <NotificationBell />
+                    <LogoutButton />
+                </div>
             </nav>
         </header>
     );

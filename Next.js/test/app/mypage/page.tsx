@@ -4,18 +4,19 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 import "../Shopping/shopping.css";
+import { PageHeader } from "@/component/PageHeader";
 
 export default function MyPage() {
   const { email, name, role } = useAuthGuard();
-  
+
   const getRoleDisplayName = (r: string) => {
-    switch(r) {
+    switch (r) {
       case "ADMIN": return "관리자";
       case "SELLER": return "판매자";
       default: return "일반회원";
     }
   };
-  
+
   const [stats, setStats] = useState({
     cartCount: 0,
     wishCount: 0,
@@ -34,8 +35,8 @@ export default function MyPage() {
           fetch(`/api/products/wishlist?email=${encodeURIComponent(email)}`),
           fetch(`/api/orders?email=${encodeURIComponent(email)}`),
           fetch(`/api/myreviews?email=${encodeURIComponent(email)}`),
-          role === "SELLER" 
-            ? fetch(`/api/Shopping/MyProducts`) 
+          role === "SELLER"
+            ? fetch(`/api/Shopping/MyProducts`)
             : Promise.resolve(null)
         ]);
 
@@ -65,24 +66,21 @@ export default function MyPage() {
   return (
     <div className="page-container shop-bg">
       <div className="bg-grid" />
-      
-      <header className="shopping-header">
-        <div className="flex-row gap-sm">
-          <div className="logo-icon">👤</div>
-          <div>
-            <h1 className="header-title text-primary">마이페이지</h1>
-            <p className="header-subtitle text-accent">나의 쇼핑 정보</p>
-          </div>
-        </div>
-        <nav className="flex-row gap-xs">
-          <Link href="/Shopping" className="nav-link">쇼핑하러 가기</Link>
-          <Link href="/" className="nav-link">홈으로</Link>
-        </nav>
-      </header>
+
+      <PageHeader
+        icon="👤"
+        title="마이 페이지"
+        subtitle="나의 쇼핑 정보"
+
+        navLinks={[
+          { href: "/", label: "메인 페이지" },
+          { href: "/Shopping", label: "쇼핑하러 가기" },
+        ]}
+      />
 
       <main className="page-main">
         <div className="content-wrapper max-w-900">
-          
+
           {/* 프로필 카드 */}
           <div className="card-container shop-surface border-default mb-2rem">
             <div className="title-banner border-bottom-default">
@@ -103,7 +101,7 @@ export default function MyPage() {
           </div>
 
           <h2 className="text-18-bold text-primary mb-1rem">나의 쇼핑 활동</h2>
-          
+
           {loading ? (
             <div className="loading-container h-200 text-secondary">
               <div className="spinner" />
@@ -111,7 +109,7 @@ export default function MyPage() {
             </div>
           ) : (
             <div className="grid-auto-fit">
-              
+
               {/* 장바구니 카드 */}
               <Link href="/cart" className="text-decoration-none">
                 <div className="card-container shop-surface border-default menu-card">
@@ -186,27 +184,27 @@ export default function MyPage() {
                     </div>
                   </Link>
 
-                <Link href="/seller/orders" className="text-decoration-none">
-                  <div className="card-container shop-surface border-default menu-card">
-                    <div className="flex-row-between mb-sm">
-                      <div style={{ fontSize: "32px" }}>🚚</div>
-                      <div className="text-24-bold text-accent">-</div>
+                  <Link href="/seller/orders" className="text-decoration-none">
+                    <div className="card-container shop-surface border-default menu-card">
+                      <div className="flex-row-between mb-sm">
+                        <div style={{ fontSize: "32px" }}>🚚</div>
+                        <div className="text-24-bold text-accent">-</div>
+                      </div>
+                      <h3 className="text-16-bold text-primary margin-0">주문/배송 관리</h3>
+                      <p className="text-13 text-secondary mt-6px margin-0">들어온 주문에 운송장을 등록하세요.</p>
                     </div>
-                    <h3 className="text-16-bold text-primary margin-0">주문/배송 관리</h3>
-                    <p className="text-13 text-secondary mt-6px margin-0">들어온 주문에 운송장을 등록하세요.</p>
-                  </div>
-                </Link>
+                  </Link>
 
-                <Link href="/seller/dashboard" className="text-decoration-none">
-                  <div className="card-container shop-surface border-default menu-card">
-                    <div className="flex-row-between mb-sm">
-                      <div style={{ fontSize: "32px" }}>📈</div>
-                      <div className="text-24-bold text-accent">-</div>
+                  <Link href="/seller/dashboard" className="text-decoration-none">
+                    <div className="card-container shop-surface border-default menu-card">
+                      <div className="flex-row-between mb-sm">
+                        <div style={{ fontSize: "32px" }}>📈</div>
+                        <div className="text-24-bold text-accent">-</div>
+                      </div>
+                      <h3 className="text-16-bold text-primary margin-0">매출 통계</h3>
+                      <p className="text-13 text-secondary mt-6px margin-0">월별 매출 및 상품별 판매 건수 그래프.</p>
                     </div>
-                    <h3 className="text-16-bold text-primary margin-0">매출 통계</h3>
-                    <p className="text-13 text-secondary mt-6px margin-0">월별 매출 및 상품별 판매 건수 그래프.</p>
-                  </div>
-                </Link>
+                  </Link>
                 </>
               )}
             </div>

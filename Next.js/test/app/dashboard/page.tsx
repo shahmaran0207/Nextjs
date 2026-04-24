@@ -5,6 +5,7 @@ import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 import Link from "next/link";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import "../Shopping/shopping.css";
+import { PageHeader } from "@/component/PageHeader";
 import axios from "axios";
 
 export default function DashboardPage() {
@@ -31,19 +32,16 @@ export default function DashboardPage() {
   return (
     <div className="page-container shop-bg">
       <div className="bg-grid" />
-      <header className="shopping-header">
-        <div className="flex-row-center gap-12">
-          <div className="logo-icon">📊</div>
-          <div>
-            <h1 className="header-title text-primary">나의 쇼핑 통계</h1>
-            <p className="header-subtitle text-accent">최근 6개월간의 구매 현황입니다</p>
-          </div>
-        </div>
-        <nav className="flex-row-center gap-2">
-          <Link href="/orders" className="nav-link">주문 내역</Link>
-          <Link href="/" className="nav-link">홈으로</Link>
-        </nav>
-      </header>
+      <PageHeader
+        icon="📊"
+        title="나의 쇼핑 통계"
+        subtitle="최근 6개월간의 구매 현황입니다"
+
+        navLinks={[
+          { href: "/", label: "메인 페이지" },
+          { href: "/orders", label: "주문 내역" },
+        ]}
+      />
 
       <main className="page-main">
         <div className="content-wrapper max-w-900">
@@ -51,13 +49,13 @@ export default function DashboardPage() {
             <div className="flex-row-between mb-md">
               <h2 className="text-16-bold text-primary margin-0">월별 구매 추이</h2>
               <div className="flex-row gap-xs">
-                <button 
+                <button
                   className={`btn-sm ${viewType === "amount" ? "btn-accent" : "btn-outline-secondary"}`}
                   onClick={() => setViewType("amount")}
                 >
                   구매 금액 보기
                 </button>
-                <button 
+                <button
                   className={`btn-sm ${viewType === "count" ? "btn-accent" : "btn-outline-secondary"}`}
                   onClick={() => setViewType("count")}
                 >
@@ -72,7 +70,7 @@ export default function DashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#2e3247" />
                   <XAxis dataKey="month" stroke="#8b90a7" tick={{ fill: '#8b90a7' }} />
                   <YAxis stroke="#8b90a7" tick={{ fill: '#8b90a7' }} />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ backgroundColor: '#1a1d27', borderColor: '#2e3247', color: '#e8eaf0' }}
                     itemStyle={{ color: '#38bdf8' }}
                   />

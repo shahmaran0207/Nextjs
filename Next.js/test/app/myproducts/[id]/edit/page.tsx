@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 import Link from "next/link";
 import "../../../Shopping/shopping.css";
+import { PageHeader } from "@/component/PageHeader";
 
 export default function EditProductPage() {
   const { role } = useAuthGuard();
@@ -19,14 +20,14 @@ export default function EditProductPage() {
     stock: "",
     category: "etc"
   });
-  
+
   const [image, setImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [useOptions, setUseOptions] = useState(false);
-  const [options, setOptions] = useState<{option_name: string, stock: number, add_price: number}[]>([]);
+  const [options, setOptions] = useState<{ option_name: string, stock: number, add_price: number }[]>([]);
 
   const handleAddOption = () => {
     setOptions([...options, { option_name: "", stock: 0, add_price: 0 }]);
@@ -46,14 +47,14 @@ export default function EditProductPage() {
     if (role && role !== "SELLER") {
       return;
     }
-    
+
     const fetchProduct = async () => {
       if (!id) return;
       try {
         const res = await fetch(`/api/Shopping/Products/${id}`);
-        if (!res.ok) throw new Error("상품 정보를 불러오지 못했습니다.");
+        if (!res.ok) throw new Error("상품 정보를 불러올 수 없습니다.");
         const data = await res.json();
-        
+
         setFormData({
           name: data.name || "",
           description: data.description || "",
@@ -61,7 +62,7 @@ export default function EditProductPage() {
           stock: data.stock ? String(data.stock) : "",
           category: data.category || "etc"
         });
-        
+
         if (data.has_image) {
           setPreviewUrl(`/api/images/products/${id}?t=${Date.now()}`); // Cache busting
         }
@@ -75,7 +76,7 @@ export default function EditProductPage() {
         setFetching(false);
       }
     };
-    
+
     if (role === "SELLER") {
       fetchProduct();
     }
@@ -123,7 +124,7 @@ export default function EditProductPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "상품 수정에 실패했습니다.");
 
-      alert("상품이 성공적으로 수정되었습니다!");
+      alert("상품이 성공적으로 수정되었습니다.");
       router.push("/myproducts");
     } catch (err: any) {
       alert(err.message);
@@ -148,16 +149,16 @@ export default function EditProductPage() {
       <div className="page-container shop-bg">
         <div className="loading-container h-200 text-secondary">
           <div className="spinner" />
-          <span className="text-14">상품 정보를 불러오는 중...</span>
+          <span className="text-14">상품 정보를 불러오는 중..</span>
         </div>
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className="page-container shop-bg">
-        <div className="error-container">⚠️ {error}</div>
+        <div className="error-container">?�️ {error}</div>
       </div>
     );
   }
@@ -165,32 +166,30 @@ export default function EditProductPage() {
   return (
     <div className="page-container shop-bg">
       <div className="bg-grid" />
-      <header className="shopping-header">
-        <div className="flex-row gap-sm">
-          <div className="logo-icon">✏️</div>
-          <div>
-            <h1 className="header-title text-primary">상품 수정</h1>
-            <p className="header-subtitle text-accent">등록한 상품의 정보를 수정하세요</p>
-          </div>
-        </div>
-        <nav className="flex-row gap-xs">
-          <Link href="/myproducts" className="nav-link">취소</Link>
-        </nav>
-      </header>
+
+      <PageHeader
+        icon="🛍️"
+        title="상품 수정"
+        subtitle="등록된 상품의 정보를 수정하세요"
+        navLinks={[
+          { href: "/", label: "메인 페이지" },
+          { href: "/myproducts", label: "취소" },
+        ]}
+      />
 
       <main className="page-main">
         <div className="content-wrapper max-w-900">
           <div className="card-container shop-surface border-default p-2rem">
             <h2 className="text-22-bold text-primary mb-1rem border-bottom-default pb-1rem">수정할 정보 입력</h2>
-            
+
             <form onSubmit={handleSubmit} className="flex-col gap-lg">
-              
+
               <div className="flex-row gap-xl items-start">
                 {/* 이미지 업로드 */}
                 <div className="shrink-0 max-w-250">
-                  <label className="text-14-bold text-secondary mb-6px block">상품 이미지 (변경 시에만 업로드)</label>
-                  <div 
-                    className="border-default badge-accent-dim flex-col-center rounded-lg overflow-hidden cursor-pointer w-full" 
+                  <label className="text-14-bold text-secondary mb-6px block">상품 이미지 (변경시에만 업로드)</label>
+                  <div
+                    className="border-default badge-accent-dim flex-col-center rounded-lg overflow-hidden cursor-pointer w-full"
                     style={{ height: "250px", position: "relative" }}
                     onClick={() => document.getElementById("imageUpload")?.click()}
                   >
@@ -198,28 +197,28 @@ export default function EditProductPage() {
                       <img src={previewUrl} alt="Preview" className="w-full h-full" style={{ objectFit: "cover" }} />
                     ) : (
                       <div className="text-muted text-center">
-                        <div className="mb-xs" style={{ fontSize: "32px" }}>📸</div>
+                        <div className="mb-xs" style={{ fontSize: "32px" }}>📷</div>
                         <div>클릭하여 업로드</div>
                       </div>
                     )}
-                    <input 
+                    <input
                       id="imageUpload"
-                      type="file" 
-                      accept="image/*" 
-                      onChange={handleImageChange} 
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
                       className="hidden"
                     />
                   </div>
                 </div>
 
-                {/* 텍스트 정보 */}
+                {/* 기본 정보 */}
                 <div className="flex-1 flex-col gap-md">
                   <div>
                     <label className="text-14-bold text-secondary mb-6px block">상품명 *</label>
-                    <input 
-                      type="text" 
-                      name="name" 
-                      value={formData.name} 
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
                       onChange={handleInputChange}
                       className="input-field w-full"
                       placeholder="상품명을 입력하세요"
@@ -229,11 +228,11 @@ export default function EditProductPage() {
 
                   <div className="flex-row gap-md">
                     <div className="flex-1">
-                      <label className="text-14-bold text-secondary mb-6px block">가격 (원) *</label>
-                      <input 
-                        type="number" 
-                        name="price" 
-                        value={formData.price} 
+                      <label className="text-14-bold text-secondary mb-6px block">가격(원) *</label>
+                      <input
+                        type="number"
+                        name="price"
+                        value={formData.price}
                         onChange={handleInputChange}
                         className="input-field w-full"
                         placeholder="예: 15000"
@@ -243,10 +242,10 @@ export default function EditProductPage() {
                     {!useOptions && (
                       <div className="flex-1">
                         <label className="text-14-bold text-secondary mb-6px block">재고 수량 *</label>
-                        <input 
-                          type="number" 
-                          name="stock" 
-                          value={formData.stock} 
+                        <input
+                          type="number"
+                          name="stock"
+                          value={formData.stock}
                           onChange={handleInputChange}
                           className="input-field w-full"
                           placeholder="예: 100"
@@ -258,9 +257,9 @@ export default function EditProductPage() {
 
                   <div>
                     <label className="text-14-bold text-secondary mb-6px block">카테고리</label>
-                    <select 
-                      name="category" 
-                      value={formData.category} 
+                    <select
+                      name="category"
+                      value={formData.category}
                       onChange={handleInputChange}
                       className="input-field w-full"
                     >
@@ -270,7 +269,7 @@ export default function EditProductPage() {
                       <option value="outer">겉옷 (outer)</option>
                       <option value="socks">양말 (socks)</option>
                       <option value="pants">하의 (pants)</option>
-                      <option value="bag">가방 (bag)</option>
+                      <option value="bag">가방(bag)</option>
                       <option value="etc">기타 (etc)</option>
                     </select>
                   </div>
@@ -281,13 +280,13 @@ export default function EditProductPage() {
                 <div className="title-banner flex-justify-between">
                   <h2 className="margin-0 text-primary text-16">상품 옵션 (선택)</h2>
                   <label className="flex-row gap-xs items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={useOptions} 
+                    <input
+                      type="checkbox"
+                      checked={useOptions}
                       onChange={(e) => {
                         setUseOptions(e.target.checked);
                         if (e.target.checked && options.length === 0) handleAddOption();
-                      }} 
+                      }}
                     />
                     <span className="text-14 text-secondary">옵션 사용하기</span>
                   </label>
@@ -296,30 +295,30 @@ export default function EditProductPage() {
                   <div className="p-md flex-col gap-sm">
                     {options.map((opt, idx) => (
                       <div key={idx} className="flex-row gap-sm items-center border-bottom-default pb-sm mb-sm">
-                        <div style={{ flex: 2 }}>
-                          <input 
-                            type="text" 
-                            className="input-field w-full" 
-                            placeholder="옵션명 (예: 블랙 / L)" 
+                        <div className="flex-2">
+                          <input
+                            type="text"
+                            className="input-field w-full"
+                            placeholder="옵션명(예: 블랙 / L)"
                             value={opt.option_name}
                             onChange={(e) => handleOptionChange(idx, "option_name", e.target.value)}
                             required
                           />
                         </div>
-                        <div style={{ flex: 1 }}>
-                          <input 
-                            type="number" 
-                            className="input-field w-full" 
-                            placeholder="추가 금액" 
+                        <div className="flex-1">
+                          <input
+                            type="number"
+                            className="input-field w-full"
+                            placeholder="추가 금액"
                             value={opt.add_price}
                             onChange={(e) => handleOptionChange(idx, "add_price", Number(e.target.value))}
                           />
                         </div>
-                        <div style={{ flex: 1 }}>
-                          <input 
-                            type="number" 
-                            className="input-field w-full" 
-                            placeholder="재고" 
+                        <div className="flex-1">
+                          <input
+                            type="number"
+                            className="input-field w-full"
+                            placeholder="재고"
                             value={opt.stock}
                             onChange={(e) => handleOptionChange(idx, "stock", Number(e.target.value))}
                             required
@@ -328,7 +327,7 @@ export default function EditProductPage() {
                         <button type="button" onClick={() => handleRemoveOption(idx)} className="btn-danger btn-sm">삭제</button>
                       </div>
                     ))}
-                    <button type="button" onClick={handleAddOption} className="btn-outline-secondary btn-sm" style={{ alignSelf: "flex-start" }}>
+                    <button type="button" onClick={handleAddOption} className="btn-outline-secondary btn-sm self-start">
                       + 옵션 추가
                     </button>
                   </div>
@@ -337,28 +336,28 @@ export default function EditProductPage() {
 
               <div>
                 <label className="text-14-bold text-secondary mb-6px block">상품 설명</label>
-                <textarea 
-                  name="description" 
-                  value={formData.description} 
+                <textarea
+                  name="description"
+                  value={formData.description}
                   onChange={handleInputChange}
                   className="input-field w-full h-150 resize-y"
-                  placeholder="상품에 대한 상세 설명을 입력하세요"
+                  placeholder="상품에 대한 자세한 설명을 입력하세요"
                 />
               </div>
 
               <div className="flex-row items-center justify-end mt-md">
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={loading}
                   className="btn-accent"
-                  style={{ 
-                    padding: "12px 32px", 
-                    fontSize: "16px", 
+                  style={{
+                    padding: "12px 32px",
+                    fontSize: "16px",
                     opacity: loading ? 0.7 : 1,
                     cursor: loading ? "not-allowed" : "pointer"
                   }}
                 >
-                  {loading ? "수정 중..." : "상품 수정하기"}
+                  {loading ? "수정 중.." : "상품 수정하기"}
                 </button>
               </div>
 

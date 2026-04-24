@@ -133,6 +133,7 @@ export default function ShoppingPage() {
           </div>
         </div>
         <nav className="flex-row gap-xs" style={{ alignItems: "center" }}>
+          <Link href="/compare" className="nav-link" style={{ background: "rgba(56,189,248,0.1)", color: "#38bdf8", fontWeight: "bold" }}>저울 비교하기</Link>
           <Link href="/" className="nav-link">홈으로</Link>
           <NotificationBell />
         </nav>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 import Link from "next/link";
 import "../../Shopping/shopping.css";
+import { PageHeader } from "@/component/PageHeader";
 
 export default function NewProductPage() {
   const { role } = useAuthGuard();
@@ -21,7 +22,7 @@ export default function NewProductPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [useOptions, setUseOptions] = useState(false);
-  const [options, setOptions] = useState<{option_name: string, stock: number, add_price: number}[]>([]);
+  const [options, setOptions] = useState<{ option_name: string, stock: number, add_price: number }[]>([]);
 
   const handleAddOption = () => {
     setOptions([...options, { option_name: "", stock: 0, add_price: 0 }]);
@@ -102,18 +103,16 @@ export default function NewProductPage() {
   return (
     <div className="page-container shop-bg">
       <div className="bg-grid" />
-      <header className="shopping-header">
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div className="logo-icon">➕</div>
-          <div>
-            <h1 className="header-title text-primary">상품 등록</h1>
-            <p className="header-subtitle text-accent">새로운 상품을 상점에 올리세요</p>
-          </div>
-        </div>
-        <nav style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <Link href="/myproducts" className="nav-link">취소</Link>
-        </nav>
-      </header>
+      <PageHeader
+        icon="➕"
+        title="상품 등록"
+        subtitle="새로운 상품을 상점에 올리세요"
+
+        navLinks={[
+          { href: "/", label: "메인 페이지" },
+          { href: "/myproducts", label: "취소" },
+        ]}
+      />
 
       <main className="page-main">
         <div className="content-wrapper max-w-900">
@@ -223,13 +222,13 @@ export default function NewProductPage() {
                 <div className="title-banner flex-justify-between">
                   <h2 className="margin-0 text-primary text-16">상품 옵션 (선택)</h2>
                   <label className="flex-row gap-xs items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={useOptions} 
+                    <input
+                      type="checkbox"
+                      checked={useOptions}
                       onChange={(e) => {
                         setUseOptions(e.target.checked);
                         if (e.target.checked && options.length === 0) handleAddOption();
-                      }} 
+                      }}
                     />
                     <span className="text-14 text-secondary">옵션 사용하기</span>
                   </label>
@@ -239,29 +238,29 @@ export default function NewProductPage() {
                     {options.map((opt, idx) => (
                       <div key={idx} className="flex-row gap-sm items-center border-bottom-default pb-sm mb-sm">
                         <div style={{ flex: 2 }}>
-                          <input 
-                            type="text" 
-                            className="search-input" 
-                            placeholder="옵션명 (예: 블랙 / L)" 
+                          <input
+                            type="text"
+                            className="search-input"
+                            placeholder="옵션명 (예: 블랙 / L)"
                             value={opt.option_name}
                             onChange={(e) => handleOptionChange(idx, "option_name", e.target.value)}
                             required
                           />
                         </div>
                         <div style={{ flex: 1 }}>
-                          <input 
-                            type="number" 
-                            className="search-input" 
-                            placeholder="추가 금액" 
+                          <input
+                            type="number"
+                            className="search-input"
+                            placeholder="추가 금액"
                             value={opt.add_price}
                             onChange={(e) => handleOptionChange(idx, "add_price", Number(e.target.value))}
                           />
                         </div>
                         <div style={{ flex: 1 }}>
-                          <input 
-                            type="number" 
-                            className="search-input" 
-                            placeholder="재고" 
+                          <input
+                            type="number"
+                            className="search-input"
+                            placeholder="재고"
                             value={opt.stock}
                             onChange={(e) => handleOptionChange(idx, "stock", Number(e.target.value))}
                             required

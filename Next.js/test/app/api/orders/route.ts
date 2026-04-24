@@ -5,7 +5,7 @@ import { createNotification } from "@/lib/notify";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, imp_uid, merchant_uid, amount, items, fromCart, receiver_name, receiver_phone, shipping_address, shipping_message, total_product_amount, shipping_fee, discount_amount, used_points, used_coupon_id, coupon_discount } = body;
+    const { email, imp_uid, merchant_uid, amount, items, fromCart, receiver_name, receiver_phone, shipping_address, shipping_message, total_product_amount, shipping_fee, discount_amount, used_points, used_coupon_id, coupon_discount, is_gift } = body;
 
     const user = await prisma.users.findUnique({ where: { email } });
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -40,6 +40,7 @@ export async function POST(req: Request) {
           receiver_phone: receiver_phone || null,
           shipping_address: shipping_address || null,
           shipping_message: shipping_message || null,
+          is_gift: is_gift || false
         }
       });
 

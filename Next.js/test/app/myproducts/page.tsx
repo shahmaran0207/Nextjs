@@ -20,6 +20,34 @@ export default function MyProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [flashSaleModal, setFlashSaleModal] = useState<number | null>(null);
+  const [flashSalePercent, setFlashSalePercent] = useState(10);
+  const [flashSaleEnd, setFlashSaleEnd] = useState("");
+
+  const handleFlashSale = async () => {
+    if (!flashSaleModal) return;
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const res = await fetch("/api/flash-sales", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token && { Authorization: `Bearer ${token}` }) },
+        body: JSON.stringify({
+          product_id: flashSaleModal,
+          discount_percent: flashSalePercent,
+          start_time: new Date().toISOString(),
+          end_time: new Date(flashSaleEnd).toISOString()
+        })
+      });
+      if (res.ok) {
+        alert("플래시 세일이 등록되었습니다.");
+        setFlashSaleModal(null);
+      } else {
+        const d = await res.json();
+        alert(d.error || "실패했습니다.");
+      }
+    } catch (err) { alert("오류가 발생했습니다."); }
+  };
+
   useEffect(() => {
     // 권한 검사 (AuthGuard가 이메일은 검증해주지만 ROLE은 여기서 체크)
     if (role && role !== "SELLER") {
@@ -180,6 +208,16 @@ export default function MyProductsPage() {
                         <td className="td-cell text-center">
                           <div className="flex-row gap-xs" style={{ justifyContent: "center" }}>
                             <button 
+                              className="btn-accent btn-sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setFlashSaleModal(Number(product.id));
+                                setFlashSaleEnd(new Date(Date.now() + 3600000).toISOString().slice(0, 16));
+                              }}
+                            >
+                              🔥 타임딜
+                            </button>
+                            <button 
                               className="btn-outline-secondary btn-sm"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -208,6 +246,28 @@ export default function MyProductsPage() {
           )}
         </div>
       </main>
+
+      {flashSaleModal && (
+        <div className="modal-overlay">
+          <div className="modal-content shop-surface border-default">
+            <h3 className="text-primary text-18-bold mb-md">🔥 타임딜 (플래시 세일) 등록</h3>
+            <div className="flex-col gap-sm mb-md">
+              <div>
+                <label className="text-13 text-muted block mb-6px">할인율 (%)</label>
+                <input type="number" className="input-field w-full" value={flashSalePercent} onChange={e => setFlashSalePercent(Number(e.target.value))} />
+              </div>
+              <div>
+                <label className="text-13 text-muted block mb-6px">종료 시간</label>
+                <input type="datetime-local" className="input-field w-full" value={flashSaleEnd} onChange={e => setFlashSaleEnd(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex-row-between">
+              <button className="btn-outline-secondary" onClick={() => setFlashSaleModal(null)}>취소</button>
+              <button className="btn-accent" onClick={handleFlashSale}>등록</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
