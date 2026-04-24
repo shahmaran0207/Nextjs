@@ -31,7 +31,7 @@ export default function CartPage() {
       setLoading(true);
       const res = await fetch(`/api/cart/items?email=${encodeURIComponent(email)}`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "장바구니를 불러오지 못했습니다.");
+      if (!res.ok) throw new Error(data.error || "장바구니를 불러올 수 없습니다.");
       const fetchedItems = data.items || [];
       setItems(fetchedItems);
       setSelectedItemIds(fetchedItems.map((item: CartItem) => item.id));
@@ -180,11 +180,11 @@ export default function CartPage() {
           {loading && (
             <div className="loading-container h-260">
               <div className="spinner" />
-              <span className="text-14">장바구니를 불러오는 중...</span>
+              <span className="text-14">장바구니를 불러오는 중..</span>
             </div>
           )}
 
-          {error && <div className="error-container">⚠️ {error}</div>}
+          {error && <div className="error-container">⚠ {error}</div>}
 
           {!loading && !error && (
             <>
@@ -245,32 +245,30 @@ export default function CartPage() {
                                 {item.product_image ? (
                                   <img src={`/api/images/products/${item.product_id}`} alt={item.product_name} className="product-img-small" />
                                 ) : (
-                                  <div className="img-placeholder bg-dim">📦</div>
+                                  <div className="img-placeholder bg-dim">📷</div>
                                 )}
                                 <div>
                                   <div className="text-14-bold text-primary">
                                     {item.product_name}
                                     {item.option_name && <span className="text-13 text-accent ml-xs">({item.option_name})</span>}
                                   </div>
-                                  {!item.is_active && <div className="text-11 text-red mt-2px">판매 중지된 상품</div>}
+                                  {!item.is_active && <div className="text-11 text-red mt-2px">판매 중단된 상품</div>}
                                 </div>
                               </div>
                             </td>
                             <td className="td-cell text-center">
-                              <div className="flex-row-center gap-6" style={{ justifyContent: "center" }}>
+                              <div className="flex-row-center gap-6 justify-center">
                                 <button 
                                   onClick={() => updateQuantity(item.id, item.quantity - 1)}
                                   disabled={item.quantity <= 1}
-                                  className="btn-outline-secondary btn-sm"
-                                  style={{ padding: "4px 8px" }}
+                                  className="btn-outline-secondary btn-sm px-8px py-4px"
                                 >
                                   -
                                 </button>
                                 <span className="text-14 font-mono text-primary w-40 text-center">{item.quantity}</span>
                                 <button 
                                   onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                  className="btn-outline-secondary btn-sm"
-                                  style={{ padding: "4px 8px" }}
+                                  className="btn-outline-secondary btn-sm px-8px py-4px"
                                 >
                                   +
                                 </button>
@@ -298,7 +296,7 @@ export default function CartPage() {
                       <div className="text-28-money text-green">₩{totalPrice.toLocaleString()}</div>
                     </div>
                     <button className="pay-btn flex-none w-200" onClick={handlePayment}>
-                      ⚡ 선택 상품 결제하기 ({selectedItemIds.length}개)
+                      선택 상품 결제하기 ({selectedItemIds.length}개)
                     </button>
                   </div>
                 </div>

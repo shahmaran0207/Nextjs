@@ -20,6 +20,7 @@ export default function CheckoutPage() {
   const { email, name } = useAuthGuard();
   const [items, setItems] = useState<CheckoutItem[]>([]);
   const [fromCart, setFromCart] = useState(false);
+  const [isGift, setIsGift] = useState(false);
   const [loading, setLoading] = useState(true);
   const [availablePoints, setAvailablePoints] = useState<number>(0);
   const [usePoints, setUsePoints] = useState<number>(0);
@@ -42,6 +43,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     const storedItems = sessionStorage.getItem("checkout_items");
     const storedFromCart = sessionStorage.getItem("checkout_from_cart");
+    const storedIsGift = sessionStorage.getItem("checkout_is_gift");
     
     if (storedItems) {
       setItems(JSON.parse(storedItems));
@@ -49,8 +51,11 @@ export default function CheckoutPage() {
     if (storedFromCart === "true") {
       setFromCart(true);
     }
+    if (storedIsGift === "true") {
+      setIsGift(true);
+    }
     
-    // Fetch user points from existing Auth API
+    // 사용자 포인트 조회
     const token = localStorage.getItem("token");
     if (token) {
       axios.get(`/api/auth/Me`, { headers: { Authorization: `Bearer ${token}` } })
@@ -58,7 +63,7 @@ export default function CheckoutPage() {
         .catch(err => console.error(err));
     }
 
-    // Fetch user coupons
+    // 사용자 쿠폰 조회
     if (email) {
       axios.get(`/api/coupons?email=${encodeURIComponent(email)}`)
         .then(res => setCoupons(res.data.coupons || []))
@@ -157,7 +162,7 @@ export default function CheckoutPage() {
             merchant_uid,
             total_product_amount: totalPrice,
             shipping_fee: shippingFee,
-            discount_amount: usePoints + couponDiscount, // 총 할인
+            discount_amount: usePoints + couponDiscount,
             used_points: usePoints,
             used_coupon_id: selectedCouponId,
             coupon_discount: couponDiscount,
@@ -167,14 +172,16 @@ export default function CheckoutPage() {
             receiver_name: receiverName,
             receiver_phone: receiverPhone,
             shipping_address: `[${zipcode}] ${address} ${addressDetail}`,
-            shipping_message: message
+            shipping_message: message,
+            is_gift: isGift
           });
           
           // 결제 성공 후 세션스토리지 초기화
           sessionStorage.removeItem("checkout_items");
           sessionStorage.removeItem("checkout_from_cart");
+          sessionStorage.removeItem("checkout_is_gift");
           
-          alert("결제 성공!!!");
+          alert("결제 성공!");
           window.location.href = "/orders";
         } catch (err) {
           alert("주문 처리 중 오류가 발생했습니다.");
@@ -185,7 +192,15 @@ export default function CheckoutPage() {
     });
   };
 
-  if (loading) return <div className="page-container shop-bg"><div className="loading-container h-260"><div className="spinner" /></div></div>;
+  if (loading) {
+    return (
+      <div className="page-container shop-bg">
+        <div className="loading-container h-260">
+          <div className="spinner" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-container shop-bg">
@@ -204,12 +219,12 @@ export default function CheckoutPage() {
       </header>
 
       <main className="page-main">
-        <div className="content-wrapper max-w-900" style={{ display: "flex", gap: "2rem", flexDirection: "column" }}>
+        <div className="content-wrapper max-w-900 flex-col gap-2rem">
           
           {/* 상품 정보 영역 */}
           <div className="card-container shop-surface border-default">
             <div className="title-banner">
-              <h2 className="margin-0 text-primary" style={{ fontSize: "16px" }}>주문 상품 정보 ({items.length}개)</h2>
+              <h2 className="margin-0 text-primary text-16-bold">주문 상품 정보 ({items.length}개)</h2>
             </div>
             <table className="shopping-table">
               <thead>
@@ -226,7 +241,9 @@ export default function CheckoutPage() {
                       {item.product_name}
                       {item.option_name && <span className="text-13 text-accent ml-xs">({item.option_name})</span>}
                     </td>
-                    <td className="td-cell text-center"><span className="text-14 font-mono text-primary">{item.quantity}</span></td>
+                    <td className="td-cell text-center">
+                      <span className="text-14 font-mono text-primary">{item.quantity}</span>
+                    </td>
                     <td className="td-cell text-right">
                       <div className="text-14-money text-green">₩{(item.unit_price * item.quantity).toLocaleString()}</div>
                     </td>
@@ -236,58 +253,123 @@ export default function CheckoutPage() {
             </table>
             <div className="order-summary-footer">
               <span className="text-12 text-muted uppercase">총 상품금액</span>
-              <span className="text-20-money text-green" style={{ marginLeft: "8px" }}>₩{totalPrice.toLocaleString()}</span>
+              <span className="text-20-money text-green ml-8px">₩{totalPrice.toLocaleString()}</span>
             </div>
           </div>
 
-          {/* 배송지 정보 입력 영역 */}
+          {/* 배송지/선물 정보 입력 영역 */}
           <div className="card-container shop-surface border-default">
             <div className="title-banner">
-              <h2 className="margin-0 text-primary" style={{ fontSize: "16px" }}>배송지 정보</h2>
+              <h2 className="margin-0 text-primary text-16-bold">
+                {isGift ? "받는 사람 정보" : "배송지 정보"}
+              </h2>
             </div>
-            <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label className="text-13 text-muted">수령인 <span className="text-red">*</span></label>
-                <input type="text" value={receiverName} onChange={e => setReceiverName(e.target.value)} className="search-input" placeholder="이름을 입력하세요" />
+            <div className="p-1-5rem flex-col gap-1rem">
+              <div className="flex-col gap-6px">
+                <label className="text-13 text-muted">성명 <span className="text-red">*</span></label>
+                <input 
+                  type="text" 
+                  value={receiverName} 
+                  onChange={e => setReceiverName(e.target.value)} 
+                  className="search-input" 
+                  placeholder="이름을 입력하세요" 
+                />
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <div className="flex-col gap-6px">
                 <label className="text-13 text-muted">연락처 <span className="text-red">*</span></label>
-                <input type="text" value={receiverPhone} onChange={e => setReceiverPhone(e.target.value)} className="search-input" placeholder="010-0000-0000" />
+                <input 
+                  type="text" 
+                  value={receiverPhone} 
+                  onChange={e => setReceiverPhone(e.target.value)} 
+                  className="search-input" 
+                  placeholder="010-0000-0000" 
+                />
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <div className="flex-col gap-6px">
                 <label className="text-13 text-muted">주소 <span className="text-red">*</span></label>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <input type="text" value={zipcode} readOnly className="search-input" placeholder="우편번호" style={{ width: "120px" }} />
-                  <button type="button" onClick={() => setIsPostcodeOpen(true)} className="btn-outline-secondary">우편번호 찾기</button>
+                <div className="flex-row gap-8px">
+                  <input 
+                    type="text" 
+                    value={zipcode} 
+                    readOnly 
+                    className="search-input w-120" 
+                    placeholder="우편번호" 
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setIsPostcodeOpen(true)} 
+                    className="btn-outline-secondary"
+                  >
+                    우편번호 찾기
+                  </button>
                 </div>
                 {isPostcodeOpen && (
-                  <div style={{ border: "1px solid #3a3f5c", marginTop: "8px", position: "relative" }}>
-                    <button type="button" onClick={() => setIsPostcodeOpen(false)} style={{ position: "absolute", right: "0", top: "0", zIndex: 1, padding: "4px 8px", background: "none", border: "none", color: "white", cursor: "pointer" }}>닫기 ✕</button>
-                    <DaumPostcodeEmbed onComplete={handleCompletePostcode} style={{ height: "400px" }} />
+                  <div className="postcode-wrapper">
+                    <button 
+                      type="button" 
+                      onClick={() => setIsPostcodeOpen(false)} 
+                      className="postcode-close-btn"
+                    >
+                      닫기 ✕
+                    </button>
+                    <DaumPostcodeEmbed onComplete={handleCompletePostcode} className="h-400" />
                   </div>
                 )}
-                <input type="text" value={address} readOnly className="search-input" placeholder="기본 주소" style={{ marginTop: "4px" }} />
-                <input type="text" value={addressDetail} onChange={e => setAddressDetail(e.target.value)} className="search-input" placeholder="상세 주소를 입력해주세요" style={{ marginTop: "4px" }} />
+                <input 
+                  type="text" 
+                  value={address} 
+                  readOnly 
+                  className="search-input mt-4px" 
+                  placeholder="기본 주소" 
+                />
+                <input 
+                  type="text" 
+                  value={addressDetail} 
+                  onChange={e => setAddressDetail(e.target.value)} 
+                  className="search-input mt-4px" 
+                  placeholder="상세 주소를 입력해주세요" 
+                />
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label className="text-13 text-muted">배송 요청사항</label>
-                <input type="text" value={message} onChange={e => setMessage(e.target.value)} className="search-input" placeholder="문 앞에 놓아주세요." />
-              </div>
+
+              {isGift ? (
+                <div className="flex-col gap-6px">
+                  <label className="text-13 text-muted">선물 메시지</label>
+                  <textarea 
+                    value={message} 
+                    onChange={e => setMessage(e.target.value)} 
+                    className="search-input" 
+                    placeholder="선물과 함께 보낼 메시지를 작성해보세요 (선택)" 
+                    rows={2} 
+                    style={{ resize: "vertical" }}
+                  />
+                </div>
+              ) : (
+                <div className="flex-col gap-6px">
+                  <label className="text-13 text-muted">배송 요청사항</label>
+                  <input 
+                    type="text" 
+                    value={message} 
+                    onChange={e => setMessage(e.target.value)} 
+                    className="search-input" 
+                    placeholder="문 앞에 놓아주세요" 
+                  />
+                </div>
+              )}
             </div>
             
-            <div style={{ padding: "1.5rem", borderTop: "1px solid #2e3247", display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <div className="title-banner" style={{ padding: "0" }}>
-                <h2 className="margin-0 text-primary" style={{ fontSize: "16px" }}>할인 및 적립</h2>
+            <div className="p-1-5rem border-top-default flex-col gap-1rem">
+              <div className="title-banner p-0">
+                <h2 className="margin-0 text-primary text-16-bold">할인 및 적립</h2>
               </div>
               
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <div className="flex-col gap-6px">
                 <label className="text-13 text-muted">쿠폰 할인</label>
                 <select 
                   className="search-input" 
                   value={selectedCouponId || ""} 
                   onChange={e => setSelectedCouponId(e.target.value ? Number(e.target.value) : null)}
                 >
-                  <option value="">사용 안 함</option>
+                  <option value="">사용 안함</option>
                   {coupons.map(c => (
                     <option key={c.user_coupon_id} value={c.user_coupon_id}>
                       {c.name} ({c.discount_type === "PERCENT" ? `${c.discount_value}%` : `${c.discount_value.toLocaleString()}원`} 할인) - {c.min_order_amount > 0 ? `${c.min_order_amount.toLocaleString()}원 이상 구매시` : "조건 없음"}
@@ -296,9 +378,9 @@ export default function CheckoutPage() {
                 </select>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <div className="flex-col gap-6px">
                 <label className="text-13 text-muted">포인트 사용 (보유: {availablePoints.toLocaleString()} P)</label>
-                <div style={{ display: "flex", gap: "8px" }}>
+                <div className="flex-row gap-8px">
                   <input 
                     type="number" 
                     value={usePoints} 
@@ -306,43 +388,48 @@ export default function CheckoutPage() {
                       const val = Math.max(0, Math.min(Number(e.target.value), availablePoints, totalPrice + shippingFee));
                       setUsePoints(val);
                     }} 
-                    className="search-input" 
-                    style={{ flex: 1 }} 
+                    className="search-input flex-1" 
                   />
-                  <button type="button" onClick={handleUseAllPoints} className="btn-outline-secondary">전액 사용</button>
+                  <button 
+                    type="button" 
+                    onClick={handleUseAllPoints} 
+                    className="btn-outline-secondary"
+                  >
+                    전액 사용
+                  </button>
                 </div>
               </div>
             </div>
 
-            <div className="checkout-summary" style={{ borderTop: "1px solid #2e3247", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", flex: 1, paddingRight: "2rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span className="text-14 text-muted">총 상품금액</span>
-                    <span className="text-14-bold text-primary">₩{totalPrice.toLocaleString()}</span>
+            <div className="checkout-summary border-top-default flex-row-between items-center">
+              <div className="flex-col gap-sm flex-1 pr-2rem">
+                <div className="flex-row-between">
+                  <span className="text-14 text-muted">총 상품금액</span>
+                  <span className="text-14-bold text-primary">₩{totalPrice.toLocaleString()}</span>
+                </div>
+                <div className="flex-row-between">
+                  <span className="text-14 text-muted">배송비</span>
+                  <span className="text-14 text-primary">+{shippingFee.toLocaleString()}원</span>
+                </div>
+                {couponDiscount > 0 && (
+                  <div className="flex-row-between">
+                    <span className="text-14 text-muted">쿠폰 할인</span>
+                    <span className="text-14-bold text-accent">-{couponDiscount.toLocaleString()}원</span>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span className="text-14 text-muted">배송비</span>
-                    <span className="text-14 text-primary">+{shippingFee.toLocaleString()}원</span>
+                )}
+                {usePoints > 0 && (
+                  <div className="flex-row-between">
+                    <span className="text-14 text-muted">포인트 사용</span>
+                    <span className="text-14-bold text-accent">-{usePoints.toLocaleString()} P</span>
                   </div>
-                  {couponDiscount > 0 && (
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span className="text-14 text-muted">쿠폰 할인</span>
-                      <span className="text-14-bold text-accent">-{couponDiscount.toLocaleString()}원</span>
-                    </div>
-                  )}
-                  {usePoints > 0 && (
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span className="text-14 text-muted">포인트 사용</span>
-                      <span className="text-14-bold text-accent">-{usePoints.toLocaleString()} P</span>
-                    </div>
-                  )}
+                )}
                 <div>
                   <div className="text-12 text-muted uppercase">최종 결제금액</div>
                   <div className="text-28-money text-green">₩{finalAmount.toLocaleString()}</div>
                 </div>
               </div>
               <button className="pay-btn flex-none w-200" onClick={handlePayment}>
-                ⚡ 결제하기
+                💳 결제하기
               </button>
             </div>
           </div>
