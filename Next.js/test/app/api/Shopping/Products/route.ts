@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { verifyAccessToken } from "@/utils/auth";
+import { cookies } from "next/headers";
 
 export async function GET(req: Request) {
     try {
@@ -62,5 +64,79 @@ export async function GET(req: Request) {
         return NextResponse.json(productsWithRating);
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 })
+    }
+}
+
+export async function POST(req: Request) {
+    try {
+        let token = req.headers.get("Authorization")?.split(" ")[1];
+        if (!token || token === "null") {
+            const cookieStore = await cookies();
+            token = cookieStore.get("accessToken")?.value;
+        }
+
+        const payload = token ? verifyAccessToken(token) : null;
+        if (!payload || payload.role !== "SELLER") {
+            return NextResponse.json({ error: "판매자만 상품을 등록할 수 있습니다." }, { status: 403 });
+        }
+
+        const formData = await req.formData();
+        const name = formData.get("name") as string;
+        const description = formData.get("description") as string;
+        const price = formData.get("price") as string;
+        const stock = formData.get("stock") as string;
+        const category = formData.get("category") as string;
+        const image = formData.get("image") as File | null;
+
+        if (!name || !price || !stock) {
+            return NextResponse.json({ error: "상품명, 가격, 재고는 필수입니다." }, { status: 400 });
+        }
+
+        let imageData = null;
+        let imageType = null;
+
+        if (image) {
+            const arrayBuffer = await image.arrayBuffer();
+            imageData = Buffer.from(arrayBuffer);
+            imageType = image.type;
+        }
+
+        const optionsStr = formData.get("options") as string | null;
+
+        const product = await prisma.products.create({
+            data: {
+                name,
+                description: description || "",
+                price: Number(price),
+                stock: Number(stock),
+                category: category || "etc",
+                seller_id: Number(payload.id),
+                image_data: imageData,
+                image_type: imageType,
+            }
+        });
+
+        if (optionsStr) {
+            try {
+                const parsedOptions = JSON.parse(optionsStr);
+                if (Array.isArray(parsedOptions) && parsedOptions.length > 0) {
+                    await prisma.product_options.createMany({
+                        data: parsedOptions.map(opt => ({
+                            product_id: product.id,
+                            option_name: opt.option_name,
+                            stock: Number(opt.stock),
+                            add_price: Number(opt.add_price) || 0
+                        }))
+                    });
+                }
+            } catch (e) {
+                console.error("Option parsing error:", e);
+            }
+        }
+
+        return NextResponse.json({ success: true, productId: Number(product.id) });
+    } catch (err: any) {
+        console.error("Product Creation Error:", err);
+        return NextResponse.json({ error: "상품 등록에 실패했습니다." }, { status: 500 });
     }
 }

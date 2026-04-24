@@ -13,6 +13,7 @@ interface CheckoutItem {
   product_name: string;
   unit_price: number;
   quantity: number;
+  option_name?: string | null;
 }
 
 export default function CheckoutPage() {
@@ -162,7 +163,10 @@ export default function CheckoutPage() {
               <tbody>
                 {items.map((item, idx) => (
                   <tr key={idx} className={`product-row ${idx % 2 === 0 ? "td-cell-even" : "td-cell-odd"}`}>
-                    <td className="td-cell text-14-bold text-primary">{item.product_name}</td>
+                    <td className="td-cell text-14-bold text-primary">
+                      {item.product_name}
+                      {item.option_name && <span className="text-13 text-accent ml-xs">({item.option_name})</span>}
+                    </td>
                     <td className="td-cell text-center"><span className="text-14 font-mono text-primary">{item.quantity}</span></td>
                     <td className="td-cell text-right">
                       <div className="text-14-money text-green">₩{(item.unit_price * item.quantity).toLocaleString()}</div>

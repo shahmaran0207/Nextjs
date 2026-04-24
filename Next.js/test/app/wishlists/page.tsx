@@ -66,14 +66,14 @@ export default function WishlistsPage() {
     <div className="page-container shop-bg">
       <div className="bg-grid" />
       <header className="shopping-header">
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div className="flex-row gap-sm">
           <div className="logo-icon">❤️</div>
           <div>
             <h1 className="header-title text-primary">위시리스트</h1>
             <p className="header-subtitle text-accent">찜한 상품 목록</p>
           </div>
         </div>
-        <nav style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <nav className="flex-row gap-xs">
           <Link href="/Shopping" className="nav-link">쇼핑 계속하기</Link>
           <Link href="/" className="nav-link">홈으로</Link>
         </nav>
@@ -130,7 +130,7 @@ export default function WishlistsPage() {
                         onClick={() => router.push(`/Shopping/${product.id}`)}
                       >
                         <td className="td-cell text-center" onClick={(e) => removeWishlist(e, Number(product.id))}>
-                          <button className="wish-btn" style={{ background: "none", border: "none", fontSize: "16px", cursor: "pointer", color: "var(--text-muted)" }}>
+                          <button className="wish-btn">
                             ✖
                           </button>
                         </td>

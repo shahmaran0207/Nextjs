@@ -50,3 +50,63 @@ export async function GET(
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: orderId } = await params;
+    const { action, email } = await req.json();
+
+    if (!email || !action) {
+      return NextResponse.json({ error: "필수 정보가 누락되었습니다." }, { status: 400 });
+    }
+
+    const user = await prisma.users.findUnique({ where: { email } });
+    if (!user) {
+      return NextResponse.json({ error: "사용자를 찾을 수 없습니다." }, { status: 404 });
+    }
+
+    const order = await prisma.orders.findUnique({
+      where: { id: Number(orderId) },
+    });
+
+    if (!order) {
+      return NextResponse.json({ error: "주문을 찾을 수 없습니다." }, { status: 404 });
+    }
+
+    if (Number(order.user_id) !== user.id) {
+      return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+    }
+
+    if (action === "CANCEL") {
+      if (order.order_status !== "PAID" && order.order_status !== "PENDING") {
+        return NextResponse.json({ error: "배송이 시작된 주문은 취소할 수 없습니다." }, { status: 400 });
+      }
+      
+      const updated = await prisma.orders.update({
+        where: { id: Number(orderId) },
+        data: { order_status: "CANCELLED" }
+      });
+      return NextResponse.json({ success: true, order: updated });
+    }
+
+    if (action === "CONFIRM") {
+      if (order.order_status !== "SHIPPED" && order.order_status !== "DELIVERED") {
+        return NextResponse.json({ error: "배송 완료된 상품만 구매 확정할 수 있습니다." }, { status: 400 });
+      }
+
+      const updated = await prisma.orders.update({
+        where: { id: Number(orderId) },
+        data: { order_status: "DELIVERED" }
+      });
+      return NextResponse.json({ success: true, order: updated });
+    }
+
+    return NextResponse.json({ error: "유효하지 않은 액션입니다." }, { status: 400 });
+  } catch (err: any) {
+    console.error("Order PATCH API Error:", err);
+    return NextResponse.json({ error: "상태 변경에 실패했습니다." }, { status: 500 });
+  }
+}

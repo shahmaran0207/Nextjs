@@ -19,17 +19,20 @@ export default function ProductDetailPage() {
   const { email } = useAuthGuard();
   const { id } = useParams<{ id: string }>();
 
-  const [product, setProduct] = useState<Product & { rating?: string, reviewCount?: number, category?: string } | null>(null);
+  const [product, setProduct] = useState<Product & { rating?: string, reviewCount?: number, category?: string, options?: any[] } | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [wishlists, setWishlists] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedOption, setSelectedOption] = useState<any>(null);
 
   const [qty, setQty] = useState(1);
   const totalPrice = useMemo(() => {
     if (!product) return 0;
-    return Number(product.price) * qty;
-  }, [product?.price, qty]);
+    const basePrice = Number(product.price);
+    const addPrice = selectedOption ? Number(selectedOption.add_price) : 0;
+    return (basePrice + addPrice) * qty;
+  }, [product?.price, qty, selectedOption]);
 
   const [newReviewText, setNewReviewText] = useState("");
   const [newReviewRating, setNewReviewRating] = useState(5);
@@ -44,7 +47,7 @@ export default function ProductDetailPage() {
   // 리뷰 페이징 및 하이라이트 관련 상태
   const [reviewPage, setReviewPage] = useState(1);
   const reviewsPerPage = 10;
-  
+
   // URL에서 하이라이트할 리뷰 ID 파싱
   const searchParams = useSearchParams();
   const highlightReviewId = searchParams.get('highlightReviewId');
@@ -81,7 +84,7 @@ export default function ProductDetailPage() {
       if (index !== -1) {
         const page = Math.floor(index / reviewsPerPage) + 1;
         setReviewPage(page);
-        
+
         // DOM 업데이트를 기다린 후 스크롤
         setTimeout(() => {
           const el = document.getElementById(`review-${highlightReviewId}`);
@@ -136,11 +139,16 @@ export default function ProductDetailPage() {
 
   const handlePayment = async () => {
     if (!product) return;
+    if (product.options && product.options.length > 0 && !selectedOption) {
+      return alert("상품 옵션을 선택해주세요.");
+    }
+    
     sessionStorage.setItem("checkout_items", JSON.stringify([{
       product_id: product.id,
       product_name: product.name,
-      unit_price: product.price,
-      quantity: qty
+      unit_price: Number(product.price) + (selectedOption ? Number(selectedOption.add_price) : 0),
+      quantity: qty,
+      option_name: selectedOption ? selectedOption.option_name : null
     }]));
     sessionStorage.setItem("checkout_from_cart", "false");
     window.location.href = "/checkout";
@@ -253,21 +261,21 @@ export default function ProductDetailPage() {
     <div className="page-container shop-bg">
       <div className="bg-grid" />
       <header className="shopping-header">
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div className="flex-row gap-sm">
           <div className="logo-icon">📦</div>
           <div>
             <h1 className="header-title text-primary">상품 상세</h1>
             <p className="header-subtitle text-accent">{product?.name ?? "불러오는 중..."}</p>
           </div>
         </div>
-        <nav style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <nav className="flex-row gap-xs">
           <Link href="/Shopping" className="nav-link">← 목록으로</Link>
           <Link href="/" className="nav-link">홈으로</Link>
         </nav>
       </header>
 
       <main className="page-main">
-        <div className="content-wrapper max-w-900" style={{ display: "flex", gap: "2rem", flexDirection: "column" }}>
+        <div className="content-wrapper max-w-900 flex-col gap-lg">
 
           {loading && (
             <div className="loading-container h-260 text-secondary">
@@ -316,17 +324,42 @@ export default function ProductDetailPage() {
                 <div className="card-container shop-surface border-default product-side-panel">
                   <h3 className="panel-title text-primary">결제 정보</h3>
                   <div className="panel-content">
+                    
+                    {product.options && product.options.length > 0 && (
+                      <div className="mb-1rem border-bottom-default pb-1rem">
+                        <span className="text-13 text-muted block mb-6px">옵션 선택 *</span>
+                        <select 
+                          className="input-field w-full"
+                          value={selectedOption ? selectedOption.option_name : ""}
+                          onChange={(e) => {
+                            const opt = product.options?.find(o => o.option_name === e.target.value);
+                            setSelectedOption(opt || null);
+                            setQty(1); // 옵션 변경 시 수량 초기화
+                          }}
+                        >
+                          <option value="">옵션을 선택하세요</option>
+                          {product.options.map(opt => (
+                            <option key={opt.id} value={opt.option_name} disabled={opt.stock <= 0}>
+                              {opt.option_name} {opt.add_price > 0 ? `(+${opt.add_price}원)` : ""} {opt.stock <= 0 ? "(품절)" : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     <div className="flex-justify-between mb-1rem">
                       <span className="text-13 text-muted">수량 선택</span>
                       <div className="qty-control border-default">
                         <button className="qty-btn" onClick={() => setQty(Math.max(1, qty - 1))}>-</button>
                         <span className="qty-val font-mono">{qty}</span>
-                        <button className="qty-btn" onClick={() => setQty(qty + 1)} disabled={qty >= product.stock}>+</button>
+                        <button className="qty-btn" onClick={() => setQty(qty + 1)} disabled={selectedOption ? qty >= selectedOption.stock : qty >= product.stock}>+</button>
                       </div>
                     </div>
                     <div className="flex-justify-between mb-1rem border-bottom-default pb-1rem">
                       <span className="text-13 text-muted">재고 현황</span>
-                      <span className={`text-13-mono ${product.stock > 0 ? "text-primary" : "text-red"}`}>{product.stock.toLocaleString()} 개</span>
+                      <span className={`text-13-mono ${((selectedOption ? selectedOption.stock : product.stock) > 0) ? "text-primary" : "text-red"}`}>
+                        {selectedOption ? selectedOption.stock.toLocaleString() : product.stock.toLocaleString()} 개
+                      </span>
                     </div>
                     <div className="flex-justify-between mt-auto pt-1rem mb-1rem">
                       <span className="text-14-bold text-primary">총 결제예상</span>
@@ -334,21 +367,24 @@ export default function ProductDetailPage() {
                     </div>
 
                     {!isMyProduct ? (
-                      <div style={{ display: "flex", gap: "10px", flexDirection: "column" }}>
-                        <button 
-                          className="btn-primary" 
-                          style={{ padding: "14px", fontSize: "16px", fontWeight: "bold", background: "var(--accent)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", opacity: (!product.is_active || product.stock <= 0) ? 0.5 : 1 }} 
-                          disabled={!product.is_active || product.stock <= 0} 
+                      <div className="flex-col gap-sm">
+                        <button
+                          className="btn-accent btn-lg w-full"
+                          disabled={!product.is_active || (selectedOption ? selectedOption.stock <= 0 : product.stock <= 0) || (product.options && product.options.length > 0 && !selectedOption)}
                           onClick={async () => {
                             if (!email) return alert("로그인이 필요합니다.");
+                            if (product.options && product.options.length > 0 && !selectedOption) return alert("상품 옵션을 선택해주세요.");
                             try {
+                              const unit_price = Number(product.price) + (selectedOption ? Number(selectedOption.add_price) : 0);
+                              const option_name = selectedOption ? selectedOption.option_name : null;
+
                               const res = await fetch("/api/cart", {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ email, product_id: product.id, quantity: qty, unit_price: product.price })
+                                body: JSON.stringify({ email, product_id: product.id, quantity: qty, unit_price, option_name })
                               });
                               if (res.ok) {
-                                if(confirm("장바구니에 담겼습니다. 장바구니로 이동하시겠습니까?")) {
+                                if (confirm("장바구니에 담겼습니다. 장바구니로 이동하시겠습니까?")) {
                                   window.location.href = "/cart";
                                 }
                               } else {
@@ -362,17 +398,16 @@ export default function ProductDetailPage() {
                         >
                           🛒 장바구니 담기
                         </button>
-                        <button 
-                          className="btn-primary" 
-                          style={{ padding: "14px", fontSize: "16px", fontWeight: "bold", background: "#10b981", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", opacity: (!product.is_active || product.stock <= 0) ? 0.5 : 1 }} 
-                          disabled={!product.is_active || product.stock <= 0} 
+                        <button
+                          className="btn-success btn-lg w-full"
+                          disabled={!product.is_active || (selectedOption ? selectedOption.stock <= 0 : product.stock <= 0) || (product.options && product.options.length > 0 && !selectedOption)}
                           onClick={handlePayment}
                         >
-                          {!product.is_active ? "판매 중지됨" : product.stock <= 0 ? "품절" : "💳 바로 결제하기"}
+                          {!product.is_active ? "판매 중지됨" : (selectedOption ? selectedOption.stock <= 0 : product.stock <= 0) ? "품절" : "💳 바로 결제하기"}
                         </button>
                       </div>
                     ) : (
-                      <div className="error-container text-center mt-1rem" style={{ padding: "1rem" }}>
+                      <div className="error-container text-center mt-sm p-sm">
                         본인이 등록한 상품은 결제 및 장바구니 담기가 불가능합니다.
                       </div>
                     )}
@@ -383,41 +418,38 @@ export default function ProductDetailPage() {
               {/* 리뷰 섹션 */}
               <div className="card-container shop-surface border-default">
                 <div className="title-banner border-bottom-default">
-                  <h2 className="margin-0 text-primary" style={{ fontSize: "16px" }}>상품 리뷰 ({reviews.length})</h2>
+                  <h2 className="margin-0 text-primary text-16">상품 리뷰 ({reviews.length})</h2>
                 </div>
 
                 {/* 리뷰 작성 폼 (권한이 있을 때만 표시) */}
                 {canReview && (
-                  <div style={{ padding: "1.5rem", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.1)" }}>
-                    <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                      <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", color: "var(--bg-primary)", flexShrink: 0 }}>
+                  <div className="p-md bg-dim border-bottom-default">
+                    <div className="flex-row items-start gap-sm">
+                      <div className="flex-row-center logo-icon shrink-0" style={{ width: "40px", height: "40px" }}>
                         👤
                       </div>
-                      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <div className="flex-col gap-xs flex-1">
+                        <div className="flex-row gap-xs items-center">
                           <span className="text-13 text-muted">별점 평가</span>
-                          <select 
-                            value={newReviewRating} 
-                            onChange={e => setNewReviewRating(Number(e.target.value))} 
-                            className="search-input" 
-                            style={{ padding: "2px 8px", fontSize: "13px", height: "auto" }}
+                          <select
+                            value={newReviewRating}
+                            onChange={e => setNewReviewRating(Number(e.target.value))}
+                            className="input-field p-sm w-auto"
                           >
                             {[5, 4, 3, 2, 1].map(r => <option key={r} value={r}>{"⭐".repeat(r)}</option>)}
                           </select>
                         </div>
-                        <div style={{ display: "flex", gap: "8px" }}>
+                        <div className="flex-row gap-xs w-full">
                           <textarea
-                            className="search-input"
+                            className="input-field flex-1 textarea-field"
                             rows={2}
                             placeholder="이 상품에 대한 리뷰를 남겨주세요."
                             value={newReviewText}
                             onChange={e => setNewReviewText(e.target.value)}
-                            style={{ flex: 1, resize: "none" }}
                           />
-                          <button 
-                            onClick={submitReview} 
-                            className="btn-primary" 
-                            style={{ padding: "0 20px", whiteSpace: "nowrap" }}
+                          <button
+                            onClick={submitReview}
+                            className="btn-accent"
                           >
                             등록
                           </button>
@@ -428,49 +460,47 @@ export default function ProductDetailPage() {
                 )}
 
                 {/* 리뷰 목록 */}
-                <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+                <div className="p-md flex-col gap-sm">
                   {reviews.length === 0 ? (
-                    <div className="text-center text-muted" style={{ padding: "2rem 0" }}>등록된 리뷰가 없습니다.</div>
+                    <div className="text-center text-muted p-lg">등록된 리뷰가 없습니다.</div>
                   ) : (
                     <>
                       {reviews.slice((reviewPage - 1) * reviewsPerPage, reviewPage * reviewsPerPage).map((review: any) => (
-                        <div key={review.id} id={`review-${review.id}`} style={{ padding: "1rem", background: "rgba(255,255,255,0.03)", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                        <div key={review.id} id={`review-${review.id}`} className="p-sm bg-dim rounded-md border-default">
                           {editingReviewId === review.id ? (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <div className="flex-col gap-xs">
+                              <div className="flex-row gap-xs items-center">
                                 <span className="text-13 text-muted">별점 수정</span>
-                                <select 
-                                  value={editReviewRating} 
-                                  onChange={e => setEditReviewRating(Number(e.target.value))} 
-                                  className="search-input" 
-                                  style={{ padding: "2px 8px", fontSize: "13px", height: "auto" }}
+                                <select
+                                  value={editReviewRating}
+                                  onChange={e => setEditReviewRating(Number(e.target.value))}
+                                  className="input-field w-auto"
                                 >
                                   {[5, 4, 3, 2, 1].map(r => <option key={r} value={r}>{"⭐".repeat(r)}</option>)}
                                 </select>
                               </div>
                               <textarea
-                                className="search-input"
+                                className="input-field flex-1 textarea-field"
                                 rows={2}
                                 value={editReviewText}
                                 onChange={e => setEditReviewText(e.target.value)}
-                                style={{ flex: 1, resize: "none" }}
                               />
-                              <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                                <button onClick={cancelEdit} className="btn-outline-secondary">취소</button>
-                                <button onClick={() => updateReview(review.id)} className="btn-primary" style={{ padding: "6px 12px" }}>저장</button>
+                              <div className="flex-row gap-xs" style={{ justifyContent: "flex-end" }}>
+                                <button onClick={cancelEdit} className="btn-outline-secondary btn-sm">취소</button>
+                                <button onClick={() => updateReview(review.id)} className="btn-accent btn-sm">저장</button>
                               </div>
                             </div>
                           ) : (
                             <>
-                              <div className="flex-justify-between mb-6px">
-                                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                              <div className="flex-row-between mb-6px">
+                                <div className="flex-row gap-xs items-center">
                                   <span className="text-14-bold text-primary">{review.author}</span>
                                   <span className="text-12 text-muted">{new Date(review.created_at).toLocaleDateString()}</span>
                                 </div>
                                 {email && review.authorEmail === email && (
-                                  <div style={{ display: "flex", gap: "6px" }}>
-                                    <button onClick={() => handleEditClick(review)} className="btn-outline-secondary" style={{ fontSize: "11px", padding: "2px 6px" }}>수정</button>
-                                    <button onClick={() => deleteReview(review.id)} className="btn-delete-small" style={{ fontSize: "11px", padding: "2px 6px" }}>삭제</button>
+                                  <div className="flex-row gap-xs">
+                                    <button onClick={() => handleEditClick(review)} className="btn-outline-secondary btn-sm">수정</button>
+                                    <button onClick={() => deleteReview(review.id)} className="btn-danger btn-sm">삭제</button>
                                   </div>
                                 )}
                               </div>
@@ -480,15 +510,14 @@ export default function ProductDetailPage() {
                           )}
                         </div>
                       ))}
-                      
+
                       {/* 페이징 UI */}
                       {reviews.length > reviewsPerPage && (
-                        <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "1.5rem" }}>
-                          <button 
-                            onClick={() => setReviewPage(p => Math.max(1, p - 1))} 
+                        <div className="flex-row gap-xs mt-md" style={{ justifyContent: "center" }}>
+                          <button
+                            onClick={() => setReviewPage(p => Math.max(1, p - 1))}
                             disabled={reviewPage === 1}
-                            className="btn-outline-secondary"
-                            style={{ padding: "6px 12px", fontSize: "13px" }}
+                            className="btn-outline-secondary btn-sm"
                           >
                             이전
                           </button>
@@ -496,17 +525,16 @@ export default function ProductDetailPage() {
                             <button
                               key={i + 1}
                               onClick={() => setReviewPage(i + 1)}
-                              className={reviewPage === i + 1 ? "btn-primary" : "btn-outline-secondary"}
-                              style={{ padding: "6px 12px", fontSize: "13px", minWidth: "32px" }}
+                              className={`btn-sm ${reviewPage === i + 1 ? "btn-accent" : "btn-outline-secondary"}`}
+                              style={{ minWidth: "32px" }}
                             >
                               {i + 1}
                             </button>
                           ))}
-                          <button 
-                            onClick={() => setReviewPage(p => Math.min(Math.ceil(reviews.length / reviewsPerPage), p + 1))} 
+                          <button
+                            onClick={() => setReviewPage(p => Math.min(Math.ceil(reviews.length / reviewsPerPage), p + 1))}
                             disabled={reviewPage === Math.ceil(reviews.length / reviewsPerPage)}
-                            className="btn-outline-secondary"
-                            style={{ padding: "6px 12px", fontSize: "13px" }}
+                            className="btn-outline-secondary btn-sm"
                           >
                             다음
                           </button>
@@ -516,10 +544,8 @@ export default function ProductDetailPage() {
                   )}
                 </div>
               </div>
-
             </>
           )}
-
         </div>
       </main>
     </div>

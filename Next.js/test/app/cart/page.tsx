@@ -15,6 +15,7 @@ interface CartItem {
   product_image: string | null;
   product_stock: number;
   is_active: boolean;
+  option_name?: string | null;
 }
 
 export default function CartPage() {
@@ -59,6 +60,28 @@ export default function CartPage() {
     setSelectedItemIds(prev =>
       prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
     );
+  };
+
+  const updateQuantity = async (itemId: number, newQty: number) => {
+    if (newQty < 1) return;
+    if (!email) return;
+
+    try {
+      const res = await fetch(`/api/cart/items`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId, quantity: newQty, email })
+      });
+      
+      if (res.ok) {
+        setItems(prev => prev.map(item => item.id === itemId ? { ...item, quantity: newQty } : item));
+      } else {
+        const data = await res.json();
+        alert(data.error || "수량 변경에 실패했습니다.");
+      }
+    } catch (err) {
+      alert("수량 변경 중 오류가 발생했습니다.");
+    }
   };
 
   const handleDelete = async (itemId: number) => {
@@ -168,7 +191,7 @@ export default function CartPage() {
               <div className="title-banner">
                 <div className="flex-row-center gap-12">
                   <span className="category-badge">내 장바구니</span>
-                  <h2 className="margin-0 text-primary" style={{ fontSize: "18px", fontWeight: 700 }}>
+                  <h2 className="margin-0 text-primary text-18 text-bold">
                     총 {items.length}개의 상품
                   </h2>
                 </div>
@@ -222,16 +245,36 @@ export default function CartPage() {
                                 {item.product_image ? (
                                   <img src={`/api/images/products/${item.product_id}`} alt={item.product_name} className="product-img-small" />
                                 ) : (
-                                  <div className="img-placeholder bg-grid" style={{ background: "rgba(56,189,248,0.05)" }}>📦</div>
+                                  <div className="img-placeholder bg-dim">📦</div>
                                 )}
                                 <div>
-                                  <div className="text-14-bold text-primary">{item.product_name}</div>
+                                  <div className="text-14-bold text-primary">
+                                    {item.product_name}
+                                    {item.option_name && <span className="text-13 text-accent ml-xs">({item.option_name})</span>}
+                                  </div>
                                   {!item.is_active && <div className="text-11 text-red mt-2px">판매 중지된 상품</div>}
                                 </div>
                               </div>
                             </td>
                             <td className="td-cell text-center">
-                              <span className="text-14 font-mono text-primary">{item.quantity}</span>
+                              <div className="flex-row-center gap-6" style={{ justifyContent: "center" }}>
+                                <button 
+                                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                  disabled={item.quantity <= 1}
+                                  className="btn-outline-secondary btn-sm"
+                                  style={{ padding: "4px 8px" }}
+                                >
+                                  -
+                                </button>
+                                <span className="text-14 font-mono text-primary w-40 text-center">{item.quantity}</span>
+                                <button 
+                                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                  className="btn-outline-secondary btn-sm"
+                                  style={{ padding: "4px 8px" }}
+                                >
+                                  +
+                                </button>
+                              </div>
                             </td>
                             <td className="td-cell text-right">
                               <div className="text-14-money text-green">

@@ -46,15 +46,34 @@ export async function GET(
 
     const orderIds = paidOrders.map(o => o.id);
 
-    // 2. 해당 주문들 중 이 상품이 포함되어 있는지 조회
-    const orderItems = await prisma.order_items.findFirst({
+    // 2. 해당 주문들 중 이 상품이 포함되어 있는 주문 건수 (중복 제거)
+    const orderItems = await prisma.order_items.findMany({
       where: {
         product_id: Number(id),
         order_id: { in: orderIds }
       }
     });
 
-    return NextResponse.json({ canReview: !!orderItems, isMyProduct: false });
+    if (orderItems.length === 0) {
+      return NextResponse.json({ canReview: false });
+    }
+
+    const distinctOrders = new Set(orderItems.map(item => item.order_id));
+    const purchasedOrderCount = distinctOrders.size;
+
+    // 3. 사용자가 이미 작성한 리뷰 개수 조회
+    const existingReviewsCount = await prisma.product_reviews.count({
+      where: {
+        user_id: user.id,
+        product_id: Number(id)
+      }
+    });
+
+    // 작성한 리뷰 수가 결제한 주문 건수보다 적을 때만 리뷰 작성 가능
+    return NextResponse.json({ 
+      canReview: existingReviewsCount < purchasedOrderCount, 
+      isMyProduct: false 
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message, isMyProduct: false }, { status: 500 });
   }

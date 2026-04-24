@@ -50,14 +50,24 @@ export async function POST(req: Request) {
             unit_price: item.unit_price,
             quantity: item.quantity,
             total_price: item.unit_price * item.quantity,
+            option_name: item.option_name || null
           }
         });
 
-        // Decrement stock (optional: 주석 처리 가능)
-        await tx.products.update({
-          where: { id: item.product_id },
-          data: { stock: { decrement: item.quantity } }
-        });
+        // Decrement stock
+        if (item.option_name) {
+          // 옵션 상품인 경우 옵션 재고만 차감
+          await tx.product_options.updateMany({
+            where: { product_id: item.product_id, option_name: item.option_name },
+            data: { stock: { decrement: item.quantity } }
+          });
+        } else {
+          // 옵션이 없는 일반 상품인 경우
+          await tx.products.update({
+            where: { id: item.product_id },
+            data: { stock: { decrement: item.quantity } }
+          });
+        }
       }
 
       // 3. Create Payment record
@@ -77,13 +87,16 @@ export async function POST(req: Request) {
       if (fromCart) {
         const cart = await tx.carts.findFirst({ where: { user_id: user.id } });
         if (cart) {
-          const productIds = items.map((i: any) => i.product_id);
-          await tx.cart_items.deleteMany({
-            where: {
-              cart_id: cart.id,
-              product_id: { in: productIds }
-            }
-          });
+          // 삭제할 때 각 아이템별로 (product_id, option_name) 쌍에 맞게 삭제
+          for (const item of items) {
+            await tx.cart_items.deleteMany({
+              where: {
+                cart_id: cart.id,
+                product_id: item.product_id,
+                option_name: item.option_name || null
+              }
+            });
+          }
         }
       }
 

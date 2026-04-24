@@ -12,6 +12,7 @@ interface OrderItem {
   unit_price: number;
   quantity: number;
   total_price: number;
+  option_name?: string | null;
 }
 
 interface Order {
@@ -47,6 +48,40 @@ export default function OrdersPage() {
     if (email) fetchOrders();
   }, [email]);
 
+  const fetchOrdersForUpdate = async () => {
+    if (!email) return;
+    try {
+      const res = await fetch(`/api/orders?email=${encodeURIComponent(email)}`);
+      const data = await res.json();
+      if (res.ok) {
+        setOrders(data.orders || []);
+      }
+    } catch (e) {}
+  };
+
+  const updateOrderStatus = async (orderId: number, action: "CANCEL" | "CONFIRM") => {
+    const actionText = action === "CANCEL" ? "주문을 취소" : "구매를 확정";
+    if (!confirm(`정말 이 ${actionText}하시겠습니까?`)) return;
+
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, email })
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        alert(`${actionText} 처리되었습니다.`);
+        fetchOrdersForUpdate();
+      } else {
+        alert(data.error || "상태 변경에 실패했습니다.");
+      }
+    } catch (err) {
+      alert("오류가 발생했습니다.");
+    }
+  };
+
   return (
     <div className="page-container shop-bg">
       <div className="bg-grid" />
@@ -81,7 +116,7 @@ export default function OrdersPage() {
               <div className="title-banner">
                 <div className="flex-row-center gap-12">
                   <span className="category-badge">내 주문내역</span>
-                  <h2 className="margin-0 text-primary" style={{ fontSize: "18px", fontWeight: 700 }}>
+                  <h2 className="margin-0 text-primary text-18 text-bold">
                     총 {orders.length}건의 주문
                   </h2>
                 </div>
@@ -101,8 +136,8 @@ export default function OrdersPage() {
                     const firstItem = order.items[0];
                     const extraCount = order.items.length - 1;
                     const orderTitle = extraCount > 0 
-                      ? `${firstItem?.product_name} 외 ${extraCount}건`
-                      : firstItem?.product_name || "상품 없음";
+                      ? `${firstItem?.product_name}${firstItem?.option_name ? `(${firstItem.option_name})` : ''} 외 ${extraCount}건`
+                      : (firstItem?.product_name ? `${firstItem.product_name}${firstItem?.option_name ? `(${firstItem.option_name})` : ''}` : "상품 없음");
 
                     return (
                       <div key={order.id} className="card-container shop-surface border-default">
@@ -118,17 +153,37 @@ export default function OrdersPage() {
                             {new Date(order.ordered_at).toLocaleString('ko-KR')}
                           </span>
                         </div>
-                        <div style={{ padding: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-                            <div className="img-placeholder bg-grid" style={{ width: "60px", height: "60px", borderRadius: "8px", background: "rgba(56,189,248,0.05)" }}>📦</div>
+                        <div className="p-md flex-row-between">
+                          <div className="flex-row gap-sm items-center">
+                            <div className="img-placeholder bg-dim rounded-md" style={{ width: "60px", height: "60px" }}>📦</div>
                             <div>
                               <div className="text-16-bold text-primary mb-1">{orderTitle}</div>
                               <div className="text-14-money text-green">총 결제금액: ₩{Number(order.final_amount).toLocaleString()}</div>
                             </div>
                           </div>
-                          <Link href={`/orders/${order.id}`} className="btn-outline-secondary" style={{ padding: "8px 16px" }}>
-                            주문 상세 보기
-                          </Link>
+                          <div className="flex-row gap-xs">
+                            {(order.order_status === "PAID" || order.order_status === "PENDING") && (
+                              <button 
+                                onClick={() => updateOrderStatus(order.id, "CANCEL")} 
+                                className="btn-outline-secondary btn-sm"
+                                style={{ padding: "8px 16px" }}
+                              >
+                                주문 취소
+                              </button>
+                            )}
+                            {order.order_status === "SHIPPED" && (
+                              <button 
+                                onClick={() => updateOrderStatus(order.id, "CONFIRM")} 
+                                className="btn-success btn-sm"
+                                style={{ padding: "8px 16px" }}
+                              >
+                                상품 수령 (구매 확정)
+                              </button>
+                            )}
+                            <Link href={`/orders/${order.id}`} className="btn-outline-secondary btn-sm" style={{ padding: "8px 16px" }}>
+                              주문 상세 보기
+                            </Link>
+                          </div>
                         </div>
                       </div>
                     );

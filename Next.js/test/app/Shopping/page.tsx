@@ -107,14 +107,14 @@ export default function ShoppingPage() {
     <div className="page-container shop-bg">
       <div className="bg-grid" />
       <header className="shopping-header">
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div className="logo-icon">🛒</div>
+        <div className="flex-row gap-sm">
+          <div className="logo-icon">🛍️</div>
           <div>
-            <h1 className="header-title text-primary">쇼핑몰</h1>
-            <p className="header-subtitle text-accent">상품 목록</p>
+            <h1 className="header-title text-primary">Shopping Mall</h1>
+            <p className="header-subtitle text-accent">최신 상품을 만나보세요</p>
           </div>
         </div>
-        <nav style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <nav className="flex-row gap-xs">
           <Link href="/" className="nav-link">홈으로</Link>
         </nav>
       </header>
@@ -139,16 +139,15 @@ export default function ShoppingPage() {
           </div>
 
           {/* 검색 및 필터 바 */}
-          <div className="card-container shop-surface border-default mb-1rem" style={{ padding: "1rem", display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+          <div className="card-container shop-surface border-default mb-sm p-sm flex-row flex-wrap gap-sm items-center">
             <input
               type="text"
               placeholder="상품명 또는 설명 검색..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="search-input"
-              style={{ flex: 1, minWidth: "200px" }}
+              className="input-field flex-1"
             />
-            <select value={category} onChange={e => setCategory(e.target.value)} className="search-input" style={{ width: "150px" }}>
+            <select value={category} onChange={e => setCategory(e.target.value)} className="input-field">
               <option value="all">전체 카테고리</option>
               <option value="shirt">상의 (shirt)</option>
               <option value="shoes">겉옷 (shoes)</option>
@@ -158,7 +157,7 @@ export default function ShoppingPage() {
               <option value="pants">하의 (pants)</option>
               <option value="bag">가방 (bag)</option>
             </select>
-            <select value={sort} onChange={e => setSort(e.target.value)} className="search-input" style={{ width: "150px" }}>
+            <select value={sort} onChange={e => setSort(e.target.value)} className="input-field">
               <option value="latest">최신순</option>
               <option value="popular">인기순(별점)</option>
               <option value="price_desc">가격 높은순</option>
@@ -201,8 +200,11 @@ export default function ShoppingPage() {
                           className={`product-row border-bottom-default ${idx % 2 === 0 ? 'td-cell-even' : 'td-cell-odd'}`}
                           onClick={() => router.push(`/Shopping/${product.id}`)}
                         >
-                          <td className="td-cell text-center" onClick={(e) => toggleWishlist(e, Number(product.id))}>
-                            <button className="wish-btn" style={{ background: "none", border: "none", fontSize: "18px", cursor: "pointer", color: isWished ? "#ef4444" : "#545874" }}>
+                          <td className="td-cell text-center">
+                            <button 
+                              className={`wish-btn ${isWished ? 'is-active' : ''}`}
+                              onClick={(e) => toggleWishlist(e, Number(product.id))}
+                            >
                               {isWished ? "❤️" : "🤍"}
                             </button>
                           </td>

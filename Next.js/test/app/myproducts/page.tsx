@@ -47,8 +47,40 @@ export default function MyProductsPage() {
         setLoading(false);
       }
     };
+    
     fetchMyProducts();
   }, [role, router]);
+
+  const fetchMyProductsForUpdate = async () => {
+    try {
+      const res = await fetch(`/api/Shopping/MyProducts`);
+      if (res.ok) {
+        setProducts(await res.json());
+      }
+    } catch (e) {}
+  };
+
+  const deleteProduct = async (productId: number) => {
+    if (!confirm("정말 이 상품을 삭제하시겠습니까?")) return;
+    
+    try {
+      const res = await fetch(`/api/Shopping/Products/${productId}`, { method: "DELETE" });
+      const data = await res.json();
+      
+      if (res.ok) {
+        if (data.softDeleted) {
+          alert(data.message || "주문 내역이 존재하여 판매 중지(숨김) 처리되었습니다.");
+        } else {
+          alert("상품이 삭제되었습니다.");
+        }
+        fetchMyProductsForUpdate();
+      } else {
+        alert(data.error || "상품 삭제에 실패했습니다.");
+      }
+    } catch (err) {
+      alert("오류가 발생했습니다.");
+    }
+  };
 
   if (role && role !== "SELLER") {
     return null; // 리다이렉트 중 렌더링 방지
@@ -58,14 +90,14 @@ export default function MyProductsPage() {
     <div className="page-container shop-bg">
       <div className="bg-grid" />
       <header className="shopping-header">
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div className="flex-row gap-sm">
           <div className="logo-icon">📦</div>
           <div>
             <h1 className="header-title text-primary">나의 등록 상품</h1>
             <p className="header-subtitle text-accent">판매자로 등록한 상품 관리</p>
           </div>
         </div>
-        <nav style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <nav className="flex-row gap-xs">
           <Link href="/mypage" className="nav-link">마이페이지</Link>
           <Link href="/Shopping" className="nav-link">쇼핑하러 가기</Link>
         </nav>
@@ -83,9 +115,17 @@ export default function MyProductsPage() {
               <p className="text-13 text-secondary mt-3px margin-0">내가 등록한 상품 목록과 상태를 한눈에 확인하세요.</p>
             </div>
             {!loading && !error && (
-              <div className="title-banner-stats badge-accent-dim">
-                <div className="text-22-bold text-accent font-mono">{products.length}</div>
-                <div className="text-11 text-muted mt-2px">총 등록 상품</div>
+              <div className="flex-row-center gap-12">
+                <div className="title-banner-stats badge-accent-dim">
+                  <div className="text-22-bold text-accent font-mono">{products.length}</div>
+                  <div className="text-11 text-muted mt-2px">총 등록 상품</div>
+                </div>
+                <button 
+                  className="btn-accent flex-row items-center gap-xs h-full rounded-lg"
+                  onClick={() => router.push("/myproducts/new")}
+                >
+                  <span className="text-18">+</span> 새 상품 등록
+                </button>
               </div>
             )}
           </div>
@@ -111,11 +151,12 @@ export default function MyProductsPage() {
                     <th className="shopping-th">재고</th>
                     <th className="shopping-th">별점</th>
                     <th className="shopping-th">상태</th>
+                    <th className="shopping-th text-center">관리</th>
                   </tr>
                 </thead>
                 <tbody>
                   {products.length === 0 ? (
-                    <tr><td colSpan={7} className="empty-table-cell text-muted">등록한 상품이 없습니다.</td></tr>
+                    <tr><td colSpan={8} className="empty-table-cell text-muted">등록한 상품이 없습니다.</td></tr>
                   ) : (
                     products.map((product, idx) => (
                       <tr
@@ -136,6 +177,28 @@ export default function MyProductsPage() {
                         <td className="td-cell"><span className="text-14 text-secondary">{Number(product.stock).toLocaleString()}개</span></td>
                         <td className="td-cell"><span className="text-13 text-accent">⭐ {product.rating}</span></td>
                         <td className="td-cell"><span className={`status-badge ${product.is_active ? 'active' : 'inactive'}`}>{product.is_active ? "판매중" : "판매중지"}</span></td>
+                        <td className="td-cell text-center">
+                          <div className="flex-row gap-xs" style={{ justifyContent: "center" }}>
+                            <button 
+                              className="btn-outline-secondary btn-sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/myproducts/${product.id}/edit`);
+                              }}
+                            >
+                              수정
+                            </button>
+                            <button 
+                              className="btn-danger btn-sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteProduct(Number(product.id));
+                              }}
+                            >
+                              삭제
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))
                   )}

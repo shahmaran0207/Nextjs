@@ -67,14 +67,14 @@ export default function MyPage() {
       <div className="bg-grid" />
       
       <header className="shopping-header">
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div className="flex-row gap-sm">
           <div className="logo-icon">👤</div>
           <div>
             <h1 className="header-title text-primary">마이페이지</h1>
             <p className="header-subtitle text-accent">나의 쇼핑 정보</p>
           </div>
         </div>
-        <nav style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <nav className="flex-row gap-xs">
           <Link href="/Shopping" className="nav-link">쇼핑하러 가기</Link>
           <Link href="/" className="nav-link">홈으로</Link>
         </nav>
@@ -86,10 +86,10 @@ export default function MyPage() {
           {/* 프로필 카드 */}
           <div className="card-container shop-surface border-default mb-2rem">
             <div className="title-banner border-bottom-default">
-              <h2 className="margin-0 text-primary" style={{ fontSize: "18px" }}>회원 정보</h2>
+              <h2 className="margin-0 text-primary text-18">회원 정보</h2>
             </div>
-            <div style={{ padding: "2rem", display: "flex", alignItems: "center", gap: "1.5rem" }}>
-              <div style={{ width: "80px", height: "80px", borderRadius: "50%", background: "var(--accent)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "32px", fontWeight: "bold" }}>
+            <div className="p-lg flex-row gap-md items-center">
+              <div className="avatar-icon">
                 {name ? name[0].toUpperCase() : "U"}
               </div>
               <div>
@@ -110,15 +110,12 @@ export default function MyPage() {
               <span className="text-14">정보를 불러오는 중...</span>
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1.5rem" }}>
+            <div className="grid-auto-fit">
               
               {/* 장바구니 카드 */}
-              <Link href="/cart" style={{ textDecoration: "none" }}>
-                <div className="card-container shop-surface border-default" style={{ padding: "1.5rem", transition: "transform 0.2s, border-color 0.2s", cursor: "pointer", height: "100%" }} 
-                  onMouseEnter={e => e.currentTarget.style.borderColor = "var(--accent)"}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <Link href="/cart" className="text-decoration-none">
+                <div className="card-container shop-surface border-default menu-card">
+                  <div className="flex-row-between mb-sm">
                     <div style={{ fontSize: "32px" }}>🛒</div>
                     <div className="text-24-bold text-accent">{stats.cartCount}</div>
                   </div>
@@ -128,12 +125,9 @@ export default function MyPage() {
               </Link>
 
               {/* 위시리스트 카드 */}
-              <Link href="/wishlists" style={{ textDecoration: "none" }}>
-                <div className="card-container shop-surface border-default" style={{ padding: "1.5rem", transition: "transform 0.2s, border-color 0.2s", cursor: "pointer", height: "100%" }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = "var(--accent)"}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <Link href="/wishlists" className="text-decoration-none">
+                <div className="card-container shop-surface border-default menu-card">
+                  <div className="flex-row-between mb-sm">
                     <div style={{ fontSize: "32px" }}>❤️</div>
                     <div className="text-24-bold text-accent">{stats.wishCount}</div>
                   </div>
@@ -143,12 +137,9 @@ export default function MyPage() {
               </Link>
 
               {/* 주문내역 카드 */}
-              <Link href="/orders" style={{ textDecoration: "none" }}>
-                <div className="card-container shop-surface border-default" style={{ padding: "1.5rem", transition: "transform 0.2s, border-color 0.2s", cursor: "pointer", height: "100%" }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = "var(--accent)"}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <Link href="/orders" className="text-decoration-none">
+                <div className="card-container shop-surface border-default menu-card">
+                  <div className="flex-row-between mb-sm">
                     <div style={{ fontSize: "32px" }}>📝</div>
                     <div className="text-24-bold text-accent">{stats.orderCount}</div>
                   </div>
@@ -158,12 +149,9 @@ export default function MyPage() {
               </Link>
 
               {/* 나의 리뷰 카드 */}
-              <Link href="/myreviews" style={{ textDecoration: "none" }}>
-                <div className="card-container shop-surface border-default" style={{ padding: "1.5rem", transition: "transform 0.2s, border-color 0.2s", cursor: "pointer", height: "100%" }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = "var(--accent)"}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <Link href="/myreviews" className="text-decoration-none">
+                <div className="card-container shop-surface border-default menu-card">
+                  <div className="flex-row-between mb-sm">
                     <div style={{ fontSize: "32px" }}>⭐</div>
                     <div className="text-24-bold text-accent">{stats.reviewCount}</div>
                   </div>
@@ -172,21 +160,31 @@ export default function MyPage() {
                 </div>
               </Link>
 
-              {/* 나의 등록 상품 관리 카드 (판매자 전용) */}
+              {/* 판매자 전용 메뉴 (나의 등록 상품 + 주문/배송 관리) */}
               {role === "SELLER" && (
-                <Link href="/myproducts" style={{ textDecoration: "none" }}>
-                  <div className="card-container shop-surface border-default" style={{ padding: "1.5rem", transition: "transform 0.2s, border-color 0.2s", cursor: "pointer", height: "100%" }}
-                    onMouseEnter={e => e.currentTarget.style.borderColor = "var(--accent)"}
-                    onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                      <div style={{ fontSize: "32px" }}>📦</div>
-                      <div className="text-24-bold text-accent">{stats.productCount}</div>
+                <>
+                  <Link href="/myproducts" className="text-decoration-none">
+                    <div className="card-container shop-surface border-default menu-card">
+                      <div className="flex-row-between mb-sm">
+                        <div style={{ fontSize: "32px" }}>📦</div>
+                        <div className="text-24-bold text-accent">{stats.productCount}</div>
+                      </div>
+                      <h3 className="text-16-bold text-primary margin-0">나의 등록 상품</h3>
+                      <p className="text-13 text-secondary mt-6px margin-0">판매 중인 상품을 관리하세요.</p>
                     </div>
-                    <h3 className="text-16-bold text-primary margin-0">나의 등록 상품</h3>
-                    <p className="text-13 text-secondary mt-6px margin-0">판매 중인 상품을 관리하세요.</p>
+                  </Link>
+
+                <Link href="/seller/orders" className="text-decoration-none">
+                  <div className="card-container shop-surface border-default menu-card">
+                    <div className="flex-row-between mb-sm">
+                      <div style={{ fontSize: "32px" }}>🚚</div>
+                      <div className="text-24-bold text-accent">-</div>
+                    </div>
+                    <h3 className="text-16-bold text-primary margin-0">주문/배송 관리</h3>
+                    <p className="text-13 text-secondary mt-6px margin-0">들어온 주문에 운송장을 등록하세요.</p>
                   </div>
                 </Link>
+                </>
               )}
             </div>
           )}

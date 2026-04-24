@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, product_id, quantity, unit_price } = body;
+    const { email, product_id, quantity, unit_price, option_name } = body;
 
     if (!email || !product_id || !quantity || !unit_price) {
       return NextResponse.json({ error: "필수 정보가 누락되었습니다." }, { status: 400 });
@@ -41,10 +41,12 @@ export async function POST(req: Request) {
     }
 
     // 3. 장바구니 아이템 추가 또는 업데이트
+    // 옵션명이 null이면 기존과 동일, 옵션명이 있으면 옵션명도 일치해야 기존 아이템으로 인식
     const existingCartItem = await prisma.cart_items.findFirst({
       where: {
         cart_id: cart.id,
         product_id: product_id,
+        option_name: option_name || null
       },
     });
 
@@ -65,6 +67,7 @@ export async function POST(req: Request) {
           product_id: product_id,
           quantity: quantity,
           unit_price: unit_price,
+          option_name: option_name || null
         },
       });
     }

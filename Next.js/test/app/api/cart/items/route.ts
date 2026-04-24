@@ -50,6 +50,7 @@ export async function GET(req: Request) {
         product_id: Number(item.product_id),
         quantity: Number(item.quantity),
         unit_price: Number(item.unit_price),
+        option_name: item.option_name,
         product_name: product?.name || "알 수 없는 상품",
         product_image: product ? !!(product as any).image_data : false,
         product_stock: product?.stock || 0,
@@ -99,9 +100,43 @@ export async function DELETE(req: Request) {
       where: { id: Number(cartItemId) }
     });
 
-    return NextResponse.json({ success: true, message: "장바구니에서 삭제되었습니다." });
+    return NextResponse.json({ success: true, message: "삭제되었습니다." });
   } catch (error: any) {
     console.error("Cart DELETE API Error:", error);
-    return NextResponse.json({ error: "장바구니 아이템 삭제에 실패했습니다." }, { status: 500 });
+    return NextResponse.json({ error: "삭제에 실패했습니다." }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const { itemId, quantity, email } = await req.json();
+
+    if (!itemId || quantity === undefined || !email) {
+      return NextResponse.json({ error: "필수 정보가 누락되었습니다." }, { status: 400 });
+    }
+
+    if (quantity < 1) {
+      return NextResponse.json({ error: "수량은 1개 이상이어야 합니다." }, { status: 400 });
+    }
+
+    const user = await prisma.users.findUnique({ where: { email } });
+    if (!user) return NextResponse.json({ error: "사용자를 찾을 수 없습니다." }, { status: 404 });
+
+    const cartItem = await prisma.cart_items.findUnique({
+      where: { id: Number(itemId) }
+    });
+
+    if (!cartItem) return NextResponse.json({ error: "장바구니 상품을 찾을 수 없습니다." }, { status: 404 });
+
+    // 업데이트
+    const updated = await prisma.cart_items.update({
+      where: { id: Number(itemId) },
+      data: { quantity: Number(quantity) }
+    });
+
+    return NextResponse.json({ success: true, item: updated });
+  } catch (error: any) {
+    console.error("Cart PATCH API Error:", error);
+    return NextResponse.json({ error: "수량 변경에 실패했습니다." }, { status: 500 });
   }
 }

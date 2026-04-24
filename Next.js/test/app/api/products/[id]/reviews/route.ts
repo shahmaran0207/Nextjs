@@ -66,21 +66,33 @@ export async function POST(
       select: { id: true }
     });
     
-    let hasPurchased = false;
+    let purchasedOrderCount = 0;
     if (paidOrders.length > 0) {
-      const orderItems = await prisma.order_items.findFirst({
+      const orderItems = await prisma.order_items.findMany({
         where: {
           product_id: Number(id),
           order_id: { in: paidOrders.map(o => o.id) }
         }
       });
-      hasPurchased = !!orderItems;
+      // 중복 주문(동일 주문 내 여러 수량)을 1건으로 처리
+      const distinctOrders = new Set(orderItems.map(item => item.order_id));
+      purchasedOrderCount = distinctOrders.size;
     }
 
-    if (!hasPurchased) {
+    if (purchasedOrderCount === 0) {
       return NextResponse.json({ error: "구매한 상품만 리뷰를 작성할 수 있습니다." }, { status: 403 });
     }
 
+    const existingReviewsCount = await prisma.product_reviews.count({
+      where: {
+        user_id: user.id,
+        product_id: Number(id)
+      }
+    });
+
+    if (existingReviewsCount >= purchasedOrderCount) {
+      return NextResponse.json({ error: `주문 1건당 1개의 리뷰만 작성 가능합니다. (주문 건수: ${purchasedOrderCount}, 작성 리뷰: ${existingReviewsCount})` }, { status: 403 });
+    }
     const review = await prisma.product_reviews.create({
       data: {
         user_id: user.id,
