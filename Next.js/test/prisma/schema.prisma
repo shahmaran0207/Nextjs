@@ -1,10 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../app/generated/prisma"
+  provider        = "prisma-client-js"
+  output          = "../app/generated/prisma"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model chat {
@@ -465,10 +467,35 @@ model products {
   stock       Decimal  @default(0) @db.Decimal(20, 0)
   sku         String?  @unique @db.VarChar(100)
   image_url   String?
+  category    String?  @default("etc") @db.VarChar(100)
   is_active   Boolean  @default(true)
   created_at  DateTime @default(now()) @db.Timestamp(6)
   updated_at  DateTime @default(now()) @db.Timestamp(6)
 
   @@index([is_active], map: "idx_products_is_active")
   @@index([name], map: "idx_products_name")
+}
+
+model wishlists {
+  id         Int      @id @default(autoincrement())
+  user_id    Decimal  @db.Decimal(20, 0)
+  product_id Decimal  @db.Decimal(20, 0)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+
+  @@unique([user_id, product_id], map: "uq_wishlists_user_product")
+  @@index([user_id], map: "idx_wishlists_user_id")
+  @@index([product_id], map: "idx_wishlists_product_id")
+}
+
+model product_reviews {
+  id         Int      @id @default(autoincrement())
+  user_id    Decimal  @db.Decimal(20, 0)
+  product_id Decimal  @db.Decimal(20, 0)
+  rating     Int      @default(5)
+  content    String   @db.Text
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([product_id], map: "idx_product_reviews_product_id")
+  @@index([user_id], map: "idx_product_reviews_user_id")
 }

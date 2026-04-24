@@ -27,6 +27,9 @@ const baseNavItems = [
   { href: "/ADMIN", label: "ADMIN PAGE", icon: "🔒", desc: "ADMIN PAGE" },
   { href: "/payment", label: "결제", icon: "💸", desc: "결제 테스트" },
   { href: "/Shopping", label: "상품", icon: "🎁", desc: "상품 페이지" },
+  { href: "/cart", label: "장바구니", icon: "🛒", desc: "장바구니 확인" },
+  { href: "/wishlists", label: "위시리스트", icon: "❤️", desc: "찜한 상품 모아보기" },
+  { href: "/orders", label: "주문내역", icon: "📝", desc: "결제 내역 확인" },
 ];
 
 const naverLinkItem = { href: "/settings", label: "네이버 계정 연동", icon: "🍀", desc: "NAVER" };

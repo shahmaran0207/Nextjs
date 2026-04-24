@@ -9,6 +9,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             where: { id: Number(id) },
         });
 
+        if (result) {
+            const reviews = await prisma.product_reviews.findMany({ where: { product_id: Number(id) } });
+            let sum = 0;
+            reviews.forEach((r: any) => sum += r.rating);
+            const avg = reviews.length > 0 ? (sum / reviews.length).toFixed(1) : "0.0";
+            return NextResponse.json({ ...result, rating: avg, reviewCount: reviews.length });
+        }
+
         return NextResponse.json(result);
     } catch (err: any) {
         console.error("getProducts API Error::::::::::", err);

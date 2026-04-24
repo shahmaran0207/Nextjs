@@ -2,92 +2,168 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 import { dark } from "../QnA/[id]/component/theme";
-import { Product } from "@/types/shoppingType";
 import { DarkTheme } from "@/types/shoppingType";
 import "./shopping.css";
 
-/* ─── 컴포넌트 ───────────────────────────────────────── */
+// 확장된 Product 타입 (rating, reviewCount, category 추가됨)
+interface Product {
+  id: number;
+  name: string;
+  description: string;
+  price: string;
+  stock: number;
+  sku: string;
+  image_url: string;
+  is_active: boolean;
+  category?: string;
+  rating?: string;
+  reviewCount?: number;
+}
+
 export default function ShoppingPage() {
+  const { email } = useAuthGuard();
+
   const [products, setProducts] = useState<Product[]>([]);
+  const [wishlists, setWishlists] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await fetch("/api/Shopping/Products");
-        if (!res.ok) throw new Error("상품 목록을 불러오지 못했습니다.");
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
+  const [sort, setSort] = useState("latest");
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (search) params.append("search", search);
+      if (category && category !== "all") params.append("category", category);
+      if (sort) params.append("sort", sort);
+
+      const res = await fetch(`/api/Shopping/Products?${params.toString()}`);
+      if (!res.ok) throw new Error("상품 목록을 불러오지 못했습니다.");
+      const data = await res.json();
+      setProducts(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchWishlists = async () => {
+    if (!email) return;
+    try {
+      const res = await fetch(`/api/products/wishlist?email=${encodeURIComponent(email)}`);
+      if (res.ok) {
         const data = await res.json();
-        setProducts(data);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+        setWishlists(data);
       }
-    };
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [search, category, sort]);
+
+  useEffect(() => {
+    fetchWishlists();
+  }, [email]);
+
+  const toggleWishlist = async (e: React.MouseEvent, productId: number) => {
+    e.stopPropagation();
+    if (!email) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+    const isWished = wishlists.includes(productId);
+
+    // Optimistic Update
+    setWishlists(prev => isWished ? prev.filter(id => id !== productId) : [...prev, productId]);
+
+    try {
+      if (isWished) {
+        await fetch(`/api/products/wishlist?email=${encodeURIComponent(email)}&product_id=${productId}`, { method: "DELETE" });
+      } else {
+        await fetch(`/api/products/wishlist`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, product_id: productId })
+        });
+      }
+    } catch (err) {
+      console.error("위시리스트 업데이트 실패", err);
+      fetchWishlists(); // Rollback
+    }
+  };
 
   return (
     <div className="page-container shop-bg">
-
-      {/* 배경 그리드 */}
       <div className="bg-grid" />
-
-      {/* 헤더 */}
       <header className="shopping-header">
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div className="logo-icon">
-            🛒
-          </div>
+          <div className="logo-icon">🛒</div>
           <div>
-            <h1 className="header-title text-primary">
-              쇼핑몰
-            </h1>
-            <p className="header-subtitle text-accent">
-              상품 목록
-            </p>
+            <h1 className="header-title text-primary">쇼핑몰</h1>
+            <p className="header-subtitle text-accent">상품 목록</p>
           </div>
         </div>
-
         <nav style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <Link href="/" className="nav-link">
-            홈으로
-          </Link>
+          <Link href="/" className="nav-link">홈으로</Link>
         </nav>
       </header>
 
-      {/* 본문 */}
       <main className="page-main">
         <div className="content-wrapper max-w-1100">
 
-          {/* 타이틀 배너 */}
-          <div className="title-banner shop-surface border-default border-left-accent">
+          <div className="title-banner shop-surface border-default border-left-accent mb-1rem">
             <div>
               <div className="flex-row-center gap-8 mb-6px">
-                <span className="category-badge badge-accent">
-                  Shopping
-                </span>
+                <span className="category-badge badge-accent">Shopping</span>
               </div>
-              <h2 className="title-banner-heading text-primary margin-0">
-                전체 상품
-              </h2>
-              <p className="text-13 text-secondary mt-3px margin-0">
-                상품을 클릭하면 상세 정보를 확인할 수 있습니다.
-              </p>
+              <h2 className="title-banner-heading text-primary margin-0">전체 상품</h2>
+              <p className="text-13 text-secondary mt-3px margin-0">상품을 클릭하면 상세 정보를 확인할 수 있습니다.</p>
             </div>
             {!loading && !error && (
               <div className="title-banner-stats badge-accent-dim">
-                <div className="text-22-bold text-accent font-mono">
-                  {products.length}
-                </div>
+                <div className="text-22-bold text-accent font-mono">{products.length}</div>
                 <div className="text-11 text-muted mt-2px">총 상품</div>
               </div>
             )}
           </div>
 
-          {/* 로딩 */}
+          {/* 검색 및 필터 바 */}
+          <div className="card-container shop-surface border-default mb-1rem" style={{ padding: "1rem", display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+            <input
+              type="text"
+              placeholder="상품명 또는 설명 검색..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="search-input"
+              style={{ flex: 1, minWidth: "200px" }}
+            />
+            <select value={category} onChange={e => setCategory(e.target.value)} className="search-input" style={{ width: "150px" }}>
+              <option value="all">전체 카테고리</option>
+              <option value="shirt">상의 (shirt)</option>
+              <option value="shoes">겉옷 (shoes)</option>
+              <option value="caps">모자 (caps)</option>
+              <option value="outer">겉옷 (outer)</option>
+              <option value="socks">양말 (socks)</option>
+              <option value="pants">하의 (pants)</option>
+              <option value="bag">가방 (bag)</option>
+            </select>
+            <select value={sort} onChange={e => setSort(e.target.value)} className="search-input" style={{ width: "150px" }}>
+              <option value="latest">최신순</option>
+              <option value="popular">인기순(별점)</option>
+              <option value="price_desc">가격 높은순</option>
+              <option value="price_asc">가격 낮은순</option>
+            </select>
+          </div>
+
           {loading && (
             <div className="loading-container h-200 text-secondary">
               <div className="spinner" />
@@ -95,37 +171,54 @@ export default function ShoppingPage() {
             </div>
           )}
 
-          {/* 에러 */}
-          {error && (
-            <div className="error-container">
-              ⚠️ {error}
-            </div>
-          )}
+          {error && <div className="error-container">⚠️ {error}</div>}
 
-          {/* 상품 테이블 */}
           {!loading && !error && (
             <div className="card-container shop-surface border-default">
               <table className="shopping-table">
                 <thead>
                   <tr className="border-bottom-default">
-                    {["이미지", "상품명", "설명", "가격", "재고", "SKU", "상태"].map((th) => (
-                      <th key={th} className="shopping-th">
-                        {th}
-                      </th>
-                    ))}
+                    <th className="shopping-th">찜</th>
+                    <th className="shopping-th">이미지</th>
+                    <th className="shopping-th">카테고리</th>
+                    <th className="shopping-th">상품명</th>
+                    <th className="shopping-th">가격</th>
+                    <th className="shopping-th">별점</th>
+                    <th className="shopping-th">상태</th>
                   </tr>
                 </thead>
                 <tbody>
                   {products.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="empty-table-cell text-muted">
-                        등록된 상품이 없습니다.
-                      </td>
-                    </tr>
+                    <tr><td colSpan={7} className="empty-table-cell text-muted">등록된 상품이 없습니다.</td></tr>
                   ) : (
-                    products.map((product, idx) => (
-                      <ProductRow key={String(product.id)} product={product} idx={idx} dark={dark} />
-                    ))
+                    products.map((product, idx) => {
+                      const isWished = wishlists.includes(Number(product.id));
+                      return (
+                        <tr
+                          key={String(product.id)}
+                          className={`product-row border-bottom-default ${idx % 2 === 0 ? 'td-cell-even' : 'td-cell-odd'}`}
+                          onClick={() => { window.location.href = `/Shopping/${product.id}`; }}
+                        >
+                          <td className="td-cell text-center" onClick={(e) => toggleWishlist(e, Number(product.id))}>
+                            <button className="wish-btn" style={{ background: "none", border: "none", fontSize: "18px", cursor: "pointer", color: isWished ? "#ef4444" : "#545874" }}>
+                              {isWished ? "❤️" : "🤍"}
+                            </button>
+                          </td>
+                          <td className="td-cell">
+                            {product.image_url ? (
+                              <img src={product.image_url} alt={product.name} className="product-img-small border-default" />
+                            ) : (
+                              <div className="img-placeholder badge-accent-dim border-default">📦</div>
+                            )}
+                          </td>
+                          <td className="td-cell"><span className="text-12 text-muted">{product.category || "etc"}</span></td>
+                          <td className="td-cell"><span className="text-14-bold text-primary">{product.name}</span></td>
+                          <td className="td-cell"><span className="text-14-money text-green">₩{Number(product.price).toLocaleString()}</span></td>
+                          <td className="td-cell"><span className="text-13 text-accent">⭐ {product.rating} ({product.reviewCount})</span></td>
+                          <td className="td-cell"><span className={`status-badge ${product.is_active ? 'active' : 'inactive'}`}>{product.is_active ? "판매중" : "판매중지"}</span></td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -134,72 +227,5 @@ export default function ShoppingPage() {
         </div>
       </main>
     </div>
-  );
-}
-
-/* ─── 행 컴포넌트 ─────────────────────────────────────── */
-function ProductRow({ product, idx, dark }: { product: Product; idx: number; dark: DarkTheme }) {
-  const isEven = idx % 2 === 0;
-
-  return (
-    <tr
-      className="product-row border-bottom-default"
-      onClick={() => { window.location.href = `/Shopping/${product.id}`; }}
-    >
-      {/* 이미지 */}
-      <td className={`td-cell ${isEven ? 'td-cell-even' : 'td-cell-odd'}`}>
-        {product.image_url ? (
-          <img
-            src={product.image_url}
-            alt={product.name}
-            className="product-img-small border-default"
-          />
-        ) : (
-          <div className="img-placeholder badge-accent-dim border-default">
-            📦
-          </div>
-        )}
-      </td>
-
-      {/* 상품명 */}
-      <td className={`td-cell ${isEven ? 'td-cell-even' : 'td-cell-odd'}`}>
-        <span className="text-14-bold text-primary">{product.name}</span>
-      </td>
-
-      {/* 설명 */}
-      <td className={`td-cell max-w-280 ${isEven ? 'td-cell-even' : 'td-cell-odd'}`}>
-        <span className="text-13 text-ellipsis text-secondary">
-          {product.description ?? "-"}
-        </span>
-      </td>
-
-      {/* 가격 */}
-      <td className={`td-cell whitespace-nowrap ${isEven ? 'td-cell-even' : 'td-cell-odd'}`}>
-        <span className="text-14-money text-green">
-          ₩{Number(product.price).toLocaleString()}
-        </span>
-      </td>
-
-      {/* 재고 */}
-      <td className={`td-cell ${isEven ? 'td-cell-even' : 'td-cell-odd'}`}>
-        <span className={`text-13-mono ${product.stock > 0 ? 'text-primary' : 'text-red'}`}>
-          {product.stock.toLocaleString()}
-        </span>
-      </td>
-
-      {/* SKU */}
-      <td className={`td-cell ${isEven ? 'td-cell-even' : 'td-cell-odd'}`}>
-        <span className="text-12 text-muted font-mono">
-          {product.sku ?? "-"}
-        </span>
-      </td>
-
-      {/* 상태 */}
-      <td className={`td-cell ${isEven ? 'td-cell-even' : 'td-cell-odd'}`}>
-        <span className={`status-badge ${product.is_active ? 'active' : 'inactive'}`}>
-          {product.is_active ? "판매중" : "판매중지"}
-        </span>
-      </td>
-    </tr>
   );
 }
