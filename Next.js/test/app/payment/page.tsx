@@ -11,11 +11,6 @@ function callback(response: RequestPayResponse) {
     console.log("Full response:", response);
     const { success, error_msg, imp_uid } = response;
 
-    console.log("Payment Success");
-    console.log("Payment ID:::::::::", response.imp_uid);
-    console.log("Order ID:::::::::::", response.merchant_uid);
-    console.log("Payment Amount:::::", response.paid_amount);
-
     if (success) {
         axios.post(`/api/orders/${imp_uid}`);
         alert("결제 성공!!!");

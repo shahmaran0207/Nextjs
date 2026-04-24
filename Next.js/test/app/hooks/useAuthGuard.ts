@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
  */
 export function useAuthGuard() {
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -52,9 +53,10 @@ export function useAuthGuard() {
 
       const data = await res.json();
       setEmail(data.email);
+      setName(data.name);
     };
     checkAuth();
   }, []);
 
-  return { email };
+  return { email, name };
 }

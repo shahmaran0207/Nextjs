@@ -3,6 +3,7 @@ export const dark = {
   surface: "#1a1d27",
   surface2: "#22263a",
   border: "#2e3247",
+  borderHover: "#3a3f5c",
   textPrimary: "#e8eaf0",
   textSecondary: "#8b90a7",
   textMuted: "#545874",
