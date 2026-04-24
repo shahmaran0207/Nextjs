@@ -19,6 +19,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "사용자를 찾을 수 없습니다." }, { status: 404 });
     }
 
+    // 본인 상품인지 확인
+    const product = await prisma.products.findUnique({
+      where: { id: Number(product_id) }
+    });
+    if (product && (product as any).seller_id === user.id) {
+      return NextResponse.json({ error: "본인이 등록한 상품은 장바구니에 담을 수 없습니다." }, { status: 403 });
+    }
+
     // 2. 사용자의 장바구니 찾기 또는 생성
     let cart = await prisma.carts.findFirst({
       where: { user_id: user.id },

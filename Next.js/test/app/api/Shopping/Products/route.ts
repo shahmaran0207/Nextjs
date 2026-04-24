@@ -42,8 +42,14 @@ export async function GET(req: Request) {
 
         const productsWithRating = products.map(p => {
             const r = ratingMap[Number(p.id)];
+            
+            // 바이너리 데이터 제외 및 플래그 추가
+            const has_image = !!(p as any).image_data;
+            const { image_data, image_type, ...safeProduct } = p as any;
+
             return {
-                ...p,
+                ...safeProduct,
+                has_image,
                 rating: r ? (r.sum / r.count).toFixed(1) : "0.0",
                 reviewCount: r ? r.count : 0
             };

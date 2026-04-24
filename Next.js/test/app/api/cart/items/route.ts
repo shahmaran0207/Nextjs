@@ -47,11 +47,11 @@ export async function GET(req: Request) {
       return {
         id: item.id,
         cart_id: item.cart_id,
-        product_id: item.product_id,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        product_name: product?.name || '알 수 없는 상품',
-        product_image: product?.image_url || null,
+        product_id: Number(item.product_id),
+        quantity: Number(item.quantity),
+        unit_price: Number(item.unit_price),
+        product_name: product?.name || "알 수 없는 상품",
+        product_image: product ? !!(product as any).image_data : false,
         product_stock: product?.stock || 0,
         is_active: product?.is_active || false,
       };

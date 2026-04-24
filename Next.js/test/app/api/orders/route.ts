@@ -9,6 +9,20 @@ export async function POST(req: Request) {
     const user = await prisma.users.findUnique({ where: { email } });
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
+    // 본인이 등록한 상품이 포함되어 있는지 확인
+    const productIds = items.map((item: any) => Number(item.product_id));
+    const ownProducts = await prisma.products.findMany({
+      where: {
+        id: { in: productIds },
+        // Prisma Client 타입 업데이트 지연으로 인한 동적 속성 참조 우회
+      }
+    });
+    
+    const hasOwnProduct = ownProducts.some((p: any) => p.seller_id === user.id);
+    if (hasOwnProduct) {
+      return NextResponse.json({ error: "본인이 등록한 상품은 결제할 수 없습니다." }, { status: 403 });
+    }
+
     // 트랜잭션 사용: order 생성 -> order_items 생성 -> payment 생성 -> 장바구니/재고 업데이트
     const result = await prisma.$transaction(async (tx) => {
       // 1. Create Order

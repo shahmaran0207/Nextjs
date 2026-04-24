@@ -220,7 +220,7 @@ export default function CartPage() {
                             <td className="td-cell">
                               <div className="flex-row-center gap-12">
                                 {item.product_image ? (
-                                  <img src={item.product_image} alt={item.product_name} className="product-img-small" />
+                                  <img src={`/api/images/products/${item.product_id}`} alt={item.product_name} className="product-img-small" />
                                 ) : (
                                   <div className="img-placeholder bg-grid" style={{ background: "rgba(56,189,248,0.05)" }}>📦</div>
                                 )}

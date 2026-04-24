@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 import { dark } from "../QnA/[id]/component/theme";
 import { DarkTheme } from "@/types/shoppingType";
@@ -15,7 +16,7 @@ interface Product {
   price: string;
   stock: number;
   sku: string;
-  image_url: string;
+  has_image: boolean;
   is_active: boolean;
   category?: string;
   rating?: string;
@@ -24,6 +25,7 @@ interface Product {
 
 export default function ShoppingPage() {
   const { email } = useAuthGuard();
+  const router = useRouter();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [wishlists, setWishlists] = useState<number[]>([]);
@@ -197,7 +199,7 @@ export default function ShoppingPage() {
                         <tr
                           key={String(product.id)}
                           className={`product-row border-bottom-default ${idx % 2 === 0 ? 'td-cell-even' : 'td-cell-odd'}`}
-                          onClick={() => { window.location.href = `/Shopping/${product.id}`; }}
+                          onClick={() => router.push(`/Shopping/${product.id}`)}
                         >
                           <td className="td-cell text-center" onClick={(e) => toggleWishlist(e, Number(product.id))}>
                             <button className="wish-btn" style={{ background: "none", border: "none", fontSize: "18px", cursor: "pointer", color: isWished ? "#ef4444" : "#545874" }}>
@@ -205,8 +207,8 @@ export default function ShoppingPage() {
                             </button>
                           </td>
                           <td className="td-cell">
-                            {product.image_url ? (
-                              <img src={product.image_url} alt={product.name} className="product-img-small border-default" />
+                            {product.has_image ? (
+                              <img src={`/api/images/products/${product.id}`} alt={product.name} className="product-img-small border-default" />
                             ) : (
                               <div className="img-placeholder badge-accent-dim border-default">📦</div>
                             )}

@@ -14,7 +14,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             let sum = 0;
             reviews.forEach((r: any) => sum += r.rating);
             const avg = reviews.length > 0 ? (sum / reviews.length).toFixed(1) : "0.0";
-            return NextResponse.json({ ...result, rating: avg, reviewCount: reviews.length });
+            
+            const has_image = !!(result as any).image_data;
+            const { image_data, image_type, ...safeProduct } = result as any;
+
+            return NextResponse.json({ ...safeProduct, has_image, rating: avg, reviewCount: reviews.length });
         }
 
         return NextResponse.json(result);

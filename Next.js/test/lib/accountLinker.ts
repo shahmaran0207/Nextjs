@@ -76,7 +76,16 @@ export async function linkAccountByEmail(naverId: string, email: string) {
       return {
         success: false,
         error: "NO_ACCOUNT",
-        message: "연동된 계정이 없습니다. 먼저 회원가입을 진행해주세요",
+        message: "연동된 계정이 없습니다. 먼저 일반 회원가입을 진행해주세요",
+      };
+    }
+
+    // 2.5. 이메일 계정이 이미 다른 네이버 계정과 연동되어 있는지 확인
+    if (userByEmail.naver_id && userByEmail.naver_id !== naverId) {
+      return {
+        success: false,
+        error: "ALREADY_LINKED",
+        message: "해당 이메일은 이미 다른 네이버 계정과 연동되어 있습니다.",
       };
     }
 

@@ -24,7 +24,8 @@ export async function GET(
       rating: r.rating,
       content: r.content,
       created_at: r.created_at,
-      author: userMap.get(Number(r.user_id)) || "익명"
+      author: userMap.get(Number(r.user_id)) || "익명",
+      authorEmail: users.find(u => Number(u.id) === Number(r.user_id))?.email || ""
     }));
 
     return NextResponse.json(formattedReviews);
@@ -47,6 +48,38 @@ export async function POST(
 
     const user = await prisma.users.findUnique({ where: { email } });
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+    // 내가 등록한 상품인지 확인
+    const product = await prisma.products.findUnique({
+      where: { id: Number(id) }
+    });
+    if (product && (product as any).seller_id === user.id) {
+      return NextResponse.json({ error: "본인이 등록한 상품에는 리뷰를 남길 수 없습니다." }, { status: 403 });
+    }
+
+    // 실제 구매 여부 서버단 확인 (PAID 등 결제 완료 주문)
+    const paidOrders = await prisma.orders.findMany({
+      where: {
+        user_id: user.id,
+        order_status: { in: ["PAID", "COMPLETED", "SHIPPED", "DELIVERED"] }
+      },
+      select: { id: true }
+    });
+    
+    let hasPurchased = false;
+    if (paidOrders.length > 0) {
+      const orderItems = await prisma.order_items.findFirst({
+        where: {
+          product_id: Number(id),
+          order_id: { in: paidOrders.map(o => o.id) }
+        }
+      });
+      hasPurchased = !!orderItems;
+    }
+
+    if (!hasPurchased) {
+      return NextResponse.json({ error: "구매한 상품만 리뷰를 작성할 수 있습니다." }, { status: 403 });
+    }
 
     const review = await prisma.product_reviews.create({
       data: {

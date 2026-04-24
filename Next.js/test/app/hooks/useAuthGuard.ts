@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 export function useAuthGuard() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [role, setRole] = useState("");
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -48,15 +49,18 @@ export function useAuthGuard() {
 
         const retryData = await retryRes.json();
         setEmail(retryData.email);
+        setName(retryData.name);
+        setRole(retryData.role);
         return;
       }
 
       const data = await res.json();
       setEmail(data.email);
       setName(data.name);
+      setRole(data.role);
     };
     checkAuth();
   }, []);
 
-  return { email, name };
+  return { email, name, role };
 }

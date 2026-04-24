@@ -63,17 +63,21 @@ export async function GET(request: NextRequest) {
             where: { naver_id: naverId },
         });
 
+        let linkErrorMessage = "연동된 계정이 없습니다. 먼저 회원가입을 진행해주세요";
+
         if (!user && email) {
             // 계정 연동 시도
             const linkResult = await linkAccountByEmail(naverId, email);
             if (linkResult.success && linkResult.user) {
                 user = linkResult.user;
+            } else if (linkResult.message) {
+                linkErrorMessage = linkResult.message;
             }
         }
 
         if (!user) {
             const loginUrl = new URL("/Login", request.url);
-            loginUrl.searchParams.set("error", "연동된 계정이 없습니다. 먼저 회원가입을 진행해주세요");
+            loginUrl.searchParams.set("error", linkErrorMessage);
             return NextResponse.redirect(loginUrl);
         }
 

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react";
+import { PageHeader } from "@/component/PageHeader";
 
 const dark = {
   bg: "#0a0e1a",
@@ -27,9 +28,7 @@ const baseNavItems = [
   { href: "/ADMIN", label: "ADMIN PAGE", icon: "🔒", desc: "ADMIN PAGE" },
   { href: "/payment", label: "결제", icon: "💸", desc: "결제 테스트" },
   { href: "/Shopping", label: "상품", icon: "🎁", desc: "상품 페이지" },
-  { href: "/cart", label: "장바구니", icon: "🛒", desc: "장바구니 확인" },
-  { href: "/wishlists", label: "위시리스트", icon: "❤️", desc: "찜한 상품 모아보기" },
-  { href: "/orders", label: "주문내역", icon: "📝", desc: "결제 내역 확인" },
+  { href: "/mypage", label: "마이페이지", icon: "👤", desc: "나의 쇼핑 활동" },
 ];
 
 const naverLinkItem = { href: "/settings", label: "네이버 계정 연동", icon: "🍀", desc: "NAVER" };
@@ -71,43 +70,13 @@ export default function Page() {
       display: "flex",
       flexDirection: "column",
     }}>
-      {/* Digital Twin Header */}
-      <header style={{
-        background: "rgba(10, 14, 26, 0.95)",
-        borderBottom: `1px solid ${dark.border}`,
-        padding: "0.75rem 1.5rem",
-        position: "sticky",
-        top: 0,
-        zIndex: 200,
-        backdropFilter: "blur(12px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{
-            width: "32px",
-            height: "32px",
-            background: "linear-gradient(135deg, #38bdf8, #0ea5e9)",
-            borderRadius: "8px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 0 16px rgba(56,189,248,0.4)",
-            fontSize: "16px",
-          }}>
-            🏠
-          </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#e8eaf0", lineHeight: 1 }}>
-              메인 페이지
-            </h1>
-            <p style={{ margin: 0, fontSize: "11px", color: "#38bdf8", lineHeight: 1.4, marginTop: "2px" }}>
-              원하는 기능을 선택하세요
-            </p>
-          </div>
-        </div>
-      </header>
+      {/* Main Header (PageHeader Component) */}
+      <PageHeader 
+        title="메인 페이지" 
+        subtitle="원하는 기능을 선택하세요" 
+        icon="🏠" 
+        navLinks={[]} 
+      />
 
       <div style={{ flex: 1, padding: "2rem 1rem" }}>
         <div style={{ maxWidth: "760px", margin: "0 auto" }}>
