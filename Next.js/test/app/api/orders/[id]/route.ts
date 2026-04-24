@@ -93,13 +93,39 @@ export async function PATCH(
     }
 
     if (action === "CONFIRM") {
-      if (order.order_status !== "SHIPPED" && order.order_status !== "DELIVERED") {
-        return NextResponse.json({ error: "배송 완료된 상품만 구매 확정할 수 있습니다." }, { status: 400 });
+      if (order.order_status !== "SHIPPED") {
+        return NextResponse.json({ error: "배송 중인 주문만 구매 확정할 수 있습니다." }, { status: 400 });
       }
 
-      const updated = await prisma.orders.update({
-        where: { id: Number(orderId) },
-        data: { order_status: "DELIVERED" }
+      const updated = await prisma.$transaction(async (tx) => {
+        const o = await tx.orders.update({
+          where: { id: Number(orderId) },
+          data: { order_status: "DELIVERED" }
+        });
+        await tx.order_items.updateMany({
+          where: { order_id: Number(orderId) },
+          data: { item_status: "DELIVERED" }
+        });
+        return o;
+      });
+      return NextResponse.json({ success: true, order: updated });
+    }
+
+    if (action === "RETURN_REQUEST") {
+      if (order.order_status !== "DELIVERED") {
+        return NextResponse.json({ error: "배송 완료된 주문만 반품 요청이 가능합니다." }, { status: 400 });
+      }
+
+      const updated = await prisma.$transaction(async (tx) => {
+        const o = await tx.orders.update({
+          where: { id: Number(orderId) },
+          data: { order_status: "RETURN_REQUEST" }
+        });
+        await tx.order_items.updateMany({
+          where: { order_id: Number(orderId) },
+          data: { item_status: "RETURN_REQUEST" }
+        });
+        return o;
       });
       return NextResponse.json({ success: true, order: updated });
     }

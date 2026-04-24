@@ -21,6 +21,12 @@ export default function CheckoutPage() {
   const [items, setItems] = useState<CheckoutItem[]>([]);
   const [fromCart, setFromCart] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [availablePoints, setAvailablePoints] = useState<number>(0);
+  const [usePoints, setUsePoints] = useState<number>(0);
+
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [selectedCouponId, setSelectedCouponId] = useState<number | null>(null);
+  const [couponDiscount, setCouponDiscount] = useState<number>(0);
 
   // 배송지 폼 상태
   const [receiverName, setReceiverName] = useState(name || "");
@@ -43,10 +49,57 @@ export default function CheckoutPage() {
     if (storedFromCart === "true") {
       setFromCart(true);
     }
+    
+    // Fetch user points from existing Auth API
+    const token = localStorage.getItem("token");
+    if (token) {
+      axios.get(`/api/auth/Me`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => setAvailablePoints(Number(res.data.points) || 0))
+        .catch(err => console.error(err));
+    }
+
+    // Fetch user coupons
+    if (email) {
+      axios.get(`/api/coupons?email=${encodeURIComponent(email)}`)
+        .then(res => setCoupons(res.data.coupons || []))
+        .catch(err => console.error(err));
+    }
+
     setLoading(false);
-  }, []);
+  }, [email]);
 
   const totalPrice = items.reduce((acc, item) => acc + item.unit_price * item.quantity, 0);
+  const shippingFee = totalPrice >= 50000 ? 0 : 3000;
+
+  // 쿠폰 할인 계산
+  useEffect(() => {
+    if (!selectedCouponId) {
+      setCouponDiscount(0);
+      return;
+    }
+    const coupon = coupons.find(c => c.user_coupon_id === selectedCouponId);
+    if (!coupon) return;
+
+    if (totalPrice < coupon.min_order_amount) {
+      alert(`해당 쿠폰은 상품 금액 ${coupon.min_order_amount.toLocaleString()}원 이상부터 사용 가능합니다.`);
+      setSelectedCouponId(null);
+      setCouponDiscount(0);
+      return;
+    }
+
+    if (coupon.discount_type === "PERCENT") {
+      setCouponDiscount(Math.floor(totalPrice * (coupon.discount_value / 100)));
+    } else {
+      setCouponDiscount(coupon.discount_value);
+    }
+  }, [selectedCouponId, totalPrice, coupons]);
+
+  const finalAmount = Math.max(totalPrice + shippingFee - usePoints - couponDiscount, 0);
+
+  const handleUseAllPoints = () => {
+    // 최대 사용 가능 포인트는 총액 + 배송비 - 쿠폰 할인
+    setUsePoints(Math.min(availablePoints, totalPrice + shippingFee - couponDiscount));
+  };
 
   const handleCompletePostcode = (data: any) => {
     let fullAddress = data.address;
@@ -84,7 +137,7 @@ export default function CheckoutPage() {
       channel_key: "channel-key-a430aad8-4b56-4c03-a96a-af05565eec6e",
       pay_method: "card",
       merchant_uid: `mid_${new Date().getTime()}`,
-      amount: totalPrice,
+      amount: finalAmount,
       name: orderName,
       buyer_name: name || email,
       buyer_tel: receiverPhone,
@@ -102,7 +155,13 @@ export default function CheckoutPage() {
             email,
             imp_uid,
             merchant_uid,
-            amount: totalPrice,
+            total_product_amount: totalPrice,
+            shipping_fee: shippingFee,
+            discount_amount: usePoints + couponDiscount, // 총 할인
+            used_points: usePoints,
+            used_coupon_id: selectedCouponId,
+            coupon_discount: couponDiscount,
+            amount: finalAmount,
             items: items,
             fromCart: fromCart,
             receiver_name: receiverName,
@@ -216,10 +275,71 @@ export default function CheckoutPage() {
               </div>
             </div>
             
-            <div className="checkout-summary" style={{ borderTop: "1px solid #2e3247" }}>
-              <div className="text-right">
-                <div className="text-12 text-muted uppercase">최종 결제금액</div>
-                <div className="text-28-money text-green">₩{totalPrice.toLocaleString()}</div>
+            <div style={{ padding: "1.5rem", borderTop: "1px solid #2e3247", display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div className="title-banner" style={{ padding: "0" }}>
+                <h2 className="margin-0 text-primary" style={{ fontSize: "16px" }}>할인 및 적립</h2>
+              </div>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label className="text-13 text-muted">쿠폰 할인</label>
+                <select 
+                  className="search-input" 
+                  value={selectedCouponId || ""} 
+                  onChange={e => setSelectedCouponId(e.target.value ? Number(e.target.value) : null)}
+                >
+                  <option value="">사용 안 함</option>
+                  {coupons.map(c => (
+                    <option key={c.user_coupon_id} value={c.user_coupon_id}>
+                      {c.name} ({c.discount_type === "PERCENT" ? `${c.discount_value}%` : `${c.discount_value.toLocaleString()}원`} 할인) - {c.min_order_amount > 0 ? `${c.min_order_amount.toLocaleString()}원 이상 구매시` : "조건 없음"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label className="text-13 text-muted">포인트 사용 (보유: {availablePoints.toLocaleString()} P)</label>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <input 
+                    type="number" 
+                    value={usePoints} 
+                    onChange={e => {
+                      const val = Math.max(0, Math.min(Number(e.target.value), availablePoints, totalPrice + shippingFee));
+                      setUsePoints(val);
+                    }} 
+                    className="search-input" 
+                    style={{ flex: 1 }} 
+                  />
+                  <button type="button" onClick={handleUseAllPoints} className="btn-outline-secondary">전액 사용</button>
+                </div>
+              </div>
+            </div>
+
+            <div className="checkout-summary" style={{ borderTop: "1px solid #2e3247", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", flex: 1, paddingRight: "2rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span className="text-14 text-muted">총 상품금액</span>
+                    <span className="text-14-bold text-primary">₩{totalPrice.toLocaleString()}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span className="text-14 text-muted">배송비</span>
+                    <span className="text-14 text-primary">+{shippingFee.toLocaleString()}원</span>
+                  </div>
+                  {couponDiscount > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span className="text-14 text-muted">쿠폰 할인</span>
+                      <span className="text-14-bold text-accent">-{couponDiscount.toLocaleString()}원</span>
+                    </div>
+                  )}
+                  {usePoints > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span className="text-14 text-muted">포인트 사용</span>
+                      <span className="text-14-bold text-accent">-{usePoints.toLocaleString()} P</span>
+                    </div>
+                  )}
+                <div>
+                  <div className="text-12 text-muted uppercase">최종 결제금액</div>
+                  <div className="text-28-money text-green">₩{finalAmount.toLocaleString()}</div>
+                </div>
               </div>
               <button className="pay-btn flex-none w-200" onClick={handlePayment}>
                 ⚡ 결제하기

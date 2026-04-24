@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, imp_uid, merchant_uid, amount, items, fromCart, receiver_name, receiver_phone, shipping_address, shipping_message } = body;
+    const { email, imp_uid, merchant_uid, amount, items, fromCart, receiver_name, receiver_phone, shipping_address, shipping_message, total_product_amount, shipping_fee, discount_amount, used_points, used_coupon_id, coupon_discount } = body;
 
     const user = await prisma.users.findUnique({ where: { email } });
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -31,7 +31,9 @@ export async function POST(req: Request) {
           user_id: user.id,
           order_number: merchant_uid,
           order_status: "PAID",
-          total_product_amount: amount,
+          total_product_amount: total_product_amount || amount,
+          shipping_fee: shipping_fee || 0,
+          discount_amount: discount_amount || 0,
           final_amount: amount,
           receiver_name: receiver_name || null,
           receiver_phone: receiver_phone || null,
@@ -98,6 +100,49 @@ export async function POST(req: Request) {
             });
           }
         }
+      }
+
+      // 5. Update Points
+      if (used_points && used_points > 0) {
+        // 포인트 사용
+        await tx.users.update({
+          where: { id: user.id },
+          data: { points: { decrement: used_points } }
+        });
+        await tx.point_logs.create({
+          data: {
+            user_id: user.id,
+            amount: -used_points,
+            description: `주문(${merchant_uid}) 결제 시 포인트 사용`
+          }
+        });
+      }
+
+      // 6. 쿠폰 사용 처리
+      if (used_coupon_id) {
+        await tx.user_coupons.update({
+          where: { id: used_coupon_id },
+          data: {
+            is_used: true,
+            used_at: new Date()
+          }
+        });
+      }
+
+      // 구매 포인트 적립 (최종 결제 금액의 1%)
+      const earnedPoints = Math.floor(amount * 0.01);
+      if (earnedPoints > 0) {
+        await tx.users.update({
+          where: { id: user.id },
+          data: { points: { increment: earnedPoints } }
+        });
+        await tx.point_logs.create({
+          data: {
+            user_id: user.id,
+            amount: earnedPoints,
+            description: `주문(${merchant_uid}) 구매 적립금 (1%)`
+          }
+        });
       }
 
       return order;

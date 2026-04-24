@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
     const dbUser = await prisma.users.findUnique({
         where: { id: Number(payload.id) },
-        select: { name: true, naver_id: true },
+        select: { name: true, naver_id: true, points: true },
     });
 
     return new Response(
@@ -30,6 +30,7 @@ export async function GET(request: Request) {
             role: payload.role,
             name: dbUser?.name ?? null,
             naver_id: dbUser?.naver_id ?? null,
+            points: dbUser?.points ?? 0,
         }),
         {
             headers: { "Content-Type": "application/json" },

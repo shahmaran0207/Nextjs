@@ -59,16 +59,25 @@ export default function OrdersPage() {
     } catch (e) {}
   };
 
-  const updateOrderStatus = async (orderId: number, action: "CANCEL" | "CONFIRM") => {
-    const actionText = action === "CANCEL" ? "주문을 취소" : "구매를 확정";
+  const updateOrderStatus = async (orderId: number, action: "CANCEL" | "CONFIRM" | "RETURN_REQUEST") => {
+    const actionText = action === "CANCEL" ? "주문을 취소" : action === "RETURN_REQUEST" ? "반품 요청" : "구매를 확정";
     if (!confirm(`정말 이 ${actionText}하시겠습니까?`)) return;
 
     try {
-      const res = await fetch(`/api/orders/${orderId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, email })
-      });
+      let res;
+      if (action === "CANCEL") {
+        res = await fetch(`/api/orders/${orderId}/cancel`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email })
+        });
+      } else {
+        res = await fetch(`/api/orders/${orderId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action, email })
+        });
+      }
       const data = await res.json();
       
       if (res.ok) {
@@ -145,8 +154,16 @@ export default function OrdersPage() {
                           <div className="flex-row-center gap-12">
                             <span className="text-13-mono text-muted">주문번호: {order.order_number}</span>
                             <span className="status-badge active">
-                              {order.order_status === "PAID" ? "결제완료" : 
-                               order.order_status === "PENDING" ? "결제대기" : order.order_status}
+                              {{
+                                PENDING: "결제 대기",
+                                PAID: "결제 완료",
+                                SHIPPED: "배송 중",
+                                DELIVERED: "배송 완료",
+                                CONFIRMED: "구매 확정",
+                                CANCELLED: "취소됨",
+                                RETURN_REQUEST: "반품 요청",
+                                RETURN_COMPLETED: "반품 완료",
+                              }[order.order_status] ?? order.order_status}
                             </span>
                           </div>
                           <span className="text-12 text-muted">
@@ -178,6 +195,15 @@ export default function OrdersPage() {
                                 style={{ padding: "8px 16px" }}
                               >
                                 상품 수령 (구매 확정)
+                              </button>
+                            )}
+                            {order.order_status === "DELIVERED" && (
+                              <button 
+                                onClick={() => updateOrderStatus(order.id, "RETURN_REQUEST")} 
+                                className="btn-sm"
+                                style={{ padding: "8px 16px", backgroundColor: "rgba(239, 68, 68, 0.15)", color: "#ef4444", border: "1px solid #ef4444", borderRadius: "6px", cursor: "pointer" }}
+                              >
+                                반품 요청
                               </button>
                             )}
                             <Link href={`/orders/${order.id}`} className="btn-outline-secondary btn-sm" style={{ padding: "8px 16px" }}>

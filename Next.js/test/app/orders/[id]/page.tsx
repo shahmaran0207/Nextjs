@@ -14,6 +14,7 @@ interface OrderItem {
   quantity: number;
   total_price: number;
   option_name?: string | null;
+  tracking_number?: string | null;
 }
 
 interface OrderDetail {
@@ -57,16 +58,25 @@ export default function OrderDetailPage() {
     if (email && id) fetchOrderDetail();
   }, [email, id]);
 
-  const updateOrderStatus = async (action: "CANCEL" | "CONFIRM") => {
-    const actionText = action === "CANCEL" ? "주문을 취소" : "구매를 확정";
+  const updateOrderStatus = async (action: "CANCEL" | "CONFIRM" | "RETURN_REQUEST") => {
+    const actionText = action === "CANCEL" ? "주문을 취소" : action === "RETURN_REQUEST" ? "반품 요청" : "구매를 확정";
     if (!confirm(`정말 이 ${actionText}하시겠습니까?`)) return;
 
     try {
-      const res = await fetch(`/api/orders/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, email })
-      });
+      let res;
+      if (action === "CANCEL") {
+        res = await fetch(`/api/orders/${id}/cancel`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email })
+        });
+      } else {
+        res = await fetch(`/api/orders/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action, email })
+        });
+      }
       const data = await res.json();
       
       if (res.ok) {
@@ -99,8 +109,17 @@ export default function OrderDetailPage() {
     );
   }
 
-  const statusText = order.order_status === "PAID" ? "결제완료" : 
-                     order.order_status === "PENDING" ? "결제대기" : order.order_status;
+  const statusMap: Record<string, string> = {
+    PENDING: "결제 대기",
+    PAID: "결제 완료",
+    SHIPPED: "배송 중",
+    DELIVERED: "배송 완료",
+    CONFIRMED: "구매 확정",
+    CANCELLED: "취소됨",
+    RETURN_REQUEST: "반품 요청",
+    RETURN_COMPLETED: "반품 완료",
+  };
+  const statusText = statusMap[order.order_status] ?? order.order_status;
 
   return (
     <div className="page-container shop-bg">
@@ -152,6 +171,15 @@ export default function OrderDetailPage() {
                   상품 수령 (구매 확정)
                 </button>
               )}
+              {order.order_status === "DELIVERED" && (
+                <button 
+                  onClick={() => updateOrderStatus("RETURN_REQUEST")} 
+                  className="btn-danger"
+                  style={{ backgroundColor: "rgba(239, 68, 68, 0.2)", color: "#ef4444", border: "1px solid #ef4444" }}
+                >
+                  반품 요청
+                </button>
+              )}
             </div>
           </div>
 
@@ -178,6 +206,9 @@ export default function OrderDetailPage() {
                     <td className="td-cell text-14-bold text-primary">
                       {item.product_name}
                       {item.option_name && <span className="text-13 text-accent ml-xs">({item.option_name})</span>}
+                      {item.tracking_number && (
+                        <div className="text-11 text-muted mt-4px">운송장: {item.tracking_number}</div>
+                      )}
                     </td>
                     <td className="td-cell text-center"><span className="text-14 font-mono text-primary">{item.quantity}</span></td>
                     <td className="td-cell text-right">

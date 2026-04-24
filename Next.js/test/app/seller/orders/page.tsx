@@ -36,27 +36,27 @@ export default function SellerOrdersPage() {
   // 로컬 인풋 상태 (order_item_id -> 입력된 송장번호)
   const [trackingInputs, setTrackingInputs] = useState<Record<number, string>>({});
 
+  const fetchOrders = async () => {
+    if (!role) return;
+    try {
+      setLoading(true);
+      const res = await fetch("/api/seller/orders");
+      if (!res.ok) throw new Error("주문 내역을 불러오지 못했습니다.");
+      const data = await res.json();
+      setItems(data.items || []);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (role && role !== "SELLER") {
       alert("판매자만 접근할 수 있는 페이지입니다.");
       router.push("/mypage");
       return;
     }
-
-    const fetchOrders = async () => {
-      if (!role) return;
-      try {
-        setLoading(true);
-        const res = await fetch("/api/seller/orders");
-        if (!res.ok) throw new Error("주문 내역을 불러오지 못했습니다.");
-        const data = await res.json();
-        setItems(data.items || []);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchOrders();
   }, [role, router]);
 
@@ -87,6 +87,25 @@ export default function SellerOrdersPage() {
           ? { ...item, tracking_number, item_status: "SHIPPING" } 
           : item
       ));
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleReturnApprove = async (orderItemId: number) => {
+    if (!confirm("반품을 승인하고 환불 처리를 진행하시겠습니까? (재고가 복구됩니다)")) return;
+    try {
+      const res = await fetch("/api/seller/orders/return", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_item_id: orderItemId })
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "반품 승인 실패");
+      }
+      alert("반품 승인 및 환불이 완료되었습니다.");
+      fetchOrders();
     } catch (err: any) {
       alert(err.message);
     }
@@ -177,6 +196,12 @@ export default function SellerOrdersPage() {
                             <span className="category-badge badge-accent badge-sm">배송중</span>
                           ) : item.item_status === 'DELIVERED' ? (
                             <span className="category-badge badge-success badge-sm">배송완료</span>
+                          ) : item.item_status === 'RETURN_REQUEST' ? (
+                            <span className="category-badge badge-danger badge-sm" style={{ backgroundColor: "rgba(239, 68, 68, 0.2)", color: "#ef4444" }}>반품 요청</span>
+                          ) : item.item_status === 'RETURN_COMPLETED' ? (
+                            <span className="category-badge badge-neutral badge-sm">반품 완료</span>
+                          ) : item.item_status === 'CANCELLED' ? (
+                            <span className="category-badge badge-neutral badge-sm">취소됨</span>
                           ) : (
                             <span className="category-badge badge-neutral badge-sm">결제완료</span>
                           )}
@@ -199,9 +224,19 @@ export default function SellerOrdersPage() {
                                 확인
                               </button>
                             </div>
+                          ) : item.item_status === "RETURN_REQUEST" ? (
+                            <div className="flex-col gap-xs">
+                              <span className="text-12 text-muted">운송장: {item.tracking_number}</span>
+                              <button 
+                                className="btn-danger btn-sm"
+                                onClick={() => handleReturnApprove(item.id)}
+                              >
+                                반품 승인
+                              </button>
+                            </div>
                           ) : (
                             <div className="text-13 text-secondary">
-                              운송장: <span className="text-primary">{item.tracking_number}</span>
+                              {item.tracking_number ? `운송장: ${item.tracking_number}` : "-"}
                             </div>
                           )}
                         </td>

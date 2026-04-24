@@ -36,6 +36,7 @@ export default function ProductDetailPage() {
 
   const [newReviewText, setNewReviewText] = useState("");
   const [newReviewRating, setNewReviewRating] = useState(5);
+  const [newReviewImage, setNewReviewImage] = useState<File | null>(null);
 
   const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
   const [editReviewText, setEditReviewText] = useState("");
@@ -183,14 +184,22 @@ export default function ProductDetailPage() {
     if (!newReviewText.trim()) return alert("리뷰 내용을 입력해주세요.");
 
     try {
+      const formData = new FormData();
+      formData.append("email", email);
+      formData.append("rating", String(newReviewRating));
+      formData.append("content", newReviewText);
+      if (newReviewImage) {
+        formData.append("image", newReviewImage);
+      }
+
       const res = await fetch(`/api/products/${id}/reviews`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, rating: newReviewRating, content: newReviewText })
+        body: formData
       });
       if (res.ok) {
         setNewReviewText("");
         setNewReviewRating(5);
+        setNewReviewImage(null);
         fetchReviews();
         fetchProduct(); // 별점 갱신
       } else {
@@ -439,14 +448,23 @@ export default function ProductDetailPage() {
                             {[5, 4, 3, 2, 1].map(r => <option key={r} value={r}>{"⭐".repeat(r)}</option>)}
                           </select>
                         </div>
-                        <div className="flex-row gap-xs w-full">
-                          <textarea
-                            className="input-field flex-1 textarea-field"
-                            rows={2}
-                            placeholder="이 상품에 대한 리뷰를 남겨주세요."
-                            value={newReviewText}
-                            onChange={e => setNewReviewText(e.target.value)}
-                          />
+                        <div className="flex-row gap-xs w-full items-end">
+                          <div className="flex-1 flex-col gap-xs">
+                            <textarea
+                              className="input-field w-full textarea-field"
+                              rows={2}
+                              placeholder="이 상품에 대한 리뷰를 남겨주세요."
+                              value={newReviewText}
+                              onChange={e => setNewReviewText(e.target.value)}
+                            />
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={e => setNewReviewImage(e.target.files?.[0] || null)}
+                              className="input-field p-xs text-12"
+                              style={{ width: "fit-content" }}
+                            />
+                          </div>
                           <button
                             onClick={submitReview}
                             className="btn-accent"
@@ -505,7 +523,16 @@ export default function ProductDetailPage() {
                                 )}
                               </div>
                               <div className="text-13 text-accent mb-6px">{"⭐".repeat(review.rating)}</div>
-                              <p className="text-14 text-secondary margin-0" style={{ lineHeight: "1.5" }}>{review.content}</p>
+                              <p className="text-14 text-secondary margin-0 mb-6px" style={{ lineHeight: "1.5" }}>{review.content}</p>
+                              {review.has_image && (
+                                <div className="mt-xs">
+                                  <img 
+                                    src={`/api/images/reviews/${review.id}`} 
+                                    alt="리뷰 이미지" 
+                                    style={{ maxWidth: "200px", maxHeight: "200px", borderRadius: "8px", objectFit: "cover" }} 
+                                  />
+                                </div>
+                              )}
                             </>
                           )}
                         </div>

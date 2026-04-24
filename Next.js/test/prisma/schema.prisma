@@ -145,7 +145,18 @@ model users {
   email          String?          @unique @db.VarChar(255)
   password       String?          @db.VarChar(255)
   ROLE           String?          @db.VarChar(1000)
+  points         Decimal          @default(0) @db.Decimal(12, 2)
   refresh_tokens refresh_tokens[]
+}
+
+model point_logs {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  amount      Decimal  @db.Decimal(12, 2)
+  description String   @db.VarChar(500)
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([user_id])
 }
 
 model refresh_tokens {
@@ -511,9 +522,34 @@ model product_reviews {
   product_id Decimal  @db.Decimal(20, 0)
   rating     Int      @default(5)
   content    String   @db.Text
+  image_data Bytes?
+  image_type String?  @db.VarChar(50)
   created_at DateTime @default(now()) @db.Timestamp(6)
   updated_at DateTime @default(now()) @db.Timestamp(6)
 
   @@index([product_id], map: "idx_product_reviews_product_id")
   @@index([user_id], map: "idx_product_reviews_user_id")
+}
+
+model coupons {
+  id               Int      @id @default(autoincrement())
+  code             String   @unique @db.VarChar(50)
+  name             String   @db.VarChar(200)
+  discount_type    String   @db.VarChar(20) // "PERCENT" | "AMOUNT"
+  discount_value   Decimal  @db.Decimal(12, 2)
+  min_order_amount Decimal  @default(0) @db.Decimal(12, 2)
+  valid_until      DateTime @db.Timestamp(6)
+  created_at       DateTime @default(now()) @db.Timestamp(6)
+}
+
+model user_coupons {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  coupon_id  Int
+  is_used    Boolean  @default(false)
+  used_at    DateTime? @db.Timestamp(6)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([user_id])
+  @@index([coupon_id])
 }

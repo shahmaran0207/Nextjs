@@ -23,6 +23,7 @@ export async function GET(
       id: r.id,
       rating: r.rating,
       content: r.content,
+      has_image: !!r.image_data,
       created_at: r.created_at,
       author: userMap.get(Number(r.user_id)) || "익명",
       authorEmail: users.find(u => Number(u.id) === Number(r.user_id))?.email || ""
@@ -40,7 +41,12 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const { email, rating, content } = await req.json();
+    const formData = await req.formData();
+    
+    const email = formData.get("email") as string;
+    const rating = formData.get("rating") as string;
+    const content = formData.get("content") as string;
+    const image = formData.get("image") as File | null;
 
     if (!email || !rating || !content) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -93,12 +99,22 @@ export async function POST(
     if (existingReviewsCount >= purchasedOrderCount) {
       return NextResponse.json({ error: `주문 1건당 1개의 리뷰만 작성 가능합니다. (주문 건수: ${purchasedOrderCount}, 작성 리뷰: ${existingReviewsCount})` }, { status: 403 });
     }
+    let imageData = null;
+    let imageType = null;
+    if (image) {
+      const arrayBuffer = await image.arrayBuffer();
+      imageData = Buffer.from(arrayBuffer);
+      imageType = image.type;
+    }
+
     const review = await prisma.product_reviews.create({
       data: {
         user_id: user.id,
         product_id: Number(id),
         rating: Number(rating),
         content,
+        image_data: imageData,
+        image_type: imageType
       }
     });
 

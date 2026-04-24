@@ -160,6 +160,18 @@ export default function MyPage() {
                 </div>
               </Link>
 
+              {/* 통계 대시보드 카드 (구매자) */}
+              <Link href="/dashboard" className="text-decoration-none">
+                <div className="card-container shop-surface border-default menu-card">
+                  <div className="flex-row-between mb-sm">
+                    <div style={{ fontSize: "32px" }}>📊</div>
+                    <div className="text-24-bold text-accent">-</div>
+                  </div>
+                  <h3 className="text-16-bold text-primary margin-0">나의 쇼핑 통계</h3>
+                  <p className="text-13 text-secondary mt-6px margin-0">월별 구매 금액 및 건수를 확인하세요.</p>
+                </div>
+              </Link>
+
               {/* 판매자 전용 메뉴 (나의 등록 상품 + 주문/배송 관리) */}
               {role === "SELLER" && (
                 <>
@@ -182,6 +194,17 @@ export default function MyPage() {
                     </div>
                     <h3 className="text-16-bold text-primary margin-0">주문/배송 관리</h3>
                     <p className="text-13 text-secondary mt-6px margin-0">들어온 주문에 운송장을 등록하세요.</p>
+                  </div>
+                </Link>
+
+                <Link href="/seller/dashboard" className="text-decoration-none">
+                  <div className="card-container shop-surface border-default menu-card">
+                    <div className="flex-row-between mb-sm">
+                      <div style={{ fontSize: "32px" }}>📈</div>
+                      <div className="text-24-bold text-accent">-</div>
+                    </div>
+                    <h3 className="text-16-bold text-primary margin-0">매출 통계</h3>
+                    <p className="text-13 text-secondary mt-6px margin-0">월별 매출 및 상품별 판매 건수 그래프.</p>
                   </div>
                 </Link>
                 </>
