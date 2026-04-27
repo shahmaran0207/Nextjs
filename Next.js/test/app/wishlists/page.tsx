@@ -6,11 +6,12 @@ import { useRouter } from "next/navigation";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 import { Product } from "@/types/shoppingType";
 import "../Shopping/shopping.css";
+import { PageHeader } from "@/component/PageHeader";
 
 export default function WishlistsPage() {
   const { email } = useAuthGuard();
   const router = useRouter();
-  
+
   const [wishlistProducts, setWishlistProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +36,7 @@ export default function WishlistsPage() {
         const prodRes = await fetch(`/api/Shopping/Products`);
         if (!prodRes.ok) throw new Error("상품 목록을 불러오지 못했습니다.");
         const allProducts: Product[] = await prodRes.json();
-        
+
         const filtered = allProducts.filter(p => wishIds.includes(Number(p.id)));
         setWishlistProducts(filtered);
       } catch (err: any) {
@@ -50,7 +51,7 @@ export default function WishlistsPage() {
   const removeWishlist = async (e: React.MouseEvent, productId: number) => {
     e.stopPropagation();
     if (!email) return;
-    
+
     // Optimistic Update
     setWishlistProducts(prev => prev.filter(p => Number(p.id) !== productId));
 
@@ -65,23 +66,20 @@ export default function WishlistsPage() {
   return (
     <div className="page-container shop-bg">
       <div className="bg-grid" />
-      <header className="shopping-header">
-        <div className="flex-row gap-sm">
-          <div className="logo-icon">❤️</div>
-          <div>
-            <h1 className="header-title text-primary">위시리스트</h1>
-            <p className="header-subtitle text-accent">찜한 상품 목록</p>
-          </div>
-        </div>
-        <nav className="flex-row gap-xs">
-          <Link href="/Shopping" className="nav-link">쇼핑 계속하기</Link>
-          <Link href="/" className="nav-link">홈으로</Link>
-        </nav>
-      </header>
+      <PageHeader
+        icon="❤️"
+        title="위시리스트"
+        subtitle="찜한 상품 목록"
+
+        navLinks={[
+          { href: "/", label: "메인 페이지" },
+          { href: "/Shopping", label: "쇼핑 계속하기" },
+        ]}
+      />
 
       <main className="page-main">
         <div className="content-wrapper max-w-1100">
-          
+
           <div className="title-banner shop-surface border-default border-left-accent mb-1rem">
             <div>
               <div className="flex-row-center gap-8 mb-6px">

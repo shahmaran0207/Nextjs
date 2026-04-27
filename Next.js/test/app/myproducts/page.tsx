@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 import { Product as BaseProduct } from "@/types/shoppingType";
 import "../Shopping/shopping.css";
+import { PageHeader } from "@/component/PageHeader";
 
 interface Product extends BaseProduct {
   category?: string;
@@ -15,7 +16,7 @@ interface Product extends BaseProduct {
 export default function MyProductsPage() {
   const { email, role } = useAuthGuard();
   const router = useRouter();
-  
+
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +76,7 @@ export default function MyProductsPage() {
         setLoading(false);
       }
     };
-    
+
     fetchMyProducts();
   }, [role, router]);
 
@@ -85,16 +86,16 @@ export default function MyProductsPage() {
       if (res.ok) {
         setProducts(await res.json());
       }
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const deleteProduct = async (productId: number) => {
     if (!confirm("정말 이 상품을 삭제하시겠습니까?")) return;
-    
+
     try {
       const res = await fetch(`/api/Shopping/Products/${productId}`, { method: "DELETE" });
       const data = await res.json();
-      
+
       if (res.ok) {
         if (data.softDeleted) {
           alert(data.message || "주문 내역이 존재하여 판매 중지(숨김) 처리되었습니다.");
@@ -117,23 +118,22 @@ export default function MyProductsPage() {
   return (
     <div className="page-container shop-bg">
       <div className="bg-grid" />
-      <header className="shopping-header">
-        <div className="flex-row gap-sm">
-          <div className="logo-icon">📦</div>
-          <div>
-            <h1 className="header-title text-primary">나의 등록 상품</h1>
-            <p className="header-subtitle text-accent">판매자로 등록한 상품 관리</p>
-          </div>
-        </div>
-        <nav className="flex-row gap-xs">
-          <Link href="/mypage" className="nav-link">마이페이지</Link>
-          <Link href="/Shopping" className="nav-link">쇼핑하러 가기</Link>
-        </nav>
-      </header>
+      <PageHeader
+        icon="📦"
+        title="나의 등록 상품"
+        subtitle="판매자로 등록한 상품 관리"
+
+        navLinks={[
+          { href: "/", label: "메인 페이지" },
+          { href: "/mypage", label: "마이페이지" },
+          { href: "/Shopping", label: "쇼핑하러 가기" },
+        ]}
+      />
+
 
       <main className="page-main">
         <div className="content-wrapper max-w-1100">
-          
+
           <div className="title-banner shop-surface border-default border-left-accent mb-1rem">
             <div>
               <div className="flex-row-center gap-8 mb-6px">
@@ -148,7 +148,7 @@ export default function MyProductsPage() {
                   <div className="text-22-bold text-accent font-mono">{products.length}</div>
                   <div className="text-11 text-muted mt-2px">총 등록 상품</div>
                 </div>
-                <button 
+                <button
                   className="btn-accent flex-row items-center gap-xs h-full rounded-lg"
                   onClick={() => router.push("/myproducts/new")}
                 >
@@ -207,7 +207,7 @@ export default function MyProductsPage() {
                         <td className="td-cell"><span className={`status-badge ${product.is_active ? 'active' : 'inactive'}`}>{product.is_active ? "판매중" : "판매중지"}</span></td>
                         <td className="td-cell text-center">
                           <div className="flex-row gap-xs" style={{ justifyContent: "center" }}>
-                            <button 
+                            <button
                               className="btn-accent btn-sm"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -217,7 +217,7 @@ export default function MyProductsPage() {
                             >
                               🔥 타임딜
                             </button>
-                            <button 
+                            <button
                               className="btn-outline-secondary btn-sm"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -226,7 +226,7 @@ export default function MyProductsPage() {
                             >
                               수정
                             </button>
-                            <button 
+                            <button
                               className="btn-danger btn-sm"
                               onClick={(e) => {
                                 e.stopPropagation();

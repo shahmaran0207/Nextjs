@@ -5,6 +5,7 @@ import useChatState from "../hook/useChatState";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 import postStyle from "../hook/postStyle";
 import { LogoutButton } from "@/component/LogoutButton";
+import { PageHeader } from "@/component/PageHeader";
 
 export default function ChatPage() {
     const { email } = useAuthGuard();
@@ -24,76 +25,18 @@ export default function ChatPage() {
         };
     }, []);
 
-    // 공통 헤더 컴포넌트
-    const Header = ({ title, subtitle }: { title: string; subtitle: string }) => (
-        <header style={{
-            background: "rgba(10, 14, 26, 0.95)",
-            borderBottom: `1px solid ${dark.border}`,
-            padding: "0.75rem 1.5rem",
-            position: "sticky",
-            top: 0,
-            zIndex: 200,
-            backdropFilter: "blur(12px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-        }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <div style={{
-                    width: "32px",
-                    height: "32px",
-                    background: "linear-gradient(135deg, #38bdf8, #0ea5e9)",
-                    borderRadius: "8px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    boxShadow: "0 0 16px rgba(56,189,248,0.4)",
-                    fontSize: "16px",
-                }}>
-                    💬
-                </div>
-                <div>
-                    <h1 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#e8eaf0", lineHeight: 1 }}>
-                        {title}
-                    </h1>
-                    <p style={{ margin: 0, fontSize: "11px", color: "#38bdf8", lineHeight: 1.4, marginTop: "2px" }}>
-                        {subtitle}
-                    </p>
-                </div>
-            </div>
-
-            <nav style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                <a
-                    href="/"
-                    style={{
-                        fontSize: "13px",
-                        color: "#8b90a7",
-                        textDecoration: "none",
-                        padding: "6px 12px",
-                        borderRadius: "8px",
-                        border: "1px solid rgba(255,255,255,0.08)",
-                        transition: "color 0.15s, border-color 0.15s",
-                    }}
-                    onMouseEnter={e => {
-                        (e.currentTarget as HTMLElement).style.color = "#e8eaf0";
-                        (e.currentTarget as HTMLElement).style.borderColor = "rgba(56,189,248,0.3)";
-                    }}
-                    onMouseLeave={e => {
-                        (e.currentTarget as HTMLElement).style.color = "#8b90a7";
-                        (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)";
-                    }}
-                >
-                    홈으로
-                </a>
-                <LogoutButton />
-            </nav>
-        </header>
-    );
-
     // 채팅방 목록 화면
     if (mode === 'roomList') return (
         <div style={{ minHeight: "100vh", background: dark.bg, display: "flex", flexDirection: "column" }}>
-            <Header title="채팅방 목록" subtitle={`내 아이디: ${userId || '로딩 중...'}`} />
+            <PageHeader
+                icon="💬"
+                title="채팅방 목록"
+                subtitle={`내 아이디: ${userId || '로딩 중...'}`}
+
+                navLinks={[
+                    { href: "/", label: "메인 페이지" },
+                ]}
+            />
 
             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", padding: "2rem" }}>
                 {chatRooms.length === 0
@@ -152,7 +95,15 @@ export default function ChatPage() {
     // 새 채팅 상대 선택 화면 (users 테이블에서 나를 제외한 목록)
     if (mode === 'newChat') return (
         <div style={{ minHeight: "100vh", background: dark.bg, display: "flex", flexDirection: "column" }}>
-            <Header title="새 채팅 시작" subtitle="대화할 상대를 선택하세요" />
+            <PageHeader
+                icon="💬"
+                title="새 채팅 시작"
+                subtitle="대화할 상대를 선택하세요"
+
+                navLinks={[
+                    { href: "/", label: "메인 페이지" },
+                ]}
+            />
 
             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem", padding: "2rem" }}>
                 <button
@@ -213,9 +164,14 @@ export default function ChatPage() {
     // 채팅 화면
     return (
         <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: dark.bg }}>
-            <Header
+            <PageHeader
+                icon="💬"
                 title="웹소켓 채팅"
                 subtitle={userId ? `내 아이디: ${userId}` : "연결 중..."}
+
+                navLinks={[
+                    { href: "/", label: "메인 페이지" },
+                ]}
             />
 
             <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>

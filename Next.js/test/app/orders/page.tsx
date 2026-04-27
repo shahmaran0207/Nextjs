@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import "../Shopping/shopping.css";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
+import { PageHeader } from "@/component/PageHeader";
 
 interface OrderItem {
   id: number;
@@ -56,7 +57,7 @@ export default function OrdersPage() {
       if (res.ok) {
         setOrders(data.orders || []);
       }
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const updateOrderStatus = async (orderId: number, action: "CANCEL" | "CONFIRM" | "RETURN_REQUEST") => {
@@ -79,7 +80,7 @@ export default function OrdersPage() {
         });
       }
       const data = await res.json();
-      
+
       if (res.ok) {
         alert(`${actionText} 처리되었습니다.`);
         fetchOrdersForUpdate();
@@ -94,20 +95,17 @@ export default function OrdersPage() {
   return (
     <div className="page-container shop-bg">
       <div className="bg-grid" />
-      <header className="shopping-header">
-        <div className="flex-row-center gap-12">
-          <div className="logo-icon">📦</div>
-          <div>
-            <h1 className="header-title text-primary">주문내역</h1>
-            <p className="header-subtitle text-accent">결제 완료된 상품 목록입니다</p>
-          </div>
-        </div>
-        <nav className="flex-row-center gap-2">
-          <Link href="/Shopping" className="nav-link">쇼핑하러 가기</Link>
-          <Link href="/cart" className="nav-link">장바구니</Link>
-          <Link href="/" className="nav-link">홈으로</Link>
-        </nav>
-      </header>
+      <PageHeader
+        icon="📦"
+        title="주문내역"
+        subtitle="결제 완료된 상품 목록입니다"
+
+        navLinks={[
+          { href: "/", label: "메인 페이지" },
+          { href: "/Shopping", label: "쇼핑하러 가기" },
+          { href: "/cart", label: "장바구니 가기" },
+        ]}
+      />
 
       <main className="page-main">
         <div className="content-wrapper max-w-900">
@@ -144,7 +142,7 @@ export default function OrdersPage() {
                   {orders.map((order) => {
                     const firstItem = order.items[0];
                     const extraCount = order.items.length - 1;
-                    const orderTitle = extraCount > 0 
+                    const orderTitle = extraCount > 0
                       ? `${firstItem?.product_name}${firstItem?.option_name ? `(${firstItem.option_name})` : ''} 외 ${extraCount}건`
                       : (firstItem?.product_name ? `${firstItem.product_name}${firstItem?.option_name ? `(${firstItem.option_name})` : ''}` : "상품 없음");
 
@@ -180,8 +178,8 @@ export default function OrdersPage() {
                           </div>
                           <div className="flex-row gap-xs">
                             {(order.order_status === "PAID" || order.order_status === "PENDING") && (
-                              <button 
-                                onClick={() => updateOrderStatus(order.id, "CANCEL")} 
+                              <button
+                                onClick={() => updateOrderStatus(order.id, "CANCEL")}
                                 className="btn-outline-secondary btn-sm"
                                 style={{ padding: "8px 16px" }}
                               >
@@ -189,8 +187,8 @@ export default function OrdersPage() {
                               </button>
                             )}
                             {order.order_status === "SHIPPED" && (
-                              <button 
-                                onClick={() => updateOrderStatus(order.id, "CONFIRM")} 
+                              <button
+                                onClick={() => updateOrderStatus(order.id, "CONFIRM")}
                                 className="btn-success btn-sm"
                                 style={{ padding: "8px 16px" }}
                               >
@@ -198,8 +196,8 @@ export default function OrdersPage() {
                               </button>
                             )}
                             {order.order_status === "DELIVERED" && (
-                              <button 
-                                onClick={() => updateOrderStatus(order.id, "RETURN_REQUEST")} 
+                              <button
+                                onClick={() => updateOrderStatus(order.id, "RETURN_REQUEST")}
                                 className="btn-sm"
                                 style={{ padding: "8px 16px", backgroundColor: "rgba(239, 68, 68, 0.15)", color: "#ef4444", border: "1px solid #ef4444", borderRadius: "6px", cursor: "pointer" }}
                               >

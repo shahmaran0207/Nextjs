@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 import "../Shopping/shopping.css";
+import { PageHeader } from "@/component/PageHeader";
 
 export default function MyReviewsPage() {
   const { email } = useAuthGuard();
@@ -38,7 +39,7 @@ export default function MyReviewsPage() {
       if (res.ok) {
         setReviews(await res.json());
       }
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const deleteReview = async (e: React.MouseEvent, reviewId: number) => {
@@ -74,20 +75,17 @@ export default function MyReviewsPage() {
   return (
     <div className="page-container shop-bg">
       <div className="bg-grid" />
-      
-      <header className="shopping-header">
-        <div className="flex-row gap-sm">
-          <div className="logo-icon">⭐</div>
-          <div>
-            <h1 className="header-title text-primary">나의 리뷰</h1>
-            <p className="header-subtitle text-accent">내가 작성한 리뷰 모아보기</p>
-          </div>
-        </div>
-        <nav className="flex-row gap-xs">
-          <Link href="/mypage" className="nav-link">마이페이지</Link>
-          <Link href="/Shopping" className="nav-link">쇼핑하러 가기</Link>
-        </nav>
-      </header>
+      <PageHeader
+        icon="⭐"
+        title="나의 리뷰"
+        subtitle="내가 작성한 리뷰 모아보기"
+
+        navLinks={[
+          { href: "/", label: "메인 페이지" },
+          { href: "/mypage", label: "마이페이지" },
+          { href: "/Shopping", label: "쇼핑하러 가기" },
+        ]}
+      />
 
       <main className="page-main">
         <div className="content-wrapper max-w-900">
@@ -95,7 +93,7 @@ export default function MyReviewsPage() {
             <div className="title-banner border-bottom-default">
               <h2 className="margin-0 text-primary text-18">작성한 리뷰 ({reviews.length})</h2>
             </div>
-            
+
             <div className="p-md">
               {loading ? (
                 <div className="text-center text-muted p-lg">로딩 중...</div>
@@ -119,14 +117,14 @@ export default function MyReviewsPage() {
                             <span className="text-14-bold text-primary">{review.product.name}</span>
                           </div>
                         )}
-                        
+
                         {/* 리뷰 내용 영역 */}
                         <div className="flex-row-between mb-6px items-center">
                           <div className="flex-row gap-sm items-center">
                             <div className="text-13 text-accent">{"⭐".repeat(review.rating)}</div>
                             <span className="text-12 text-muted">{new Date(review.created_at).toLocaleDateString()}</span>
                           </div>
-                          <button 
+                          <button
                             className="btn-danger btn-sm"
                             onClick={(e) => deleteReview(e, review.id)}
                           >
@@ -143,8 +141,8 @@ export default function MyReviewsPage() {
               {/* 페이지네이션 UI */}
               {!loading && totalPages > 1 && (
                 <div className="flex-row gap-xs mt-lg" style={{ justifyContent: "center" }}>
-                  <button 
-                    onClick={() => handlePageChange(currentPage - 1)} 
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
                     className="btn-outline-secondary btn-sm"
                   >
@@ -160,8 +158,8 @@ export default function MyReviewsPage() {
                       {i + 1}
                     </button>
                   ))}
-                  <button 
-                    onClick={() => handlePageChange(currentPage + 1)} 
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
                     className="btn-outline-secondary btn-sm"
                   >

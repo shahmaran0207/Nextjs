@@ -5,15 +5,16 @@ import RoadTable from "@/component/roadTable";
 import SectionTable from "@/component/SectionTable";
 import LinkTable from "@/component/LinkTable";
 import { useMapFunction } from "../hook/useMapFunction";
+import { PageHeader } from "@/component/PageHeader";
 
 export default function KakaoMap() {
 
   const { selectedLinks, setSelectedLinks, handleLinkSelect, polylineMapRef, clearAllHighlights,
-        roadData, setRoadData, sectionData, linkData, setBusanLinkData, kakaoMapRef, existingLinkIdsRef,
-        handleSection, handleLink, enterLinkSelectMode, setLinkData, handleRoadWithSelect, isLinkSelectModeRef,
-        isLinkSelectMode, setisLinkSelectMode, showTrafficOnly, selectedRoadId, setSelectedRoadId,
-        selectedSectionId, handleSectionWithSelect, resetPolylines, handleLinkSelectRef,  
-   } = useMapFunction();
+    roadData, setRoadData, sectionData, linkData, setBusanLinkData, kakaoMapRef, existingLinkIdsRef,
+    handleSection, handleLink, enterLinkSelectMode, setLinkData, handleRoadWithSelect, isLinkSelectModeRef,
+    isLinkSelectMode, setisLinkSelectMode, showTrafficOnly, selectedRoadId, setSelectedRoadId,
+    selectedSectionId, handleSectionWithSelect, resetPolylines, handleLinkSelectRef,
+  } = useMapFunction();
 
   useEffect(() => {
     handleLinkSelectRef.current = handleLinkSelect;
@@ -50,7 +51,7 @@ export default function KakaoMap() {
       const incidentRes = await fetch("/api/GIS/Busan/Incident");
       const incidentRaw = await incidentRes.json();
       const incidentData: any[] = Array.isArray(incidentRaw) ? incidentRaw : [];
-      
+
       const getSpeedColor = (spd: number | undefined) => {
         if (spd === undefined || spd === null) return "#dddddd";
         if (spd >= 60) return "#00cc44";
@@ -120,7 +121,7 @@ export default function KakaoMap() {
             case "01": return "#ff4444"; // 사고
             case "02": return "#ff8800"; // 공사
             case "03": return "#ffcc00"; // 행사
-            default:   return "#888888";
+            default: return "#888888";
           }
         };
 
@@ -197,134 +198,18 @@ export default function KakaoMap() {
   return (
     <div style={{ minHeight: "100vh", background: "#0a0e1a", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {/* 다크 상단 헤더 */}
-      <header style={{
-        background: "rgba(10, 14, 26, 0.95)",
-        borderBottom: "1px solid rgba(56,189,248,0.15)",
-        padding: "0.75rem 1.5rem",
-        position: "sticky",
-        top: 0,
-        zIndex: 200,
-        backdropFilter: "blur(12px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          {/* 글로우 로고 */}
-          <div style={{
-            width: "32px",
-            height: "32px",
-            background: "linear-gradient(135deg, #38bdf8, #0ea5e9)",
-            borderRadius: "8px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 0 16px rgba(56,189,248,0.4)",
-            fontSize: "16px",
-          }}>
-            🗺️
-          </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#e8eaf0", lineHeight: 1 }}>
-              지도
-            </h1>
-            <p style={{ margin: 0, fontSize: "11px", color: "#38bdf8", lineHeight: 1.4, marginTop: "2px" }}>
-              부산 교통 정보
-            </p>
-          </div>
-        </div>
+      <PageHeader
+        icon="🗺️"
+        title="지도"
+        subtitle="부산 교통 정보"
 
-        <nav style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <a
-            href="/"
-            style={{
-              fontSize: "13px",
-              color: "#8b90a7",
-              textDecoration: "none",
-              padding: "6px 12px",
-              borderRadius: "8px",
-              border: "1px solid rgba(255,255,255,0.08)",
-              transition: "color 0.15s, border-color 0.15s",
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.color = "#e8eaf0";
-              (e.currentTarget as HTMLElement).style.borderColor = "rgba(56,189,248,0.3)";
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.color = "#8b90a7";
-              (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)";
-            }}
-          >
-            홈으로
-          </a>
-          <a
-            href="/list"
-            style={{
-              fontSize: "13px",
-              color: "#8b90a7",
-              textDecoration: "none",
-              padding: "6px 12px",
-              borderRadius: "8px",
-              border: "1px solid rgba(255,255,255,0.08)",
-              transition: "color 0.15s, border-color 0.15s",
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.color = "#e8eaf0";
-              (e.currentTarget as HTMLElement).style.borderColor = "rgba(56,189,248,0.3)";
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.color = "#8b90a7";
-              (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)";
-            }}
-          >
-            게시판
-          </a>
-          <a
-            href="/QnA"
-            style={{
-              fontSize: "13px",
-              color: "#8b90a7",
-              textDecoration: "none",
-              padding: "6px 12px",
-              borderRadius: "8px",
-              border: "1px solid rgba(255,255,255,0.08)",
-              transition: "color 0.15s, border-color 0.15s",
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.color = "#e8eaf0";
-              (e.currentTarget as HTMLElement).style.borderColor = "rgba(56,189,248,0.3)";
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.color = "#8b90a7";
-              (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)";
-            }}
-          >
-            Q&A
-          </a>
-          <a
-            href="/digitalTwin"
-            style={{
-              fontSize: "13px",
-              color: "#8b90a7",
-              textDecoration: "none",
-              padding: "6px 12px",
-              borderRadius: "8px",
-              border: "1px solid rgba(255,255,255,0.08)",
-              transition: "color 0.15s, border-color 0.15s",
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.color = "#e8eaf0";
-              (e.currentTarget as HTMLElement).style.borderColor = "rgba(56,189,248,0.3)";
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.color = "#8b90a7";
-              (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)";
-            }}
-          >
-            디지털트윈
-          </a>
-        </nav>
-      </header>
+        navLinks={[
+          { href: "/", label: "메인 페이지" },
+          { href: "/list", label: "게시판" },
+          { href: "/QnA", label: "Q&A" },
+          { href: "/digitalTwin", label: "디지털트윈" },
+        ]}
+      />
 
       <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
         <div ref={mapRef} style={{ width: "100%", height: "100%", position: "absolute", top: 0, left: 0 }} />

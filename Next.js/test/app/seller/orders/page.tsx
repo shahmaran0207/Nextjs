@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 import "../../Shopping/shopping.css";
+import { PageHeader } from "@/component/PageHeader";
 
 interface SellerOrderItem {
   id: number;
@@ -80,11 +81,11 @@ export default function SellerOrdersPage() {
       }
 
       alert("운송장 번호가 등록되어 배송중 처리되었습니다.");
-      
+
       // Update local state
-      setItems(prev => prev.map(item => 
-        item.id === orderItemId 
-          ? { ...item, tracking_number, item_status: "SHIPPING" } 
+      setItems(prev => prev.map(item =>
+        item.id === orderItemId
+          ? { ...item, tracking_number, item_status: "SHIPPING" }
           : item
       ));
     } catch (err: any) {
@@ -116,23 +117,21 @@ export default function SellerOrdersPage() {
   return (
     <div className="page-container shop-bg">
       <div className="bg-grid" />
-      <header className="shopping-header">
-        <div className="flex-row gap-sm">
-          <div className="logo-icon">🚚</div>
-          <div>
-            <h1 className="header-title text-primary">주문/배송 관리</h1>
-            <p className="header-subtitle text-accent">판매된 상품의 배송 상태 업데이트</p>
-          </div>
-        </div>
-        <nav className="flex-row gap-xs">
-          <Link href="/mypage" className="nav-link">마이페이지</Link>
-          <Link href="/myproducts" className="nav-link">나의 등록 상품</Link>
-        </nav>
-      </header>
+      <PageHeader
+        icon="🚚"
+        title="주문/배송 관리"
+        subtitle="판매된 상품의 배송 상태 업데이트"
+
+        navLinks={[
+          { href: "/", label: "메인 페이지" },
+          { href: "/mypage", label: "마이페이지" },
+          { href: "/myproducts", label: "나의 등록 상품" },
+        ]}
+      />
 
       <main className="page-main">
         <div className="content-wrapper max-w-1100">
-          
+
           <div className="title-banner shop-surface border-default border-left-accent mb-1rem">
             <div>
               <div className="flex-row-center gap-8 mb-6px">
@@ -209,15 +208,15 @@ export default function SellerOrdersPage() {
                         <td className="td-cell">
                           {item.item_status === "PAID" ? (
                             <div className="flex-row gap-xs">
-                              <input 
-                                type="text" 
-                                className="input-field input-sm" 
+                              <input
+                                type="text"
+                                className="input-field input-sm"
                                 style={{ width: "140px" }}
                                 placeholder="운송장 번호 입력"
                                 value={trackingInputs[item.id] || ""}
                                 onChange={(e) => setTrackingInputs({ ...trackingInputs, [item.id]: e.target.value })}
                               />
-                              <button 
+                              <button
                                 className="btn-accent btn-sm"
                                 onClick={() => handleTrackingSubmit(item.id)}
                               >
@@ -227,7 +226,7 @@ export default function SellerOrdersPage() {
                           ) : item.item_status === "RETURN_REQUEST" ? (
                             <div className="flex-col gap-xs">
                               <span className="text-12 text-muted">운송장: {item.tracking_number}</span>
-                              <button 
+                              <button
                                 className="btn-danger btn-sm"
                                 onClick={() => handleReturnApprove(item.id)}
                               >

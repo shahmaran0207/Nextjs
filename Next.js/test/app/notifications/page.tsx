@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 import "../Shopping/shopping.css";
+import { PageHeader } from "@/component/PageHeader";
 
 interface Notification {
   id: number;
@@ -74,21 +75,17 @@ export default function NotificationsPage() {
   return (
     <div className="page-container shop-bg">
       <div className="bg-grid" />
-      <header className="shopping-header">
-        <div className="flex-row-center gap-12">
-          <div className="logo-icon">🔔</div>
-          <div>
-            <h1 className="header-title text-primary">알림 센터</h1>
-            <p className="header-subtitle text-accent">
-              {unreadCount > 0 ? `읽지 않은 알림 ${unreadCount}개` : "모든 알림을 확인했습니다"}
-            </p>
-          </div>
-        </div>
-        <nav className="flex-row gap-xs">
-          <Link href="/mypage" className="nav-link">마이페이지</Link>
-          <Link href="/Shopping" className="nav-link">쇼핑</Link>
-        </nav>
-      </header>
+      <PageHeader
+        icon="🔔"
+        title="알림 센터"
+        subtitle={unreadCount > 0 ? `읽지 않은 알림 ${unreadCount}개` : "모든 알림을 확인했습니다"}
+
+        navLinks={[
+          { href: "/", label: "메인 페이지" },
+          { href: "/mypage", label: "마이페이지" },
+          { href: "/Shopping", label: "쇼핑" },
+        ]}
+      />
 
       <main className="page-main">
         <div className="content-wrapper max-w-900">

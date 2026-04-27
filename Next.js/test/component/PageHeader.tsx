@@ -1,5 +1,6 @@
 import { LogoutButton } from "./LogoutButton";
 import { NotificationBell } from "./NotificationBell";
+import { ReactNode } from "react";
 
 interface NavLink {
     href: string;
@@ -11,6 +12,7 @@ interface PageHeaderProps {
     title: string;
     subtitle: string;
     navLinks?: NavLink[];
+    children?: ReactNode;
 }
 
 const defaultNavLinks: NavLink[] = [
@@ -23,6 +25,7 @@ export function PageHeader({
     title,
     subtitle,
     navLinks = defaultNavLinks,
+    children
 }: PageHeaderProps) {
     return (
         <header style={{
@@ -62,6 +65,7 @@ export function PageHeader({
             </div>
 
             <nav style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                {children}
                 {navLinks.map(({ href, label }) => (
                     <a
                         key={href}

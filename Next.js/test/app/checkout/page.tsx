@@ -7,6 +7,7 @@ import "../Shopping/shopping.css";
 import axios from "axios";
 import DaumPostcodeEmbed from "react-daum-postcode";
 import { RequestPayParams, RequestPayResponse } from "@/types/paymentType";
+import { PageHeader } from "@/component/PageHeader";
 
 interface CheckoutItem {
   product_id: number;
@@ -36,7 +37,7 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState("");
   const [addressDetail, setAddressDetail] = useState("");
   const [message, setMessage] = useState("");
-  
+
   // 우편번호 모달 상태
   const [isPostcodeOpen, setIsPostcodeOpen] = useState(false);
 
@@ -44,7 +45,7 @@ export default function CheckoutPage() {
     const storedItems = sessionStorage.getItem("checkout_items");
     const storedFromCart = sessionStorage.getItem("checkout_from_cart");
     const storedIsGift = sessionStorage.getItem("checkout_is_gift");
-    
+
     if (storedItems) {
       setItems(JSON.parse(storedItems));
     }
@@ -54,7 +55,7 @@ export default function CheckoutPage() {
     if (storedIsGift === "true") {
       setIsGift(true);
     }
-    
+
     // 사용자 포인트 조회
     const token = localStorage.getItem("token");
     if (token) {
@@ -175,12 +176,12 @@ export default function CheckoutPage() {
             shipping_message: message,
             is_gift: isGift
           });
-          
+
           // 결제 성공 후 세션스토리지 초기화
           sessionStorage.removeItem("checkout_items");
           sessionStorage.removeItem("checkout_from_cart");
           sessionStorage.removeItem("checkout_is_gift");
-          
+
           alert("결제 성공!");
           window.location.href = "/orders";
         } catch (err) {
@@ -205,22 +206,20 @@ export default function CheckoutPage() {
   return (
     <div className="page-container shop-bg">
       <div className="bg-grid" />
-      <header className="shopping-header">
-        <div className="flex-row-center gap-12">
-          <div className="logo-icon">💳</div>
-          <div>
-            <h1 className="header-title text-primary">주문서 작성</h1>
-            <p className="header-subtitle text-accent">배송지 정보 입력 및 결제</p>
-          </div>
-        </div>
-        <nav className="flex-row-center gap-2">
-          <Link href="/cart" className="nav-link">장바구니로 돌아가기</Link>
-        </nav>
-      </header>
+      <PageHeader
+        icon="💳"
+        title="주문서 작성"
+        subtitle="배송지 정보 입력 및 결제"
+
+        navLinks={[
+          { href: "/", label: "메인 페이지" },
+          { href: "/cart", label: "장바구니로 돌아가기" },
+        ]}
+      />
 
       <main className="page-main">
         <div className="content-wrapper max-w-900 flex-col gap-2rem">
-          
+
           {/* 상품 정보 영역 */}
           <div className="card-container shop-surface border-default">
             <div className="title-banner">
@@ -267,37 +266,37 @@ export default function CheckoutPage() {
             <div className="p-1-5rem flex-col gap-1rem">
               <div className="flex-col gap-6px">
                 <label className="text-13 text-muted">성명 <span className="text-red">*</span></label>
-                <input 
-                  type="text" 
-                  value={receiverName} 
-                  onChange={e => setReceiverName(e.target.value)} 
-                  className="search-input" 
-                  placeholder="이름을 입력하세요" 
+                <input
+                  type="text"
+                  value={receiverName}
+                  onChange={e => setReceiverName(e.target.value)}
+                  className="search-input"
+                  placeholder="이름을 입력하세요"
                 />
               </div>
               <div className="flex-col gap-6px">
                 <label className="text-13 text-muted">연락처 <span className="text-red">*</span></label>
-                <input 
-                  type="text" 
-                  value={receiverPhone} 
-                  onChange={e => setReceiverPhone(e.target.value)} 
-                  className="search-input" 
-                  placeholder="010-0000-0000" 
+                <input
+                  type="text"
+                  value={receiverPhone}
+                  onChange={e => setReceiverPhone(e.target.value)}
+                  className="search-input"
+                  placeholder="010-0000-0000"
                 />
               </div>
               <div className="flex-col gap-6px">
                 <label className="text-13 text-muted">주소 <span className="text-red">*</span></label>
                 <div className="flex-row gap-8px">
-                  <input 
-                    type="text" 
-                    value={zipcode} 
-                    readOnly 
-                    className="search-input w-120" 
-                    placeholder="우편번호" 
+                  <input
+                    type="text"
+                    value={zipcode}
+                    readOnly
+                    className="search-input w-120"
+                    placeholder="우편번호"
                   />
-                  <button 
-                    type="button" 
-                    onClick={() => setIsPostcodeOpen(true)} 
+                  <button
+                    type="button"
+                    onClick={() => setIsPostcodeOpen(true)}
                     className="btn-outline-secondary"
                   >
                     우편번호 찾기
@@ -305,9 +304,9 @@ export default function CheckoutPage() {
                 </div>
                 {isPostcodeOpen && (
                   <div className="postcode-wrapper">
-                    <button 
-                      type="button" 
-                      onClick={() => setIsPostcodeOpen(false)} 
+                    <button
+                      type="button"
+                      onClick={() => setIsPostcodeOpen(false)}
                       className="postcode-close-btn"
                     >
                       닫기 ✕
@@ -315,58 +314,58 @@ export default function CheckoutPage() {
                     <DaumPostcodeEmbed onComplete={handleCompletePostcode} className="h-400" />
                   </div>
                 )}
-                <input 
-                  type="text" 
-                  value={address} 
-                  readOnly 
-                  className="search-input mt-4px" 
-                  placeholder="기본 주소" 
+                <input
+                  type="text"
+                  value={address}
+                  readOnly
+                  className="search-input mt-4px"
+                  placeholder="기본 주소"
                 />
-                <input 
-                  type="text" 
-                  value={addressDetail} 
-                  onChange={e => setAddressDetail(e.target.value)} 
-                  className="search-input mt-4px" 
-                  placeholder="상세 주소를 입력해주세요" 
+                <input
+                  type="text"
+                  value={addressDetail}
+                  onChange={e => setAddressDetail(e.target.value)}
+                  className="search-input mt-4px"
+                  placeholder="상세 주소를 입력해주세요"
                 />
               </div>
 
               {isGift ? (
                 <div className="flex-col gap-6px">
                   <label className="text-13 text-muted">선물 메시지</label>
-                  <textarea 
-                    value={message} 
-                    onChange={e => setMessage(e.target.value)} 
-                    className="search-input" 
-                    placeholder="선물과 함께 보낼 메시지를 작성해보세요 (선택)" 
-                    rows={2} 
+                  <textarea
+                    value={message}
+                    onChange={e => setMessage(e.target.value)}
+                    className="search-input"
+                    placeholder="선물과 함께 보낼 메시지를 작성해보세요 (선택)"
+                    rows={2}
                     style={{ resize: "vertical" }}
                   />
                 </div>
               ) : (
                 <div className="flex-col gap-6px">
                   <label className="text-13 text-muted">배송 요청사항</label>
-                  <input 
-                    type="text" 
-                    value={message} 
-                    onChange={e => setMessage(e.target.value)} 
-                    className="search-input" 
-                    placeholder="문 앞에 놓아주세요" 
+                  <input
+                    type="text"
+                    value={message}
+                    onChange={e => setMessage(e.target.value)}
+                    className="search-input"
+                    placeholder="문 앞에 놓아주세요"
                   />
                 </div>
               )}
             </div>
-            
+
             <div className="p-1-5rem border-top-default flex-col gap-1rem">
               <div className="title-banner p-0">
                 <h2 className="margin-0 text-primary text-16-bold">할인 및 적립</h2>
               </div>
-              
+
               <div className="flex-col gap-6px">
                 <label className="text-13 text-muted">쿠폰 할인</label>
-                <select 
-                  className="search-input" 
-                  value={selectedCouponId || ""} 
+                <select
+                  className="search-input"
+                  value={selectedCouponId || ""}
                   onChange={e => setSelectedCouponId(e.target.value ? Number(e.target.value) : null)}
                 >
                   <option value="">사용 안함</option>
@@ -381,18 +380,18 @@ export default function CheckoutPage() {
               <div className="flex-col gap-6px">
                 <label className="text-13 text-muted">포인트 사용 (보유: {availablePoints.toLocaleString()} P)</label>
                 <div className="flex-row gap-8px">
-                  <input 
-                    type="number" 
-                    value={usePoints} 
+                  <input
+                    type="number"
+                    value={usePoints}
                     onChange={e => {
                       const val = Math.max(0, Math.min(Number(e.target.value), availablePoints, totalPrice + shippingFee));
                       setUsePoints(val);
-                    }} 
-                    className="search-input flex-1" 
+                    }}
+                    className="search-input flex-1"
                   />
-                  <button 
-                    type="button" 
-                    onClick={handleUseAllPoints} 
+                  <button
+                    type="button"
+                    onClick={handleUseAllPoints}
                     className="btn-outline-secondary"
                   >
                     전액 사용

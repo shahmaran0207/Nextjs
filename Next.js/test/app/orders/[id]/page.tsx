@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 import "../../Shopping/shopping.css";
+import { PageHeader } from "@/component/PageHeader";
 
 interface OrderItem {
   id: number;
@@ -35,7 +36,7 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const id = params.id as string;
   const { email } = useAuthGuard();
-  
+
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +79,7 @@ export default function OrderDetailPage() {
         });
       }
       const data = await res.json();
-      
+
       if (res.ok) {
         alert(`${actionText} 처리되었습니다.`);
         setOrder(data.order);
@@ -124,22 +125,20 @@ export default function OrderDetailPage() {
   return (
     <div className="page-container shop-bg">
       <div className="bg-grid" />
-      <header className="shopping-header">
-        <div className="flex-row-center gap-12">
-          <div className="logo-icon">📦</div>
-          <div>
-            <h1 className="header-title text-primary">주문 상세</h1>
-            <p className="header-subtitle text-accent">{new Date(order.ordered_at).toLocaleString('ko-KR')}</p>
-          </div>
-        </div>
-        <nav className="flex-row-center gap-2">
-          <Link href="/orders" className="nav-link">주문 내역으로</Link>
-        </nav>
-      </header>
+      <PageHeader
+        icon="📦"
+        title="주문 상세"
+        subtitle={new Date(order.ordered_at).toLocaleString('ko-KR')}
+
+        navLinks={[
+          { href: "/", label: "메인 페이지" },
+          { href: "/orders", label: "주문 내역으로" },
+        ]}
+      />
 
       <main className="page-main">
         <div className="content-wrapper max-w-900 flex-col gap-lg">
-          
+
           {/* 상단 주문 요약 */}
           <div className="card-container shop-surface border-default p-md flex-col gap-md">
             <div className="flex-justify-between">
@@ -152,28 +151,28 @@ export default function OrderDetailPage() {
                 <span className="status-badge active p-sm text-16">{statusText}</span>
               </div>
             </div>
-            
+
             {/* 상태 변경 액션 버튼 */}
             <div className="flex-justify-end gap-xs border-top-default pt-md mt-sm">
               {(order.order_status === "PAID" || order.order_status === "PENDING") && (
-                <button 
-                  onClick={() => updateOrderStatus("CANCEL")} 
+                <button
+                  onClick={() => updateOrderStatus("CANCEL")}
                   className="btn-outline-secondary"
                 >
                   주문 취소
                 </button>
               )}
               {order.order_status === "SHIPPED" && (
-                <button 
-                  onClick={() => updateOrderStatus("CONFIRM")} 
+                <button
+                  onClick={() => updateOrderStatus("CONFIRM")}
                   className="btn-success"
                 >
                   상품 수령 (구매 확정)
                 </button>
               )}
               {order.order_status === "DELIVERED" && (
-                <button 
-                  onClick={() => updateOrderStatus("RETURN_REQUEST")} 
+                <button
+                  onClick={() => updateOrderStatus("RETURN_REQUEST")}
                   className="btn-danger"
                   style={{ backgroundColor: "rgba(239, 68, 68, 0.2)", color: "#ef4444", border: "1px solid #ef4444" }}
                 >
@@ -198,8 +197,8 @@ export default function OrderDetailPage() {
               </thead>
               <tbody>
                 {order.items.map((item, idx) => (
-                  <tr 
-                    key={item.id} 
+                  <tr
+                    key={item.id}
                     className={`product-row ${idx % 2 === 0 ? "td-cell-even" : "td-cell-odd"} cursor-pointer`}
                     onClick={() => router.push(`/Shopping/${item.product_id}`)}
                   >

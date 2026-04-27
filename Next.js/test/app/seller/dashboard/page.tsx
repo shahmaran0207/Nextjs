@@ -6,6 +6,7 @@ import Link from "next/link";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import "../../Shopping/shopping.css";
 import axios from "axios";
+import { PageHeader } from "@/component/PageHeader";
 
 export default function SellerDashboardPage() {
   const { email } = useAuthGuard();
@@ -38,33 +39,30 @@ export default function SellerDashboardPage() {
   return (
     <div className="page-container shop-bg">
       <div className="bg-grid" />
-      <header className="shopping-header">
-        <div className="flex-row-center gap-12">
-          <div className="logo-icon">📈</div>
-          <div>
-            <h1 className="header-title text-primary">판매자 매출 통계</h1>
-            <p className="header-subtitle text-accent">최근 6개월간의 매출 및 상품 판매 추이입니다</p>
-          </div>
-        </div>
-        <nav className="flex-row-center gap-2">
-          <Link href="/seller/orders" className="nav-link">주문 관리</Link>
-          <Link href="/myproducts" className="nav-link">내 상품 관리</Link>
-          <Link href="/" className="nav-link">홈으로</Link>
-        </nav>
-      </header>
+      <PageHeader
+        icon="📈"
+        title="판매자 매출 통계"
+        subtitle="최근 6개월간의 매출 및 상품 판매 추이입니다"
+
+        navLinks={[
+          { href: "/", label: "메인 페이지" },
+          { href: "/seller/orders", label: "주문 관리" },
+          { href: "/myproducts", label: "내 상품 관리" },
+        ]}
+      />
 
       <main className="page-main">
         <div className="content-wrapper max-w-1100">
-          
+
           <div className="card-container shop-surface border-default p-md">
             <div className="flex-row-between mb-md">
               <h2 className="text-16-bold text-primary margin-0">
                 {viewType === "amount" ? "월별 총 판매 금액 추이" : "상품별 월별 판매 건수 추이"}
               </h2>
-              <select 
-                value={viewType} 
-                onChange={e => setViewType(e.target.value as "amount" | "count")} 
-                className="input-field" 
+              <select
+                value={viewType}
+                onChange={e => setViewType(e.target.value as "amount" | "count")}
+                className="input-field"
                 style={{ width: "200px" }}
               >
                 <option value="amount">월별 판매 금액 (원)</option>
@@ -79,7 +77,7 @@ export default function SellerDashboardPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#2e3247" />
                     <XAxis dataKey="month" stroke="#8b90a7" tick={{ fill: '#8b90a7' }} />
                     <YAxis stroke="#8b90a7" tick={{ fill: '#8b90a7' }} />
-                    <Tooltip 
+                    <Tooltip
                       contentStyle={{ backgroundColor: '#1a1d27', borderColor: '#2e3247', color: '#e8eaf0' }}
                       itemStyle={{ color: '#38bdf8' }}
                     />
@@ -96,20 +94,20 @@ export default function SellerDashboardPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#2e3247" />
                       <XAxis dataKey="month" stroke="#8b90a7" tick={{ fill: '#8b90a7' }} />
                       <YAxis stroke="#8b90a7" tick={{ fill: '#8b90a7' }} />
-                      <Tooltip 
+                      <Tooltip
                         contentStyle={{ backgroundColor: '#1a1d27', borderColor: '#2e3247', color: '#e8eaf0' }}
                       />
                       <Legend />
                       {productsList.map((productName, idx) => (
-                        <Line 
+                        <Line
                           key={idx}
-                          type="monotone" 
-                          dataKey={productName} 
-                          name={productName} 
-                          stroke={colors[idx % colors.length]} 
-                          strokeWidth={2} 
-                          dot={{ r: 4 }} 
-                          activeDot={{ r: 6 }} 
+                          type="monotone"
+                          dataKey={productName}
+                          name={productName}
+                          stroke={colors[idx % colors.length]}
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          activeDot={{ r: 6 }}
                         />
                       ))}
                     </LineChart>

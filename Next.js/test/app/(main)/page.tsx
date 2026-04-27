@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { PageHeader } from "@/component/PageHeader";
 
@@ -35,6 +36,10 @@ const naverLinkItem = { href: "/settings", label: "네이버 계정 연동", ico
 
 export default function Page() {
   const [navItems, setNavItems] = useState(baseNavItems);
+  const [weather, setWeather] = useState<any>(null);
+  const [airQuality, setAirQuality] = useState<any>(null);
+  const [moodTitle, setMoodTitle] = useState("");
+  const [moodItems, setMoodItems] = useState<{name: string, icon: string, link: string}[]>([]);
 
   useEffect(() => {
     // URL 파라미터에서 토큰 확인 및 저장 (네이버 로그인 콜백 처리)
@@ -69,7 +74,69 @@ export default function Page() {
       }
     };
 
+    const fetchEnvironmentData = async () => {
+      try {
+        const [weatherRes, airRes] = await Promise.all([
+          fetch("/api/weather/busan"),
+          fetch("/api/airquality/busan"),
+        ]);
+        
+        let wData = null;
+        let aData = null;
+        
+        if (weatherRes.ok) {
+          wData = await weatherRes.json();
+          setWeather(wData);
+        }
+        if (airRes.ok) {
+          aData = await airRes.json();
+          setAirQuality(aData);
+        }
+
+        // 상황(Mood) 추천 로직
+        if (wData && wData.rainfall > 0) {
+          setMoodTitle("☔ 비 오는 날, 쾌적한 실내를 위한 추천");
+          setMoodItems([
+            { name: "제습기", icon: "🌬️", link: "/Shopping?search=제습기" },
+            { name: "암막커튼", icon: "🪟", link: "/Shopping?search=커튼" },
+            { name: "홈카페 세트", icon: "☕", link: "/Shopping?search=커피" },
+          ]);
+        } else if (aData && (aData.pm10 > 80 || aData.pm25 > 35)) {
+          setMoodTitle("😷 미세먼지 나쁨! 기관지 건강을 챙기세요");
+          setMoodItems([
+            { name: "공기청정기", icon: "🌀", link: "/Shopping?search=공기청정기" },
+            { name: "KF94 마스크", icon: "😷", link: "/Shopping?search=마스크" },
+            { name: "도라지 배즙", icon: "🍐", link: "/Shopping?search=도라지" },
+          ]);
+        } else if (wData && wData.temperature < 5) {
+          setMoodTitle("❄️ 너무 추운 오늘, 따뜻한 외출 준비");
+          setMoodItems([
+            { name: "구스다운 패딩", icon: "🧥", link: "/Shopping?search=패딩" },
+            { name: "발열 내의", icon: "👕", link: "/Shopping?search=내의" },
+            { name: "휴대용 핫팩", icon: "🔥", link: "/Shopping?search=핫팩" },
+          ]);
+        } else if (wData && wData.temperature > 28) {
+          setMoodTitle("☀️ 무더운 날씨, 시원하게 이겨내기");
+          setMoodItems([
+            { name: "휴대용 선풍기", icon: "🎐", link: "/Shopping?search=선풍기" },
+            { name: "쿨링 넥밴드", icon: "🧊", link: "/Shopping?search=쿨링" },
+            { name: "선크림", icon: "🧴", link: "/Shopping?search=선크림" },
+          ]);
+        } else {
+          setMoodTitle("🌿 날씨가 너무 좋네요! 나들이 어떠세요?");
+          setMoodItems([
+            { name: "피크닉 매트", icon: "🧺", link: "/Shopping?search=매트" },
+            { name: "선글라스", icon: "🕶️", link: "/Shopping?search=선글라스" },
+            { name: "블루투스 스피커", icon: "🎵", link: "/Shopping?search=스피커" },
+          ]);
+        }
+      } catch (err) {
+        console.error("날씨/미세먼지 로드 실패:", err);
+      }
+    };
+
     checkUserInfo();
+    fetchEnvironmentData();
   }, []);
 
   return (
@@ -115,6 +182,50 @@ export default function Page() {
             </p>
           </div>
 
+          {/* 상황 기반 무드 큐레이션 */}
+          {moodTitle && (
+            <div style={{
+              background: dark.surface,
+              borderRadius: "16px",
+              border: `1px solid ${dark.border}`,
+              padding: "1.5rem",
+              marginBottom: "2rem",
+              position: "relative",
+              overflow: "hidden",
+            }}>
+              <div style={{
+                position: "absolute", top: 0, left: 0, width: "4px", height: "100%", background: "linear-gradient(180deg, #38bdf8, #0ea5e9)",
+              }} />
+              <h2 style={{ fontSize: "16px", fontWeight: 700, color: dark.textPrimary, margin: "0 0 1rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                <span>✨</span> AI 라이프스타일 큐레이션
+              </h2>
+              <p style={{ fontSize: "14px", color: dark.textSecondary, marginBottom: "1rem" }}>
+                {moodTitle}
+              </p>
+              <div style={{ display: "flex", gap: "1rem", overflowX: "auto", paddingBottom: "0.5rem" }}>
+                {moodItems.map((item, idx) => (
+                  <Link key={idx} href={item.link} style={{
+                    minWidth: "120px", background: dark.surface2, border: `1px solid ${dark.border}`,
+                    borderRadius: "12px", padding: "1rem", textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px",
+                    transition: "all 0.2s"
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLAnchorElement).style.borderColor = dark.accent;
+                    (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLAnchorElement).style.borderColor = dark.border;
+                    (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
+                  }}
+                  >
+                    <span style={{ fontSize: "28px" }}>{item.icon}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 600, color: dark.textPrimary }}>{item.name}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* 메뉴 그리드 */}
           <div style={{
             display: "grid",
@@ -122,7 +233,7 @@ export default function Page() {
             gap: "1rem",
           }}>
             {navItems.map((item) => (
-              <a
+              <Link
                 key={item.href}
                 href={item.href}
                 style={{
@@ -150,7 +261,7 @@ export default function Page() {
                 <div style={{ fontSize: "12px", color: dark.textMuted }}>
                   {item.desc}
                 </div>
-              </a>
+              </Link>
             ))}
           </div>
         </div>

@@ -4,12 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
-import { dark } from "../QnA/[id]/component/theme";
-import { DarkTheme } from "@/types/shoppingType";
 import "./shopping.css";
 import { NotificationBell } from "@/component/NotificationBell";
+import { PageHeader } from "@/component/PageHeader";
 
-// 확장된 Product 타입 (rating, reviewCount, category 추가됨)
 interface Product {
   id: number;
   name: string;
@@ -33,7 +31,13 @@ export default function ShoppingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("search") || "";
+    }
+    return "";
+  });
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState("latest");
   const [recentProducts, setRecentProducts] = useState<Product[]>([]);
@@ -91,7 +95,7 @@ export default function ShoppingPage() {
           .filter(Boolean) as Product[];
         setRecentProducts(ordered);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const toggleWishlist = async (e: React.MouseEvent, productId: number) => {
@@ -124,20 +128,16 @@ export default function ShoppingPage() {
   return (
     <div className="page-container shop-bg">
       <div className="bg-grid" />
-      <header className="shopping-header">
-        <div className="flex-row gap-sm">
-          <div className="logo-icon">🛍️</div>
-          <div>
-            <h1 className="header-title text-primary">Shopping Mall</h1>
-            <p className="header-subtitle text-accent">최신 상품을 만나보세요</p>
-          </div>
-        </div>
-        <nav className="flex-row gap-xs" style={{ alignItems: "center" }}>
-          <Link href="/compare" className="nav-link" style={{ background: "rgba(56,189,248,0.1)", color: "#38bdf8", fontWeight: "bold" }}>저울 비교하기</Link>
-          <Link href="/" className="nav-link">홈으로</Link>
-          <NotificationBell />
-        </nav>
-      </header>
+      <PageHeader
+        icon="🛍️"
+        title="Shopping Mall"
+        subtitle="최신 상품을 만나보세요"
+
+        navLinks={[
+          { href: "/", label: "메인 페이지" },
+          { href: "/compare", label: "저울 비교하기" },
+        ]}
+      />
 
       <main className="page-main">
         <div className="content-wrapper max-w-1100">
@@ -221,7 +221,7 @@ export default function ShoppingPage() {
                           onClick={() => router.push(`/Shopping/${product.id}`)}
                         >
                           <td className="td-cell text-center">
-                            <button 
+                            <button
                               className={`wish-btn ${isWished ? 'is-active' : ''}`}
                               onClick={(e) => toggleWishlist(e, Number(product.id))}
                             >
