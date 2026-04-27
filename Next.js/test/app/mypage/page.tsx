@@ -146,6 +146,18 @@ export default function MyPage() {
                 </div>
               </Link>
 
+              {/* 게이미피케이션 지갑 카드 (Phase 2 신규) */}
+              <Link href="/mypage/wallet" className="text-decoration-none">
+                <div className="card-container shop-surface border-default menu-card" style={{ borderColor: '#8b5cf6', background: 'linear-gradient(145deg, rgba(30,41,59,1) 0%, rgba(139,92,246,0.1) 100%)' }}>
+                  <div className="flex-row-between mb-sm">
+                    <div style={{ fontSize: "32px" }}>🎫</div>
+                    <div className="text-24-bold" style={{ color: '#c084fc' }}>MAP</div>
+                  </div>
+                  <h3 className="text-16-bold text-primary margin-0">맵 쿠폰 지갑</h3>
+                  <p className="text-13 text-secondary mt-6px margin-0">트윈맵에서 획득한 쿠폰 및 업적 배지.</p>
+                </div>
+              </Link>
+
               {/* 나의 리뷰 카드 */}
               <Link href="/myreviews" className="text-decoration-none">
                 <div className="card-container shop-surface border-default menu-card">

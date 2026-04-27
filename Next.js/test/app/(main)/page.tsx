@@ -20,15 +20,16 @@ const baseNavItems = [
   { href: "/list", label: "게시글 목록", icon: "📋", desc: "전체 게시글을 확인하세요" },
   { href: "/map", label: "지도", icon: "🗺️", desc: "지도 기반 정보를 탐색하세요" },
   { href: "/digitalTwin", label: "디지털트윈", icon: "🏙️", desc: "디지털 트윈 시뮬레이션" },
-  { href: "/index", label: "Todo List", icon: "✅", desc: "할 일을 관리하세요" },
   { href: "/FCM", label: "FCM", icon: "🔔", desc: "푸시 알림 설정" },
   { href: "/chat", label: "웹소켓 채팅", icon: "💬", desc: "실시간 채팅에 참여하세요" },
   { href: "/QnA", label: "QnA", icon: "❓", desc: "질문과 답변을 확인하세요" },
   { href: "/SeoulTod", label: "서울 TOD", icon: "🚇", desc: "서울 대중교통 정보" },
   { href: "/api-docs", label: "API 문서", icon: "📃", desc: "Swagger 파일" },
   { href: "/ADMIN", label: "ADMIN PAGE", icon: "🔒", desc: "ADMIN PAGE" },
+  { href: "/admin-dashboard", label: "ADMIN DASHBOARD", icon: "🔒", desc: "ADMIN DASHBOARD" },
   { href: "/Shopping", label: "상품", icon: "🎁", desc: "상품 페이지" },
   { href: "/mypage", label: "마이페이지", icon: "👤", desc: "나의 쇼핑 활동" },
+  { href: "/todo", label: "TODO", icon: "📋", desc: "todo list" },
 ];
 
 const naverLinkItem = { href: "/settings", label: "네이버 계정 연동", icon: "🍀", desc: "NAVER" };

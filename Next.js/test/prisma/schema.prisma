@@ -147,6 +147,21 @@ model users {
   ROLE           String?          @db.VarChar(1000)
   points         Decimal          @default(0) @db.Decimal(12, 2)
   refresh_tokens refresh_tokens[]
+  todos          todos[]
+}
+
+model todos {
+  id           Int       @id @default(autoincrement())
+  user_id      Int
+  title        String    @db.VarChar(255)
+  is_completed Boolean   @default(false)
+  deadline     DateTime? @db.Timestamp(6)
+  created_at   DateTime  @default(now()) @db.Timestamp(6)
+  updated_at   DateTime  @default(now()) @updatedAt @db.Timestamp(6)
+
+  users        users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 model point_logs {
