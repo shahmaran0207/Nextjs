@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/component/PageHeader";
-import "../app/Shopping/shopping.css";
-import { NotificationBell } from "@/component/NotificationBell";
+import "../Shopping/shopping.css";
 
 export default function ComparePage() {
   const [products, setProducts] = useState<any[]>([]);

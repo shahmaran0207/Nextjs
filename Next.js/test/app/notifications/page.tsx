@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
-import "../app/Shopping/shopping.css";
+import "../Shopping/shopping.css";
 
 interface Notification {
   id: number;

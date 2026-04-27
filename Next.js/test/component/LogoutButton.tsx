@@ -8,10 +8,30 @@ export function LogoutButton() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     useEffect(() => {
-        const token = localStorage.getItem("token");
-        // token이 있거나 쿠키 검증을 위해 /api/auth/Me를 찔러볼 수 있지만
-        // 간단히 토큰 여부로 판단
-        setIsLoggedIn(!!token);
+        // URL에서 토큰을 직접 확인 (컴포넌트 마운트 순서 문제 해결)
+        const params = new URLSearchParams(window.location.search);
+        const urlToken = params.get("token");
+        if (urlToken) {
+            localStorage.setItem("token", urlToken);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        const checkAuth = () => {
+            const token = localStorage.getItem("token");
+            setIsLoggedIn(!!token);
+        };
+
+        // 초기 상태 확인
+        checkAuth();
+
+        // 다른 탭이나 같은 탭에서의 스토리지 변경 감지
+        window.addEventListener("storage", checkAuth);
+        window.addEventListener("loginStateChange", checkAuth);
+
+        return () => {
+            window.removeEventListener("storage", checkAuth);
+            window.removeEventListener("loginStateChange", checkAuth);
+        };
     }, []);
 
     const handleClick = () => {

@@ -37,6 +37,15 @@ export default function Page() {
   const [navItems, setNavItems] = useState(baseNavItems);
 
   useEffect(() => {
+    // URL 파라미터에서 토큰 확인 및 저장 (네이버 로그인 콜백 처리)
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get("token");
+    if (urlToken) {
+      localStorage.setItem("token", urlToken);
+      // URL 파라미터 정리
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     // 사용자 정보 확인하여 네이버 연동 여부 체크
     const checkUserInfo = async () => {
       const token = localStorage.getItem("token");

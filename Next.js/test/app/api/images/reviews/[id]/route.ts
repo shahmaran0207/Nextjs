@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    
+
     if (!id || isNaN(Number(id))) {
       return new NextResponse("Invalid ID", { status: 400 });
     }
@@ -21,7 +21,10 @@ export async function GET(
       return new NextResponse("Image not found", { status: 404 });
     }
 
-    return new NextResponse(review.image_data, {
+    // ✅ Uint8Array → ArrayBuffer로 변환
+    const buffer = Buffer.from(review.image_data);
+
+    return new NextResponse(buffer, {
       headers: {
         "Content-Type": review.image_type || "image/jpeg",
         "Cache-Control": "public, max-age=86400",

@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import postStyle from "../hook/postStyle";
 
-export default function Login() {
+// ✅ useSearchParams를 사용하는 부분만 별도 컴포넌트로 분리
+function LoginInner() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
@@ -14,21 +15,17 @@ export default function Login() {
     const searchParams = useSearchParams();
     const { labelStyle, inputStyle, dark } = postStyle();
 
-    // 사용자 정보 확인 (네이버 연동 여부 체크)
     useEffect(() => {
         const checkUserInfo = async () => {
             const token = localStorage.getItem("token");
             if (token) {
                 try {
                     const response = await fetch("/api/auth/Me", {
-                        headers: {
-                            "Authorization": `Bearer ${token}`
-                        }
+                        headers: { "Authorization": `Bearer ${token}` }
                     });
                     if (response.ok) {
                         const data = await response.json();
                         setUserInfo(data);
-                        // 네이버 ID가 있으면 네이버 로그인 버튼 숨기기
                         setShowNaverLogin(!data.naver_id);
                     }
                 } catch (error) {
@@ -36,11 +33,9 @@ export default function Login() {
                 }
             }
         };
-        
         checkUserInfo();
     }, []);
 
-    // URL 파라미터에서 오류 메시지 확인
     useEffect(() => {
         const errorParam = searchParams.get("error");
         if (errorParam) {
@@ -65,13 +60,9 @@ export default function Login() {
         const data = await res.json();
 
         if (data.accessToken) {
-            // 새로운 토큰 시스템: accessToken을 localStorage에 저장
             localStorage.setItem("token", data.accessToken);
-            // refreshToken은 자동으로 HttpOnly 쿠키에 저장됨
-            
-            // 네이버 연동 여부에 따라 네이버 로그인 버튼 표시/숨김
             setShowNaverLogin(!data.user.hasNaverLink);
-            router.push("/"); // 로그인 성공 시 메인 페이지로 이동
+            router.push("/");
         } else {
             setError("로그인 실패: " + (data.err ?? "알 수 없는 오류"));
         }
@@ -80,7 +71,6 @@ export default function Login() {
     async function handleNaverLogin() {
         try {
             setError("");
-            // 직접 구현한 네이버 OAuth로 리다이렉트
             window.location.href = `/api/auth/naver/signin?callbackUrl=${encodeURIComponent("/api/auth/callback/naver")}`;
         } catch (error) {
             console.error("[NAVER LOGIN ERROR]", error);
@@ -104,37 +94,24 @@ export default function Login() {
             }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                     <div style={{
-                        width: "32px",
-                        height: "32px",
+                        width: "32px", height: "32px",
                         background: "linear-gradient(135deg, #38bdf8, #0ea5e9)",
-                        borderRadius: "8px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        boxShadow: "0 0 16px rgba(56,189,248,0.4)",
-                        fontSize: "16px",
-                    }}>
-                        ✍️
-                    </div>
+                        borderRadius: "8px", display: "flex",
+                        alignItems: "center", justifyContent: "center",
+                        boxShadow: "0 0 16px rgba(56,189,248,0.4)", fontSize: "16px",
+                    }}>✍️</div>
                     <div>
                         <h1 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#e8eaf0", lineHeight: 1 }}>
                             로그인
                         </h1>
                     </div>
                 </div>
-
                 <nav style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                    <a
-                        href="/"
-                        style={{
-                            fontSize: "13px",
-                            color: "#8b90a7",
-                            textDecoration: "none",
-                            padding: "6px 12px",
-                            borderRadius: "8px",
-                            border: "1px solid rgba(255,255,255,0.08)",
-                            transition: "color 0.15s, border-color 0.15s",
-                        }}
+                    <a href="/" style={{
+                        fontSize: "13px", color: "#8b90a7", textDecoration: "none",
+                        padding: "6px 12px", borderRadius: "8px",
+                        border: "1px solid rgba(255,255,255,0.08)", transition: "color 0.15s, border-color 0.15s",
+                    }}
                         onMouseEnter={e => {
                             (e.currentTarget as HTMLElement).style.color = "#e8eaf0";
                             (e.currentTarget as HTMLElement).style.borderColor = "rgba(56,189,248,0.3)";
@@ -143,25 +120,18 @@ export default function Login() {
                             (e.currentTarget as HTMLElement).style.color = "#8b90a7";
                             (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)";
                         }}
-                    >
-                        홈으로
-                    </a>
+                    >홈으로</a>
                 </nav>
             </header>
 
             <div className="min-h-screen flex items-center justify-center bg-slate-950 relative overflow-hidden px-4">
-
-                {/* 배경 장식 (디지털 트윈/관제 솔루션 느낌의 그리드와 글로우 효과) */}
                 <div className="absolute inset-0 z-0 pointer-events-none">
                     <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_center,var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-slate-950"></div>
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-500/10 rounded-full blur-[100px]"></div>
                     <div className="absolute w-full h-full opacity-20" style={{ backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
                 </div>
 
-                {/* 메인 폼 컨테이너: 약간의 투명도와 블러가 들어간 글래스모피즘 */}
                 <div className="relative z-10 bg-slate-900/70 backdrop-blur-xl border border-cyan-900/50 rounded-2xl p-10 w-full max-w-md shadow-[0_0_30px_rgba(8,145,178,0.15)]">
-
-                    {/* 브랜드/로고 영역 */}
                     <div className="mb-8 flex items-center">
                         <div className="relative flex items-center justify-center w-8 h-8 mr-3">
                             <span className="absolute inset-0 rounded-full bg-cyan-400/30 blur-md animate-pulse"></span>
@@ -170,76 +140,51 @@ export default function Login() {
                         <span className="font-mono text-xl text-cyan-50 tracking-wider font-semibold">TwinSystem</span>
                     </div>
 
-                    {/* 타이틀 영역 */}
                     <h1 className="text-2xl font-semibold text-white mb-2">디지털 트윈 시스템 로그인</h1>
                     <p className="text-sm text-slate-400 mb-8 font-light">관제 플랫폼에 접속하기 위해 인증을 진행하세요</p>
 
-                    {/* 이메일/아이디 입력란 */}
                     <form onSubmit={handleLogin}>
                         <div className="mb-5">
-                            <label className="block text-xs font-mono text-cyan-500 mb-2 uppercase tracking-[0.15em]">
-                                User ID
-                            </label>
-                            <input
-                                type="email"
-                                placeholder="admin@system.local"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
+                            <label className="block text-xs font-mono text-cyan-500 mb-2 uppercase tracking-[0.15em]">User ID</label>
+                            <input type="email" placeholder="admin@system.local" value={email}
+                                onChange={(e) => setEmail(e.target.value)} required
                                 className="w-full h-11 border border-slate-700/80 rounded-lg px-4 text-sm bg-slate-950/60 text-cyan-50 outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 placeholder:text-slate-600 transition-all shadow-inner"
                             />
                         </div>
-
-                        {/* 비밀번호 입력란 */}
                         <div className="mb-5">
-                            <label className="block text-xs font-mono text-cyan-500 mb-2 uppercase tracking-[0.15em]">
-                                Security Key
-                            </label>
-                            <input
-                                type="password"
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
+                            <label className="block text-xs font-mono text-cyan-500 mb-2 uppercase tracking-[0.15em]">Security Key</label>
+                            <input type="password" placeholder="••••••••" value={password}
+                                onChange={(e) => setPassword(e.target.value)} required
                                 className="w-full h-11 border border-slate-700/80 rounded-lg px-4 text-sm bg-slate-950/60 text-cyan-50 outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 placeholder:text-slate-600 transition-all shadow-inner"
                             />
                         </div>
-
-                    {/* 로그인 버튼 */}
                         <button type="submit" className="relative w-full h-12 bg-cyan-900/40 border border-cyan-500/50 hover:bg-cyan-500/20 hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(34,211,238,0.2)] active:scale-[0.98] text-cyan-400 hover:text-cyan-300 text-sm font-semibold tracking-wider rounded-lg transition-all overflow-hidden">
                             <span className="relative z-10 block">로그인</span>
                         </button>
                     </form>
 
-                    {/* 오류 메시지 */}
                     {error && (
                         <div className="mt-4 p-3 bg-red-900/30 border border-red-500/50 rounded-lg text-red-400 text-sm">
                             {error}
                         </div>
                     )}
 
-                    {/* 구분선 */}
                     <div className="flex items-center gap-4 my-6">
                         <div className="flex-1 h-px bg-slate-700" />
                         <span className="text-xs font-mono text-slate-500 uppercase tracking-widest">or</span>
                         <div className="flex-1 h-px bg-slate-700" />
                     </div>
 
-                    {/* 네이버 로그인 버튼 - 네이버 계정이 연동되지 않은 경우에만 표시 */}
                     {showNaverLogin && (
                         <>
-                            <button 
-                                type="button"
-                                onClick={handleNaverLogin}
+                            <button type="button" onClick={handleNaverLogin}
                                 className="relative w-full h-12 bg-[#03C75A] hover:bg-[#02b350] active:scale-[0.98] text-white text-sm font-semibold rounded-lg transition-all overflow-hidden flex items-center justify-center gap-2 shadow-lg"
                             >
                                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M13.3333 10.8333L6.66667 0H0V20H6.66667V9.16667L13.3333 20H20V0H13.3333V10.8333Z" fill="white"/>
+                                    <path d="M13.3333 10.8333L6.66667 0H0V20H6.66667V9.16667L13.3333 20H20V0H13.3333V10.8333Z" fill="white" />
                                 </svg>
                                 <span>네이버로 로그인</span>
                             </button>
-
-                            {/* 구분선 */}
                             <div className="flex items-center gap-4 my-6 mt-6">
                                 <div className="flex-1 h-px bg-linear-to-r from-transparent to-slate-700" />
                                 <span className="text-xs font-mono text-slate-500 uppercase tracking-widest">or</span>
@@ -248,21 +193,31 @@ export default function Login() {
                         </>
                     )}
 
-                    {/* 회원가입 */}
                     <p className="text-center text-sm text-slate-400">
                         시스템에 등록되지 않았나요?{" "}
                         <button onClick={() => router.push("/Register")} className="text-cyan-500 font-medium hover:text-cyan-400 hover:underline hover:underline-offset-4 transition-all">
                             회원가입
                         </button>
                     </p>
-
                 </div>
 
-                {/* 하단 관제 시스템 워터마크 라인 */}
                 <div className="absolute bottom-5 right-5 text-mono text-xs text-slate-600">
                     SECURE_SYSTEM_V.1.0_ONLINE
                 </div>
             </div>
         </>
+    );
+}
+
+// ✅ 페이지 컴포넌트에서 Suspense로 감싸기
+export default function Login() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-slate-950">
+                <div className="text-cyan-400 font-mono">Loading...</div>
+            </div>
+        }>
+            <LoginInner />
+        </Suspense>
     );
 }
