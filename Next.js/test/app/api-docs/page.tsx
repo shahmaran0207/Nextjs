@@ -391,7 +391,6 @@ export default function ApiDocs() {
       {/* 메인 콘텐츠 */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative", zIndex: 10 }}>
 
-
         {/* 로딩 상태 */}
         {!spec ? (
           <div style={{

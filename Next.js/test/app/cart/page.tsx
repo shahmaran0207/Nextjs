@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import "../Shopping/shopping.css";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
+import { PageHeader } from "@/component/PageHeader";
 
 interface CartItem {
   id: number;
@@ -72,7 +73,7 @@ export default function CartPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ itemId, quantity: newQty, email })
       });
-      
+
       if (res.ok) {
         setItems(prev => prev.map(item => item.id === itemId ? { ...item, quantity: newQty } : item));
       } else {
@@ -161,19 +162,15 @@ export default function CartPage() {
   return (
     <div className="page-container shop-bg">
       <div className="bg-grid" />
-      <header className="shopping-header">
-        <div className="flex-row-center gap-12">
-          <div className="logo-icon">🛒</div>
-          <div>
-            <h1 className="header-title text-primary">장바구니</h1>
-            <p className="header-subtitle text-accent">담아둔 상품을 확인하세요</p>
-          </div>
-        </div>
-        <nav className="flex-row-center gap-2">
-          <Link href="/Shopping" className="nav-link">쇼핑 계속하기</Link>
-          <Link href="/" className="nav-link">홈으로</Link>
-        </nav>
-      </header>
+      <PageHeader
+        icon="🛒"
+        title="장바구니"
+        subtitle="담아둔 상품을 확인하세요"
+        navLinks={[
+          { href: "/", label: "메인 페이지" },
+          { href: "/Shopping", label: "쇼핑 계속하기" },
+        ]}
+      />
 
       <main className="page-main">
         <div className="content-wrapper max-w-900">
@@ -258,7 +255,7 @@ export default function CartPage() {
                             </td>
                             <td className="td-cell text-center">
                               <div className="flex-row-center gap-6 justify-center">
-                                <button 
+                                <button
                                   onClick={() => updateQuantity(item.id, item.quantity - 1)}
                                   disabled={item.quantity <= 1}
                                   className="btn-outline-secondary btn-sm px-8px py-4px"
@@ -266,7 +263,7 @@ export default function CartPage() {
                                   -
                                 </button>
                                 <span className="text-14 font-mono text-primary w-40 text-center">{item.quantity}</span>
-                                <button 
+                                <button
                                   onClick={() => updateQuantity(item.id, item.quantity + 1)}
                                   className="btn-outline-secondary btn-sm px-8px py-4px"
                                 >
