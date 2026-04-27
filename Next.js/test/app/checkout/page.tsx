@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
-import Link from "next/link";
 import "../Shopping/shopping.css";
 import axios from "axios";
 import DaumPostcodeEmbed from "react-daum-postcode";
@@ -25,6 +24,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true);
   const [availablePoints, setAvailablePoints] = useState<number>(0);
   const [usePoints, setUsePoints] = useState<number>(0);
+  const [sharedMembersCount, setSharedMembersCount] = useState<number>(1);
 
   const [coupons, setCoupons] = useState<any[]>([]);
   const [selectedCouponId, setSelectedCouponId] = useState<number | null>(null);
@@ -45,6 +45,7 @@ export default function CheckoutPage() {
     const storedItems = sessionStorage.getItem("checkout_items");
     const storedFromCart = sessionStorage.getItem("checkout_from_cart");
     const storedIsGift = sessionStorage.getItem("checkout_is_gift");
+    const storedSharedMembersCount = sessionStorage.getItem("shared_members_count");
 
     if (storedItems) {
       setItems(JSON.parse(storedItems));
@@ -54,6 +55,9 @@ export default function CheckoutPage() {
     }
     if (storedIsGift === "true") {
       setIsGift(true);
+    }
+    if (storedSharedMembersCount) {
+      setSharedMembersCount(Number(storedSharedMembersCount));
     }
 
     // 사용자 포인트 조회
@@ -422,9 +426,17 @@ export default function CheckoutPage() {
                     <span className="text-14-bold text-accent">-{usePoints.toLocaleString()} P</span>
                   </div>
                 )}
-                <div>
-                  <div className="text-12 text-muted uppercase">최종 결제금액</div>
-                  <div className="text-28-money text-green">₩{finalAmount.toLocaleString()}</div>
+                <div className="flex-row-between items-end">
+                  <div>
+                    <div className="text-12 text-muted uppercase">최종 결제금액</div>
+                    <div className="text-28-money text-green">₩{finalAmount.toLocaleString()}</div>
+                  </div>
+                  {sharedMembersCount > 1 && (
+                    <div className="p-xs px-sm bg-surface-inner rounded-md border-default border-left-accent text-right">
+                      <div className="text-11 text-muted">👫 1/N 정산 시 (1인당)</div>
+                      <div className="text-14-bold text-accent">약 {Math.floor(finalAmount / sharedMembersCount).toLocaleString()}원</div>
+                    </div>
+                  )}
                 </div>
               </div>
               <button className="pay-btn flex-none w-200" onClick={handlePayment}>

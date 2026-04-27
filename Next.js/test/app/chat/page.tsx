@@ -4,7 +4,6 @@ import { useEffect } from "react"
 import useChatState from "../hook/useChatState";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 import postStyle from "../hook/postStyle";
-import { LogoutButton } from "@/component/LogoutButton";
 import { PageHeader } from "@/component/PageHeader";
 
 export default function ChatPage() {

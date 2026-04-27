@@ -195,6 +195,16 @@ export default function CartPage() {
                 <div className="flex-row-center gap-8">
                   <button onClick={handleDeleteSelected} className="btn-outline-secondary">선택 삭제</button>
                   <button onClick={handleEmptyCart} className="btn-outline-danger">장바구니 비우기</button>
+                  <button 
+                    onClick={() => {
+                      const newRoomId = Math.random().toString(36).substring(2, 8);
+                      window.location.href = `/cart/shared/${newRoomId}`;
+                    }} 
+                    className="btn-outline-primary"
+                    style={{ borderColor: "#8b5cf6", color: "#8b5cf6", display: "flex", alignItems: "center", gap: "4px" }}
+                  >
+                    🤝 1/N 공유 장바구니 만들기
+                  </button>
                 </div>
               </div>
 

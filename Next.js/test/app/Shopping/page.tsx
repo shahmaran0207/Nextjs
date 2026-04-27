@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 import "./shopping.css";
-import { NotificationBell } from "@/component/NotificationBell";
 import { PageHeader } from "@/component/PageHeader";
 
 interface Product {

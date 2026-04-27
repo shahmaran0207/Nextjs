@@ -2,11 +2,9 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import Link from "next/link";
 import { Product } from "@/types/shoppingType";
 import "../shopping.css";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
-import { NotificationBell } from "@/component/NotificationBell";
 import { PageHeader } from "@/component/PageHeader";
 
 interface Review {
@@ -32,6 +30,9 @@ export default function ProductDetailPage() {
 
   // 젠 모드 상태
   const [isZenMode, setIsZenMode] = useState(false);
+
+  // AR 컬러 체인저 상태
+  const [activeHue, setActiveHue] = useState<number>(0);
 
   // 최애핏 비교기 상태
   const [myFit, setMyFit] = useState<{ waist: number, length: number } | null>(null);
@@ -199,7 +200,7 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    const socket = new WebSocket('ws://localhost:8080');
+    const socket = new WebSocket('ws://localhost:3000');
 
     socket.onopen = () => {
       console.log('[WS] Connected to Flash Mob Server');
@@ -484,15 +485,49 @@ export default function ProductDetailPage() {
                   <button onClick={toggleWishlist} style={{ position: "absolute", top: "16px", left: "16px", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "50%", width: "40px", height: "40px", fontSize: "20px", cursor: "pointer", zIndex: 10 }}>
                     {isWished ? "❤️" : "🤍"}
                   </button>
-                  <div className="product-img-box">
+                  <div className="product-img-box" style={{ position: "relative" }}>
                     {product.has_image ? (
-                      <img src={`/api/images/products/${product.id}`} alt={product.name} className="product-img-full" />
+                      <img 
+                        src={`/api/images/products/${product.id}`} 
+                        alt={product.name} 
+                        className="product-img-full" 
+                        style={{ 
+                          filter: activeHue === 0 ? "none" : `sepia(0.8) saturate(3) hue-rotate(${activeHue}deg)`, 
+                          transition: "filter 0.5s ease-in-out" 
+                        }} 
+                      />
                     ) : (
                       <div className="product-img-empty">
                         <div className="empty-box-icon">📷</div>
                         <div className="text-12">이미지 없음</div>
                       </div>
                     )}
+
+                    {/* AR 컬러 체인저 UI */}
+                    <div style={{ position: "absolute", bottom: "16px", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "10px", background: "rgba(10, 14, 26, 0.7)", padding: "10px 16px", borderRadius: "30px", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.1)", zIndex: 10, boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}>
+                      {[
+                        { color: "#ffffff", hue: 0, name: "오리지널" },
+                        { color: "#ef4444", hue: 320, name: "레드 체인지" },
+                        { color: "#10b981", hue: 90, name: "그린 체인지" },
+                        { color: "#3b82f6", hue: 180, name: "블루 체인지" },
+                        { color: "#a855f7", hue: 230, name: "퍼플 체인지" },
+                      ].map((swatch, idx) => (
+                        <button
+                          key={idx}
+                          title={swatch.name}
+                          onClick={() => setActiveHue(swatch.hue)}
+                          style={{
+                            width: "28px", height: "28px", borderRadius: "50%",
+                            background: swatch.color,
+                            border: activeHue === swatch.hue ? "2px solid #fff" : "1px solid rgba(255,255,255,0.2)",
+                            cursor: "pointer",
+                            transform: activeHue === swatch.hue ? "scale(1.2)" : "scale(1)",
+                            transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                            boxShadow: activeHue === swatch.hue ? `0 0 10px ${swatch.color}` : "none"
+                          }}
+                        />
+                      ))}
+                    </div>
                   </div>
                   <div className="product-info-col">
                     <div>
@@ -623,8 +658,8 @@ export default function ProductDetailPage() {
                         }} />
                       </div>
                       <p style={{ fontSize: "12px", color: flashMobSuccess ? "#ef4444" : "#fbbf24", margin: "8px 0 0 0", fontWeight: flashMobSuccess ? "bold" : "normal", lineHeight: 1.4 }}>
-                        {flashMobSuccess 
-                          ? "🎉 목표 인원 달성 완료! 지금 결제하시면 결제 금액의 50%가 포인트로 즉시 페이백됩니다!" 
+                        {flashMobSuccess
+                          ? "🎉 목표 인원 달성 완료! 지금 결제하시면 결제 금액의 50%가 포인트로 즉시 페이백됩니다!"
                           : `💡 먼저 결제하셔도 손해 없습니다! ${targetParticipants}명 달성 시, 이미 결제하신 분들을 포함해 참여자 전원에게 결제 금액의 50%를 포인트로 환급(페이백) 해드립니다.`}
                       </p>
                     </div>

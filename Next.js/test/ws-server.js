@@ -71,6 +71,49 @@ async function startServer() {
             }
           });
         }
+        else if (data.type === 'join_cart') {
+          const roomId = String(data.roomId);
+          ws.cartRoom = roomId;
+          
+          const redisKey = `shared_cart:${roomId}`;
+          let cartDataStr = await redisClient.get(redisKey);
+          if (!cartDataStr) {
+            cartDataStr = "[]";
+            await redisClient.set(redisKey, cartDataStr);
+          }
+          
+          // Send current cart state to the joined user
+          ws.send(JSON.stringify({ type: 'cart_sync', items: JSON.parse(cartDataStr) }));
+          
+          // Count participants
+          let participants = 0;
+          wss.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN && client.cartRoom === roomId) {
+              participants++;
+            }
+          });
+          
+          // Broadcast participant count
+          wss.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN && client.cartRoom === roomId) {
+              client.send(JSON.stringify({ type: 'cart_participants', count: participants }));
+            }
+          });
+        }
+        else if (data.type === 'update_cart') {
+          const roomId = String(data.roomId);
+          const items = data.items || [];
+          
+          const redisKey = `shared_cart:${roomId}`;
+          await redisClient.set(redisKey, JSON.stringify(items));
+          
+          // Broadcast to everyone in the room
+          wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN && client.cartRoom === roomId) {
+              client.send(JSON.stringify({ type: 'cart_sync', items: items }));
+            }
+          });
+        }
       } catch (err) {
         console.error('[WS] Error parsing message:', err);
       }
@@ -78,6 +121,22 @@ async function startServer() {
 
     ws.on('close', () => {
       console.log('[WS] Connection closed');
+      
+      // If it was a cart connection, broadcast updated participant count
+      if (ws.cartRoom) {
+        let participants = 0;
+        wss.clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN && client.cartRoom === ws.cartRoom) {
+            participants++;
+          }
+        });
+        
+        wss.clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN && client.cartRoom === ws.cartRoom) {
+            client.send(JSON.stringify({ type: 'cart_participants', count: participants }));
+          }
+        });
+      }
     });
   });
 

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
-import Link from "next/link";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import "../../Shopping/shopping.css";
 import axios from "axios";
