@@ -416,3 +416,103 @@ export function createCctvClusterLayers(
     cctvPointDot,
   ];
 }
+
+export function createParkingClusterLayers(parkingClusters: any[]) {
+  const parkingClusterGlow = new ScatterplotLayer({
+    id: "parking-cluster-glow",
+    data: parkingClusters.filter((c: any) => c.properties.cluster),
+    getPosition: (d: any) => d.geometry.coordinates,
+    getRadius: (d: any) => 12 + Math.log2(d.properties.point_count) * 3,
+    getFillColor: [59, 130, 246, 30],
+    getLineColor: [59, 130, 246, 0],
+    lineWidthMinPixels: 0,
+    stroked: false,
+    filled: true,
+    radiusUnits: "pixels",
+    pickable: false,
+  });
+
+  const parkingClusterLayer = new ScatterplotLayer({
+    id: "parking-cluster-layer",
+    data: parkingClusters.filter((c: any) => c.properties.cluster),
+    getPosition: (d: any) => d.geometry.coordinates,
+    getRadius: (d: any) => 10 + Math.log2(d.properties.point_count) * 3,
+    getFillColor: [37, 99, 235, 40],
+    getLineColor: [96, 165, 250, 255],
+    lineWidthMinPixels: 2,
+    stroked: true,
+    filled: true,
+    radiusUnits: "pixels",
+    pickable: true,
+  });
+
+  const parkingClusterText = new TextLayer({
+    id: "parking-cluster-text",
+    data: parkingClusters.filter((c: any) => c.properties.cluster),
+    getPosition: (d: any) => d.geometry.coordinates,
+    getText: (d: any) => String(d.properties.point_count),
+    getSize: 11,
+    getColor: [219, 234, 254, 255],
+    getTextAnchor: "middle",
+    getAlignmentBaseline: "center",
+    fontWeight: "700",
+    fontFamily: "system-ui",
+  });
+
+  const parkingPointGlow = new ScatterplotLayer({
+    id: "parking-point-glow",
+    data: parkingClusters.filter((c: any) => !c.properties.cluster),
+    getPosition: (d: any) => d.geometry.coordinates,
+    getRadius: 20,
+    getFillColor: [29, 78, 216, 50],
+    getLineColor: [29, 78, 216, 0],
+    lineWidthMinPixels: 0,
+    stroked: false,
+    filled: true,
+    radiusUnits: "pixels",
+    pickable: false,
+  });
+
+  const parkingPointRing = new ScatterplotLayer({
+    id: "parking-point-ring",
+    data: parkingClusters.filter((c: any) => !c.properties.cluster),
+    getPosition: (d: any) => d.geometry.coordinates,
+    getRadius: 12,
+    getFillColor: [0, 0, 0, 0],
+    getLineColor: [59, 130, 246, 255],
+    lineWidthMinPixels: 2,
+    stroked: true,
+    filled: true,
+    radiusUnits: "pixels",
+    pickable: false,
+  });
+
+  const parkingPointCore = new ScatterplotLayer({
+    id: "parking-point-core",
+    data: parkingClusters.filter((c: any) => !c.properties.cluster),
+    getPosition: (d: any) => d.geometry.coordinates,
+    getRadius: 6,
+    getFillColor: [59, 130, 246, 255],
+    getLineColor: [0, 0, 0, 0],
+    lineWidthMinPixels: 0,
+    stroked: false,
+    filled: true,
+    radiusUnits: "pixels",
+    pickable: true,
+  });
+
+  const parkingPointText = new TextLayer({
+    id: "parking-point-text",
+    data: parkingClusters.filter((c: any) => !c.properties.cluster),
+    getPosition: (d: any) => d.geometry.coordinates,
+    getText: () => "P",
+    getSize: 10,
+    getColor: [255, 255, 255, 255],
+    getTextAnchor: "middle",
+    getAlignmentBaseline: "center",
+    fontWeight: "800",
+    fontFamily: "system-ui",
+  });
+
+  return [parkingClusterGlow, parkingClusterLayer, parkingClusterText, parkingPointGlow, parkingPointRing, parkingPointCore, parkingPointText];
+}

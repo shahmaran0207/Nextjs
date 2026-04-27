@@ -14,6 +14,7 @@ interface OrderItem {
   quantity: number;
   total_price: number;
   option_name?: string | null;
+  tracking_number?: string | null;
 }
 
 interface Order {
@@ -22,6 +23,7 @@ interface Order {
   order_status: string;
   final_amount: number;
   ordered_at: string;
+  shipping_address?: string | null;
   items: OrderItem[];
 }
 
@@ -146,6 +148,8 @@ export default function OrdersPage() {
                       ? `${firstItem?.product_name}${firstItem?.option_name ? `(${firstItem.option_name})` : ''} 외 ${extraCount}건`
                       : (firstItem?.product_name ? `${firstItem.product_name}${firstItem?.option_name ? `(${firstItem.option_name})` : ''}` : "상품 없음");
 
+                    const trackingNumber = order.items.find(item => !!item.tracking_number)?.tracking_number;
+
                     return (
                       <div key={order.id} className="card-container shop-surface border-default">
                         <div className="detail-table-header flex-justify-between">
@@ -187,13 +191,24 @@ export default function OrdersPage() {
                               </button>
                             )}
                             {order.order_status === "SHIPPED" && (
-                              <button
-                                onClick={() => updateOrderStatus(order.id, "CONFIRM")}
-                                className="btn-success btn-sm"
-                                style={{ padding: "8px 16px" }}
-                              >
-                                상품 수령 (구매 확정)
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => updateOrderStatus(order.id, "CONFIRM")}
+                                  className="btn-success btn-sm"
+                                  style={{ padding: "8px 16px" }}
+                                >
+                                  상품 수령 (구매 확정)
+                                </button>
+                                {trackingNumber && (
+                                  <Link 
+                                    href={`/digitalTwin?tracking_number=${trackingNumber}&address=${encodeURIComponent(order.shipping_address || '')}`} 
+                                    className="btn-accent btn-sm" 
+                                    style={{ padding: "8px 16px", backgroundColor: "#8b5cf6", color: "white", border: "none" }}
+                                  >
+                                    🚚 배송 3D 뷰
+                                  </Link>
+                                )}
+                              </>
                             )}
                             {order.order_status === "DELIVERED" && (
                               <button

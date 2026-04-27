@@ -27,7 +27,8 @@ export default function CheckoutPage() {
   const [sharedMembersCount, setSharedMembersCount] = useState<number>(1);
 
   const [coupons, setCoupons] = useState<any[]>([]);
-  const [selectedCouponId, setSelectedCouponId] = useState<number | null>(null);
+  const [mapCoupons, setMapCoupons] = useState<any[]>([]); // 지도에서 획득한 쿠폰
+  const [selectedCouponId, setSelectedCouponId] = useState<string | null>(null); // "db-{id}" | "map-{id}"
   const [couponDiscount, setCouponDiscount] = useState<number>(0);
 
   // 배송지 폼 상태
@@ -75,34 +76,46 @@ export default function CheckoutPage() {
         .catch(err => console.error(err));
     }
 
+    // localStorage 지도 쿠폰 로드
+    try {
+      const stored = JSON.parse(localStorage.getItem('mapCoupons') || '[]');
+      setMapCoupons(stored);
+    } catch (_) { }
+
     setLoading(false);
   }, [email]);
 
   const totalPrice = items.reduce((acc, item) => acc + item.unit_price * item.quantity, 0);
   const shippingFee = totalPrice >= 50000 ? 0 : 3000;
 
-  // 쿠폰 할인 계산
+  // 쿠폰 할인 계산 (DB 쿠폰 + 지도 쿠폰 통합)
   useEffect(() => {
-    if (!selectedCouponId) {
-      setCouponDiscount(0);
+    if (!selectedCouponId) { setCouponDiscount(0); return; }
+
+    // 지도 쿠폰 ("map-" prefix)
+    if (selectedCouponId.startsWith('map-')) {
+      const mapCoupon = mapCoupons.find(c => `map-${c.id}` === selectedCouponId);
+      if (mapCoupon) {
+        setCouponDiscount(Math.floor(totalPrice * (mapCoupon.discount / 100)));
+      }
       return;
     }
-    const coupon = coupons.find(c => c.user_coupon_id === selectedCouponId);
-    if (!coupon) return;
 
+    // DB 쿠폰 ("db-" prefix)
+    const coupon = coupons.find(c => `db-${c.user_coupon_id}` === selectedCouponId);
+    if (!coupon) return;
     if (totalPrice < coupon.min_order_amount) {
       alert(`해당 쿠폰은 상품 금액 ${coupon.min_order_amount.toLocaleString()}원 이상부터 사용 가능합니다.`);
       setSelectedCouponId(null);
       setCouponDiscount(0);
       return;
     }
-
     if (coupon.discount_type === "PERCENT") {
       setCouponDiscount(Math.floor(totalPrice * (coupon.discount_value / 100)));
     } else {
       setCouponDiscount(coupon.discount_value);
     }
-  }, [selectedCouponId, totalPrice, coupons]);
+  }, [selectedCouponId, totalPrice, coupons, mapCoupons]);
 
   const finalAmount = Math.max(totalPrice + shippingFee - usePoints - couponDiscount, 0);
 
@@ -157,6 +170,11 @@ export default function CheckoutPage() {
       app_scheme: "digitalTwin",
     };
 
+    // DB 쿠폰 ID 추출 (db- prefix 제거)
+    const dbCouponId = selectedCouponId?.startsWith('db-')
+      ? Number(selectedCouponId.replace('db-', ''))
+      : null;
+
     IMP.request_pay(data, async (response: RequestPayResponse) => {
       const { success, error_msg, imp_uid, merchant_uid } = response;
       if (success) {
@@ -169,7 +187,7 @@ export default function CheckoutPage() {
             shipping_fee: shippingFee,
             discount_amount: usePoints + couponDiscount,
             used_points: usePoints,
-            used_coupon_id: selectedCouponId,
+            used_coupon_id: dbCouponId,
             coupon_discount: couponDiscount,
             amount: finalAmount,
             items: items,
@@ -181,11 +199,18 @@ export default function CheckoutPage() {
             is_gift: isGift
           });
 
-          // 결제 성공 후 세션스토리지 초기화
+          // 지도 쿠폰 사용 시 localStorage에서 제거
+          if (selectedCouponId?.startsWith('map-')) {
+            const usedMapId = selectedCouponId.replace('map-', '');
+            try {
+              const stored = JSON.parse(localStorage.getItem('mapCoupons') || '[]');
+              localStorage.setItem('mapCoupons', JSON.stringify(stored.filter((c: any) => c.id !== usedMapId)));
+            } catch (_) { }
+          }
+
           sessionStorage.removeItem("checkout_items");
           sessionStorage.removeItem("checkout_from_cart");
           sessionStorage.removeItem("checkout_is_gift");
-
           alert("결제 성공!");
           window.location.href = "/orders";
         } catch (err) {
@@ -367,17 +392,36 @@ export default function CheckoutPage() {
 
               <div className="flex-col gap-6px">
                 <label className="text-13 text-muted">쿠폰 할인</label>
+                {mapCoupons.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', padding: '8px 12px', background: 'rgba(250,204,21,0.08)', border: '1px solid rgba(250,204,21,0.3)', borderRadius: '8px' }}>
+                    <span style={{ fontSize: '18px' }}>🗺️</span>
+                    <span style={{ fontSize: '13px', color: '#fbbf24', fontWeight: 600 }}>지도에서 획득한 쿠폰 {mapCoupons.length}개 있음!</span>
+                  </div>
+                )}
                 <select
                   className="search-input"
                   value={selectedCouponId || ""}
-                  onChange={e => setSelectedCouponId(e.target.value ? Number(e.target.value) : null)}
+                  onChange={e => setSelectedCouponId(e.target.value || null)}
                 >
                   <option value="">사용 안함</option>
-                  {coupons.map(c => (
-                    <option key={c.user_coupon_id} value={c.user_coupon_id}>
-                      {c.name} ({c.discount_type === "PERCENT" ? `${c.discount_value}%` : `${c.discount_value.toLocaleString()}원`} 할인) - {c.min_order_amount > 0 ? `${c.min_order_amount.toLocaleString()}원 이상 구매시` : "조건 없음"}
-                    </option>
-                  ))}
+                  {mapCoupons.length > 0 && (
+                    <optgroup label="🗺️ 지도 쿠폰">
+                      {mapCoupons.map(c => (
+                        <option key={`map-${c.id}`} value={`map-${c.id}`}>
+                          {c.name} — {c.discount}% 할인
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {coupons.length > 0 && (
+                    <optgroup label="🎟️ 보유 쿠폰">
+                      {coupons.map(c => (
+                        <option key={`db-${c.user_coupon_id}`} value={`db-${c.user_coupon_id}`}>
+                          {c.name} ({c.discount_type === "PERCENT" ? `${c.discount_value}%` : `${c.discount_value.toLocaleString()}원`} 할인) - {c.min_order_amount > 0 ? `${c.min_order_amount.toLocaleString()}원 이상` : "조건 없음"}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
 

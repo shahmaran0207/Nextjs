@@ -58,3 +58,36 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+// 알림 생성 (FCM, 배송 완료 등에서 호출)
+export async function POST(req: Request) {
+  try {
+    let token = req.headers.get("Authorization")?.split(" ")[1];
+    if (!token) {
+      const cookieStore = await cookies();
+      token = cookieStore.get("accessToken")?.value;
+    }
+    const payload = token ? verifyAccessToken(token) : null;
+    if (!payload) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const body = await req.json();
+    const { title, message, link } = body;
+
+    if (!title || !message) {
+      return NextResponse.json({ error: "Title and message are required" }, { status: 400 });
+    }
+
+    const notification = await prisma.notifications.create({
+      data: {
+        user_id: Number(payload.id),
+        title,
+        message,
+        link,
+      },
+    });
+
+    return NextResponse.json({ success: true, notification });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

@@ -8,13 +8,14 @@ interface CctvPopupProps {
   cctv: CCTVPoint;
   isOpen: boolean;
   onClose: () => void;
+  variant?: 'default' | 'mini';
 }
 
 /**
  * CCTV 영상 플레이어 팝업
  * HLS.js를 사용하여 실시간 CCTV 스트림을 재생합니다.
  */
-export default function CctvPopup({ cctv, isOpen, onClose }: CctvPopupProps) {
+export default function CctvPopup({ cctv, isOpen, onClose, variant = 'default' }: CctvPopupProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,8 +44,10 @@ export default function CctvPopup({ cctv, isOpen, onClose }: CctvPopupProps) {
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         setIsLoading(false);
         video.play().catch((err) => {
-          console.error("Video play error:", err);
-          setError("영상 재생에 실패했습니다");
+          if (err.name !== "AbortError") {
+            console.error("Video play error:", err);
+            setError("영상 재생에 실패했습니다");
+          }
         });
       });
 
@@ -81,8 +84,10 @@ export default function CctvPopup({ cctv, isOpen, onClose }: CctvPopupProps) {
       video.addEventListener("loadedmetadata", () => {
         setIsLoading(false);
         video.play().catch((err) => {
-          console.error("Video play error:", err);
-          setError("영상 재생에 실패했습니다");
+          if (err.name !== "AbortError") {
+            console.error("Video play error:", err);
+            setError("영상 재생에 실패했습니다");
+          }
         });
       });
     } else {
@@ -101,23 +106,27 @@ export default function CctvPopup({ cctv, isOpen, onClose }: CctvPopupProps) {
 
   if (!isOpen) return null;
 
+  const isMini = variant === 'mini';
+
   return (
     <div
       style={{
         position: "fixed",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
+        top: isMini ? "80px" : "50%",
+        left: isMini ? "auto" : "50%",
+        right: isMini ? "24px" : "auto",
+        transform: isMini ? "none" : "translate(-50%, -50%)",
         background: "rgba(10, 14, 26, 0.92)",
         backdropFilter: "blur(16px)",
         WebkitBackdropFilter: "blur(16px)",
         border: "1px solid rgba(56, 189, 248, 0.2)",
         borderRadius: "12px",
-        padding: "20px",
-        zIndex: 1000,
-        width: "640px",
+        padding: isMini ? "12px" : "20px",
+        zIndex: 10000, // 시뮬레이션 UI 위로 올라오도록
+        width: isMini ? "300px" : "640px",
         maxWidth: "90vw",
         boxShadow: "0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(56, 189, 248, 0.3)",
+        transition: "all 0.3s ease",
       }}
     >
       {/* Header */}
@@ -132,7 +141,7 @@ export default function CctvPopup({ cctv, isOpen, onClose }: CctvPopupProps) {
         <h3
           style={{
             color: "#38bdf8",
-            fontSize: "16px",
+            fontSize: isMini ? "14px" : "16px",
             fontWeight: 700,
             margin: 0,
           }}
@@ -153,8 +162,8 @@ export default function CctvPopup({ cctv, isOpen, onClose }: CctvPopupProps) {
             borderRadius: "6px",
             color: "#38bdf8",
             cursor: "pointer",
-            fontSize: "18px",
-            padding: "4px 12px",
+            fontSize: isMini ? "14px" : "18px",
+            padding: isMini ? "2px 8px" : "4px 12px",
             transition: "all 0.2s",
           }}
           onMouseEnter={(e) => {

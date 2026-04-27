@@ -1,7 +1,8 @@
 "use client"
 
 import DeckGL from "@deck.gl/react";
-import MapGL from "react-map-gl/maplibre";
+import { WebMercatorViewport } from "@deck.gl/core";
+import MapGL, { Source, Layer } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useTwinMapFunction } from "@/app/hook/useTwinMapFunction";
 import TwinRoadPanel from "@/component/dt/TwinRoadPanel";
@@ -16,26 +17,20 @@ import { TourismCarouselDisplay, ConstructionCarouselDisplay } from "@/component
 import MapLegend from "@/component/MapLegend";
 import CctvPopup from "@/component/dt/popups/CctvPopup";
 import LinkSpeedHistoryPopup from "@/component/dt/popups/LinkSpeedHistoryPopup";
-import { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { createBoundaryLayer, createPathLayer } from "@/component/dt/layers/createBaseLayers";
-import { createBitClusterLayers, createConstructionClusterLayers, createThemeTravelClusterLayers, createCctvClusterLayers } from "@/component/dt/layers/createClusterLayers";
+import { createBitClusterLayers, createConstructionClusterLayers, createThemeTravelClusterLayers, createCctvClusterLayers, createParkingClusterLayers } from "@/component/dt/layers/createClusterLayers";
 import { createRoadviewMarkerLayer } from "@/component/dt/layers/createRoadviewMarker";
-import { useTimeFilter } from "@/component/dt/hooks/useTimeFilter";
-import { useDashboardStats } from "@/component/dt/hooks/useDashboardStats";
+import { createTrafficHeatmapLayer } from "@/component/dt/layers/createHeatmapLayer";
+import RainOverlay from "@/component/dt/RainOverlay";
 import { useMapNavigation } from "@/hooks/useMapNavigation";
-import { useCategoryFilter } from "@/hooks/useCategoryFilter";
 import { ConstructionPoint, ThemeTravelPoint } from "@/component/dt/modules/DashboardStatsModule";
-import { useTwinClusters } from "@/component/dt/hooks/useTwinClusters";
-import { useLinkClusters } from "@/component/dt/hooks/useLinkClusters";
 import { useTwinTooltip } from "@/component/dt/hooks/useTwinTooltip";
-import { useViewportLinks } from "@/component/dt/hooks/useViewportLinks";
-import { useTwinCarousels } from "@/component/dt/hooks/useTwinCarousels";
-import { DISTRICT_COORDINATES } from "@/component/dt/constants/districtCoordinates";
 import { DistrictBoundary } from "@/types/ui-ux";
-import { getDistrictCenter } from "@/utils/mapValidation";
-import { CCTVPoint } from "@/types/cctv";
-import { RoadviewState } from "@/types/roadview";
 import styles from "./TwinMap.module.css";
+import { useDeliverySimulation } from "@/component/dt/hooks/useDeliverySimulation";
+import { useTwinMapHandlers } from "@/component/dt/hooks/useTwinMapHandlers";
+import { useTwinMapState } from "@/component/dt/hooks/useTwinMapState";
 
 // Context import를 optional로 처리
 let useDataContext: any = null;
@@ -53,9 +48,11 @@ interface TwinMapProps {
   boundaryData: DistrictBoundary[];
   constructionData: ConstructionPoint[];
   themeTravelData: ThemeTravelPoint[];
+  trackingNumber?: string;
+  shippingAddress?: string;
 }
 
-export default function TwinMap({ linkData: initLinkData, trafficData: initTrafficData, bitData, boundaryData, constructionData, themeTravelData }: TwinMapProps) {
+export default function TwinMap({ linkData: initLinkData, trafficData: initTrafficData, bitData, boundaryData, constructionData, themeTravelData, trackingNumber, shippingAddress }: TwinMapProps) {
   // Context를 안전하게 사용
   let setDataStats: any = () => { };
   try {
@@ -78,391 +75,74 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
     getSelectableLinkIds,
   } = useTwinMapFunction();
 
-  const [busanLinkData, setBusanLinkData] = useState(initLinkData);
-  const [allLinksData, setAllLinksData] = useState<any>(null); // 링크 선택 모드용 전체 링크 데이터
+  // Map Navigation Hook (flyTo가 useTwinMapState보다 먼저 필요)
+  const { flyTo } = useMapNavigation({ viewState, setViewState, animationDuration: 500 });
 
-  // 뷰포트 기반 동적 링크 로딩 (링크 선택 모드가 아닐 때만)
-  const { linkData: viewportLinkData, isLoading: isLinksLoading } = useViewportLinks({
-    viewState,
-    enabled: !isLinkSelectMode, // 링크 선택 모드일 때는 비활성화
-  });
-
-  // 뷰포트 링크 데이터가 로드되면 업데이트 (링크 선택 모드가 아닐 때만)
-  useEffect(() => {
-    if (viewportLinkData && !isLinkSelectMode) {
-      setBusanLinkData(viewportLinkData);
-    }
-  }, [viewportLinkData, isLinkSelectMode]);
-
-  // 링크 선택 모드일 때는 전체 링크 데이터 사용
-  useEffect(() => {
-    if (isLinkSelectMode && allLinksData) {
-      setBusanLinkData(allLinksData);
-    }
-  }, [isLinkSelectMode, allLinksData]);
-
-  const isLinkSelectModeState = useRef(isLinkSelectMode);
-
-  // ─── 소통정보(교통 속도) 상태 ────────────────────────────────────
-  // 서버가 IP 제한으로 외부 API 호출 실패 시, 브라우저에서 직접 호출
-  const [trafficData, setTrafficData] = useState<any[]>(initTrafficData);
-
-  // CCTV 상태
-  const [cctvData, setCctvData] = useState<CCTVPoint[]>([]);
-  const [selectedCctv, setSelectedCctv] = useState<CCTVPoint | null>(null);
-  const [isCctvPopupOpen, setIsCctvPopupOpen] = useState(false);
-  const [isCctvOnly, setIsCctvOnly] = useState(false);  // CCTV 단독 표시 모드
-
-  // 링크 속도 히스토리 팝업 상태
-  const [historyPopup, setHistoryPopup] = useState<{
-    linkId: string;
-    speed: number | null;
-    x: number;
-    y: number;
-  } | null>(null);
-
-  // 로드뷰 상태 (Task 5.1)
-  const [roadviewState, setRoadviewState] = useState<RoadviewState>({
-    isOpen: false,
-    position: null,
-    direction: 0,
-    zoom: 0,
-    isAvailable: false,
-  });
-  const [roadviewMarker, setRoadviewMarker] = useState<{ lat: number; lng: number } | null>(null);
-
-  // 교통 이력 패널 상태 (Task 7.1)
-  const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
-  const [isHistoryMode, setIsHistoryMode] = useState(false);
-  const [historyTrafficMap, setHistoryTrafficMap] = useState<Map<string, number>>(new Map());
-
-  // Time Filter Hook
+  // ─── 상태 / 데이터 훅 통합 ─────────────────────────────────────
   const {
-    config: timeFilterConfig, setStartDate, setEndDate,
-    toggleOngoingOnly, filteredConstruction, visibleCount,
-    totalCount, resetFilters,
-  } = useTimeFilter(constructionData);
-
-  // Dashboard Stats Hook
-  const { stats, isLoading: statsLoading } = useDashboardStats(
-    filteredConstruction, themeTravelData, boundaryData,
-    cctvData
-  );
-
-  // Map Navigation Hook
-  const { flyTo } = useMapNavigation({
-    viewState, setViewState, animationDuration: 500,
+    busanLinkData, allLinksData, setAllLinksData,
+    isLinkSelectModeState,
+    trafficData,
+    cctvData, setCctvData,
+    selectedCctv, setSelectedCctv,
+    isCctvPopupOpen, setIsCctvPopupOpen,
+    isCctvOnly, setIsCctvOnly,
+    historyPopup, setHistoryPopup,
+    roadviewState, setRoadviewState,
+    roadviewMarker, setRoadviewMarker,
+    isHistoryPanelOpen, setIsHistoryPanelOpen,
+    isHistoryMode, setIsHistoryMode,
+    historyTrafficMap, setHistoryTrafficMap,
+    isRainy, mapStyleUrl,
+    timeFilterConfig, setStartDate, setEndDate,
+    toggleOngoingOnly, filteredConstruction,
+    visibleCount, totalCount, resetFilters,
+    stats, statsLoading,
+    filteredTourismData, filteredConstructionByCategory, carousels,
+    trafficMap, bitClusters, constructionClusters, themeTravelClusters, cctvClusters, parkingClusters,
+    shouldFilterLinks, filteredLinks,
+    isFpvMode, toggleFpvMode,
+    isHeatmapVisible, setIsHeatmapVisible, heatmapData,
+    couponBoxes, collectedCoupon, handleCouponClick,
+    spawnCoupons, updateCouponVisibility,
+  } = useTwinMapState({
+    initTrafficData, initLinkData,
+    constructionData, themeTravelData, boundaryData, bitData,
+    isLinkSelectMode, isLinkSelectModeRef, selectedLinks,
+    flyTo, viewState, setViewState,
+    setRoadData, setDataStats,
   });
 
-  // 관광 카테고리 필터링 Hook
-  const { filteredData: filteredTourismData } = useCategoryFilter({
-    data: themeTravelData,
-    getCategoryKey: (item) => item.category_name || '기타',
+  // ─── 🚚 배송 시뮬레이션 (OSRM 기반) ──────────────────────────
+  const {
+    deliveryRoute, deliveryProgress, isSimulating,
+    truckPos, nearbyEvent, truckAngle, autoOpenedCctvRef,
+  } = useDeliverySimulation({
+    trackingNumber, shippingAddress,
+    cctvData, constructionData,
+    setViewState, setSelectedCctv, setIsCctvPopupOpen,
   });
 
-  // 공사 카테고리 필터링 Hook
-  const { filteredData: filteredConstructionByCategory } = useCategoryFilter({
-    data: filteredConstruction, // 시간 필터링된 데이터를 카테고리 필터링
-    getCategoryKey: (item) => item.field_code || 'F08',
-  });
-
-  // 카루젤 관리 Hook
-  const carousels = useTwinCarousels({
-    filteredTourismData, filteredConstructionByCategory, flyTo,
-  });
-
-  // ─── 교통 속도 맵 ─────────────────────────────────────────────
-  const trafficMap = useMemo(() => {
-    // 교통 이력 모드일 때는 historyTrafficMap 사용 (Task 7.2)
-    if (isHistoryMode && historyTrafficMap.size > 0) {
-      return historyTrafficMap;
-    }
-
-    // 실시간 모드: 기존 trafficData 사용
-    const map = new Map<string, number>();
-    let sampleItems = 0;
-    trafficData.forEach((item: any) => {
-      // lkId가 숫자로 올 수도 있어 String 변환, spd도 문자열일 수 있어 Number 변환
-      const id = String(item.lkId ?? "").trim();
-      const spd = Number(item.spd);
-      if (id) {
-        map.set(id, isNaN(spd) ? 0 : spd);
-        // 처음 5개 샘플 로그
-        if (sampleItems < 5) {
-          sampleItems++;
-        }
-      }
-    });
-    return map;
-  }, [trafficData, isHistoryMode, historyTrafficMap]);
-
-  // 클러스터링 Hook
-  const { bitClusters, constructionClusters, themeTravelClusters, cctvClusters } = useTwinClusters({
-    bitData, filteredConstructionByCategory,
-    filteredTourismData, cctvData, viewState,
-  });
-
-  // 링크 클러스터링 Hook (줌 레벨이 낮을 때 주요 도로만 필터링)
-  const { shouldFilter: shouldFilterLinks, filteredLinks } = useLinkClusters({
-    linkData: busanLinkData,
-    trafficMap,
-    viewState,
-    enabled: !isLinkSelectMode, // 링크 선택 모드일 때는 비활성화
-  });
+  // 쿠폰 경로 배치 (시뮬레이션 시작 시)
+  useEffect(() => { spawnCoupons(deliveryRoute ?? []); }, [deliveryRoute, spawnCoupons]);
+  // 트럭 근접 시 쿠폰 visible 갱신
+  useEffect(() => { updateCouponVisibility(truckPos ?? null, isSimulating); }, [truckPos, isSimulating, updateCouponVisibility]);
 
   // 툴팁 Hook
   const { tooltip, handleHover } = useTwinTooltip();
 
-  // District 클릭 핸들러
-  const handleDistrictClick = (districtName: string) => {
-    // 구 이름 → 좌표 직접 매핑
-    if (DISTRICT_COORDINATES[districtName]) {
-      flyTo(DISTRICT_COORDINATES[districtName], 13);
-      return;
-    }
+  // ─── 핸들러 / 이벤트 함수 통합 Hook ──────────────────────────
+  const {
+    mapRef, handleDistrictClick, handleMapClick,
+    toggleRoadviewPanel, handleRoadviewPositionChange, handleRoadviewAvailabilityChange,
+    toggleHistoryPanel, handleTrafficDataChange, goToMyLocation, handleMapLoad,
+  } = useTwinMapHandlers({
+    boundaryData, flyTo, isLinkSelectModeRef,
+    roadviewState, setRoadviewState, setRoadviewMarker,
+    setIsHistoryPanelOpen, setIsHistoryMode, setHistoryTrafficMap, setViewState,
+  });
 
-    // boundaryData에서 해당 district 찾기 (동 단위)
-    const district = boundaryData.find(
-      (d) => d.name === districtName || d.name.includes(districtName)
-    );
-
-    if (district) {
-      flyTo(getDistrictCenter(district), 13);
-    } else {
-      console.warn(`District not found: ${districtName}`);
-      flyTo([129.0756, 35.1796], 12);
-    }
-  };
-
-  // 지도 클릭 핸들러 (Task 5.2)
-  const handleMapClick = (info: any) => {
-    // 링크 선택 모드일 때는 로드뷰 클릭 무시
-    if (isLinkSelectModeState.current) return;
-
-    // 로드뷰가 열려있지 않으면 클릭 무시 (토글 버튼으로만 열기)
-    if (!roadviewState.isOpen) return;
-
-    // 다른 레이어 클릭 시 로드뷰 클릭 무시
-    if (info.layer?.id && !info.layer.id.includes('boundary')) return;
-
-    if (!info.coordinate) return;
-
-    const [lng, lat] = info.coordinate;
-
-    // 부산 지역 좌표 유효성 검증 (대략적인 범위)
-    if (lat < 34.8 || lat > 35.4 || lng < 128.7 || lng > 129.3) {
-      console.warn('Clicked position is outside Busan area');
-      return;
-    }
-
-    // 로드뷰 위치만 변경 (이미 열려있으므로)
-    setRoadviewState(prev => ({
-      ...prev,
-      position: { lat, lng },
-    }));
-
-    // 마커 표시
-    setRoadviewMarker({ lat, lng });
-  };
-
-  // 로드뷰 패널 토글 (Task 5.3)
-  const toggleRoadviewPanel = () => {
-    setRoadviewState(prev => {
-      const newIsOpen = !prev.isOpen;
-
-      // 패널을 열 때 기본 위치 설정 (부산역)
-      if (newIsOpen && !prev.position) {
-        const defaultPosition = { lat: 35.1796, lng: 129.0756 };
-        setRoadviewMarker(defaultPosition);
-        return {
-          ...prev,
-          isOpen: true,
-          position: defaultPosition,
-        };
-      }
-
-      return {
-        ...prev,
-        isOpen: newIsOpen,
-      };
-    });
-  };
-
-  // 로드뷰 위치 동기화 핸들러 (Task 5.4)
-  const handleRoadviewPositionChange = (newPosition: { lat: number; lng: number }, direction: number) => {
-    setRoadviewState(prev => ({
-      ...prev,
-      position: newPosition,
-      direction,
-    }));
-
-    setRoadviewMarker(newPosition);
-  };
-
-  // 로드뷰 가용성 변경 핸들러
-  const handleRoadviewAvailabilityChange = (isAvailable: boolean) => {
-    setRoadviewState(prev => ({
-      ...prev,
-      isAvailable,
-    }));
-  };
-
-  // 교통 이력 패널 토글 (Task 7.1)
-  const toggleHistoryPanel = () => {
-    setIsHistoryPanelOpen(prev => !prev);
-  };
-
-  // 교통 이력 데이터 변경 핸들러 (Task 7.2)
-  const handleTrafficDataChange = useCallback((newTrafficMap: Map<string, number>) => {
-    // 빈 Map이면 실시간 모드로 전환
-    if (newTrafficMap.size === 0) {
-      setIsHistoryMode(false);
-      setHistoryTrafficMap(new Map());
-    } else {
-      // 교통 이력 데이터가 있으면 이력 모드로 전환
-      setIsHistoryMode(true);
-      setHistoryTrafficMap(newTrafficMap);
-    }
-  }, []);
-
-  // MapLibre 인스턴스 ref
-  const mapRef = useRef<any>(null);
-
-  // MapLibre 로드 시 styleimagemissing 이벤트 핸들러 등록
-  const handleMapLoad = (event: any) => {
-    const map = event.target;
-    mapRef.current = map;
-
-    // styleimagemissing 이벤트 리스너 등록 (스타일 로드 전에 등록)
-    map.on('styleimagemissing', (e: any) => {
-      const id = e.id;
-
-      // 존재하지 않는 이미지에 대해 투명 이미지 생성
-      if (!map.hasImage(id)) {
-        try {
-          const size = 64;
-          const data = new Uint8Array(size * size * 4);
-          // 완전 투명 이미지
-          for (let i = 0; i < data.length; i += 4) {
-            data[i] = 0;     // R
-            data[i + 1] = 0; // G
-            data[i + 2] = 0; // B
-            data[i + 3] = 0; // A (투명)
-          }
-          map.addImage(id, {
-            width: size,
-            height: size,
-            data: data
-          });
-        } catch (err) {
-          // 무시
-        }
-      }
-    });
-
-    // 스타일이 완전히 로드된 후 3D 건물 활성화
-    map.once('styledata', () => {
-      try {
-        // MapTiler 스타일에 이미 3D 건물이 포함되어 있음
-        // 3D 건물 레이어의 가시성 확인 및 조정
-        const buildingLayer = map.getLayer('building-3d');
-        if (buildingLayer) {
-          map.setLayoutProperty('building-3d', 'visibility', 'visible');
-        }
-      } catch (err) {
-        console.warn('지도 레이어 설정 실패:', err);
-      }
-    });
-  };
-
-  useEffect(() => {
-    isLinkSelectModeState.current = isLinkSelectMode;
-    isLinkSelectModeRef.current = isLinkSelectMode;
-  }, [isLinkSelectMode, isLinkSelectModeRef]);
-
-  // 소통정보: 서버 API 실패 시 클라이언트에서 직접 외부 API 호출
-  useEffect(() => {
-    // 서버에서 데이터가 정상적으로 넘어왔으면 재요청 불필요
-    if (initTrafficData.length > 0) {
-      setTrafficData(initTrafficData);
-      return;
-    }
-
-    // 서버 API 호출 시도
-    fetch("/api/GIS/Busan/Traffic")
-      .then(async (res) => {
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
-            setTrafficData(data);
-            return;
-          }
-          // 데이터 없음 + clientFallbackUrl: 직접 외부 API 호출
-          if (data?.clientFallbackUrl) {
-            return fetch(data.clientFallbackUrl)
-              .then(r => r.json())
-              .then(d => {
-                const items = d?.content?.items;
-                if (items && items.length > 0) {
-                  setTrafficData(Array.isArray(items) ? items : [items]);
-                }
-              })
-              .catch(e => console.warn("[TwinMap] 클라이언트 직접 호출 실패:", e));
-          }
-        } else if (res.status === 503) {
-          const errData = await res.json().catch(() => ({}));
-          if (errData?.clientFallbackUrl) {
-            return fetch(errData.clientFallbackUrl)
-              .then(r => r.json())
-              .then(d => {
-                const items = d?.content?.items;
-                if (items && items.length > 0) {
-                  setTrafficData(Array.isArray(items) ? items : [items]);
-                }
-              })
-              .catch(e => console.warn("[TwinMap] 직접 호출 실패:", e));
-          }
-        }
-      })
-      .catch(e => console.warn("[TwinMap] Traffic API 호출 실패:", e));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initTrafficData]);
-
-  // 도로 목록 초기 fetch
-  useEffect(() => {
-    fetch("/api/GIS/Busan/Road/getRoadList")
-      .then(res => res.json())
-      .then(data => setRoadData(Array.isArray(data) ? data : []));
-  }, [setRoadData]);
-
-  // CCTV 데이터 페칭
-  useEffect(() => {
-    fetch("/api/GIS/Busan/CCTV/getCCTVList")
-      .then(res => res.json())
-      .then(data => {
-        if (data.data) {
-          setCctvData(data.data);
-        }
-      })
-      .catch(err => {
-        console.error("Failed to fetch CCTV data:", err);
-        setCctvData([]); // Graceful degradation
-      });
-  }, []);
-
-  // 데이터 통계 계산 및 Context 업데이트
-  useEffect(() => {
-    const speeds = trafficData.map((t: any) => t.spd).filter((s: number) => s > 0);
-    const avgSpeed = speeds.length > 0 ? Math.round(speeds.reduce((a: number, b: number) => a + b, 0) / speeds.length) : 0;
-    const activeConstruction = (constructionData || []).filter((c: any) => (c.progress_rate ?? 0) < 100).length;
-
-    setDataStats({
-      totalTraffic: trafficData.length,
-      avgSpeed, activeConstruction,
-    });
-  }, [trafficData, constructionData, setDataStats]);
-
-  // ─── 선택 가능한 링크 ID 계산 ──────────────────────────────────
+  // ─── 선택 가능한 링크 ID 계산 ─────────────────────────────────
   const selectableLinkIds = useMemo(() => {
     if (!isLinkSelectMode) return new Set<string>();
     return getSelectableLinkIds(selectedLinks, busanLinkData);
@@ -470,32 +150,16 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
 
   // ─── PathLayer 데이터 빌드 ────────────────────────────────────
   const pathData = useMemo(() => {
-    // 필터링된 링크가 있으면 사용, 없으면 원본 사용
     const sourceData = shouldFilterLinks && filteredLinks ? filteredLinks : busanLinkData;
-
-    const data = (sourceData?.features ?? []).map((feature: any) => {
-      // link_id를 String으로 변환해 trafficMap 키와 타입 통일
-      const lkId: string = String(feature.properties?.link_id ?? "").trim();
-      const coords = feature.geometry?.coordinates ?? [];
-
-      // LineString: coordinates = [[lng, lat], [lng, lat], ...]
-      return {
-        lkId,
-        path: coords, // 이미 [lng, lat] 형식의 배열
-      };
-    });
-
-    // 처음 5개 링크 샘플 로그
-    if (data.length > 0 && data.length <= 5) {
-      data.forEach((item: any, idx: number) => {
-      });
-    }
-
-    return data;
+    return (sourceData?.features ?? []).map((feature: any) => ({
+      lkId: String(feature.properties?.link_id ?? "").trim(),
+      path: feature.geometry?.coordinates ?? [],
+    }));
   }, [busanLinkData, shouldFilterLinks, filteredLinks, viewState.zoom]);
 
   // ─── 레이어 생성 ──────────────────────────────────────────────
   const boundaryLayer = createBoundaryLayer(boundaryData);
+
 
   // 링크 레이어: 필터링 여부와 관계없이 PathLayer 사용 (소통정보 색상 유지)
   const linkLayers = [createPathLayer(pathData, trafficMap, highlightedLinkIds, activeLinkId, isLinkSelectModeRef, handleLinkSelect, busanLinkData, selectableLinkIds,
@@ -509,14 +173,19 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
     }
   )];
 
+  // 교통 혼잡 히트맵 레이어
+  const trafficHeatmapLayer = createTrafficHeatmapLayer(heatmapData, isHeatmapVisible);
+
   // isCctvOnly 모드 시 CCTV 레이어만 표시 (다른 마커 숨김)
   const bitLayers = isCctvOnly ? [] : createBitClusterLayers(bitClusters);
   const constructionLayers = isCctvOnly ? [] : createConstructionClusterLayers(constructionClusters);
   const themeTravelLayers = isCctvOnly ? [] : createThemeTravelClusterLayers(themeTravelClusters);
+  const parkingLayers = isCctvOnly ? [] : createParkingClusterLayers(parkingClusters);
   const cctvLayers = createCctvClusterLayers(cctvClusters, {
     onMarkerClick: (cctv) => {
       setSelectedCctv(cctv);
       setIsCctvPopupOpen(true);
+      autoOpenedCctvRef.current = false; // 마커를 직접 클릭한 건 풀사이즈(default)로 띄움
     }
   });
 
@@ -524,6 +193,25 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
   const roadviewMarkerLayers = useMemo(() => {
     return createRoadviewMarkerLayer(roadviewMarker, roadviewState.direction);
   }, [roadviewMarker, roadviewState.direction]);
+
+  // 트럭 아이콘 2D 스크린 좌표 계산
+  const truckScreenPos = useMemo(() => {
+    if (!truckPos) return null;
+    const viewport = new WebMercatorViewport(viewState);
+    const [x, y] = viewport.project([truckPos.longitude, truckPos.latitude]);
+    return { x, y };
+  }, [truckPos, viewState]);
+
+  // 쿠폰 상자 화면 좌표 계산
+  const couponScreenPositions = useMemo(() => {
+    const viewport = new WebMercatorViewport(viewState);
+    return couponBoxes
+      .filter(b => b.visible && !b.collected)
+      .map(b => {
+        const [x, y] = viewport.project([b.lng, b.lat]);
+        return { ...b, x, y };
+      });
+  }, [couponBoxes, viewState]);
 
   return (
     <div className={styles.mapContainer}>
@@ -549,8 +237,10 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
           ...bitLayers,
           ...constructionLayers,
           ...themeTravelLayers,
+          ...parkingLayers,
           ...cctvLayers,
           ...roadviewMarkerLayers,  // 로드뷰 마커 레이어 추가 (Task 5.5)
+          trafficHeatmapLayer,      // 교통 혼잡 히트맵
           ...linkLayers,  // 링크 레이어 (클러스터 또는 개별) - 클릭 우선순위 최상위
         ]}
         onHover={handleHover}
@@ -561,16 +251,118 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
         style={{ position: 'relative', zIndex: '1' }}
       >
         <MapGL
-          mapStyle={`https://api.maptiler.com/maps/streets-v2-dark/style.json?key=fKF8gmBWlA2Re9H6cfet`}
+          mapStyle={mapStyleUrl}
           interactiveLayerIds={[]}
           style={{ position: 'relative', zIndex: '0' }}
           onLoad={handleMapLoad}
         >
+          {deliveryRoute && (
+            <Source id="delivery-route" type="geojson" data={{
+              type: 'Feature',
+              properties: {},
+              geometry: {
+                type: 'LineString',
+                coordinates: deliveryRoute
+              }
+            }}>
+              <Layer
+                id="delivery-route-line"
+                type="line"
+                paint={{
+                  'line-color': '#f59e0b',
+                  'line-width': 8,
+                  'line-opacity': 0.8,
+                  'line-dasharray': [2, 2]
+                }}
+              />
+            </Source>
+          )}
         </MapGL>
       </DeckGL>
 
+      {/* 날씨에 따른 비 내리는 효과 (지도 위에 오버레이) */}ㅁ
+      {isRainy && <RainOverlay />}
+
+      {/* FPV 모드 HUD 오버레이 */}
+      {isSimulating && isFpvMode && (
+        <div className={styles.fpvHudRoot}>
+          <div className={styles.fpvPillar} />
+          <div className={styles.fpvSpeedometer}>
+            <span className={styles.fpvSpeed}>
+              {Math.round(deliveryProgress * 80)} <span className={styles.fpvSpeedUnit}>km/h</span>
+            </span>
+            <span className={styles.fpvLabel}>DRIVE MODE</span>
+          </div>
+          <div className={styles.fpvProgressBar}>
+            <div className={styles.fpvProgressFill} style={{ width: `${deliveryProgress * 100}%` }} />
+          </div>
+          <div className={styles.fpvCrosshair}>
+            <div className={styles.fpvCrosshairH} />
+            <div className={styles.fpvCrosshairV} />
+          </div>
+        </div>
+      )}
+
+      {/* 최상단 HTML 오버레이: 배송 트럭 아이콘 */}
+      {truckScreenPos && (
+        <div
+          className={styles.truckOverlay}
+          style={{ left: truckScreenPos.x, top: truckScreenPos.y }}
+        >
+          🚛
+        </div>
+      )}
+
+      {/* 쿠폰 상자 HTML 오버레이 */}
+      {isSimulating && couponScreenPositions.map(box => (
+        <div
+          key={box.id}
+          onClick={() => handleCouponClick(box)}
+          className={styles.couponMarker}
+          style={{ left: box.x, top: box.y }}
+          title={`${box.discount}% 할인 쿠폰! 클릭하세요`}
+        >
+          🎁
+          <div className={styles.couponBadge}>{box.discount}% OFF</div>
+        </div>
+      ))}
+
+      {/* 쿠폰 획득 알림 */}
+      {collectedCoupon && (
+        <div className={styles.couponCollectPopup}>
+          <div className={styles.couponCollectIcon}>🎉</div>
+          <div className={styles.couponCollectAmount}>{collectedCoupon.discount}% 할인</div>
+          <div className={styles.couponCollectMsg}>GET! 쿠폰을 획득했습니다!</div>
+        </div>
+      )}
+
+
+      {/* 주변 CCTV / 공사 감지 UI */}
+      {nearbyEvent && (
+        <div
+          className={styles.eventFloatingPopup}
+          style={{ borderColor: nearbyEvent.type === 'cctv' ? '#06b6d4' : '#f97316', boxShadow: `0 0 20px ${nearbyEvent.type === 'cctv' ? 'rgba(6,182,212,0.3)' : 'rgba(249,115,22,0.3)'}` }}
+        >
+          <div className={styles.eventPopupHeader}>
+            <span className={`${styles.eventPopupTitle} ${nearbyEvent.type === 'cctv' ? styles.eventPopupTitleCctv : styles.eventPopupTitleConst}`}>
+              {nearbyEvent.type === 'cctv' ? '🎥 전방 CCTV 감지' : '🚧 전방 공사구간 감지'}
+            </span>
+            <span className={styles.eventPopupDist}>{nearbyEvent.distance.toFixed(1)}km 앞</span>
+          </div>
+          <div className={styles.eventPopupBody}>
+            {nearbyEvent.type === 'cctv'
+              ? (nearbyEvent.data.name || 'CCTV')
+              : (<><span className={styles.eventPopupFieldCode}>[{nearbyEvent.data.field_code || '진행중 공사'}]</span>{nearbyEvent.data.project_name || '도로 공사구간'}</>)
+            }
+          </div>
+          {nearbyEvent.type === 'construction' && nearbyEvent.data.progress_rate !== undefined && (
+            <div className={styles.eventPopupProgress}>진행률: {Math.round(nearbyEvent.data.progress_rate)}%</div>
+          )}
+        </div>
+      )}
+
       {/* Tooltip */}
-      {tooltip && (
+      {!isSimulating && tooltip && (
         <div
           className={styles.tooltip}
           style={{
@@ -583,14 +375,14 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
       )}
 
       {/* 링크 선택 모드 안내 배너 */}
-      {isLinkSelectMode && (
+      {!isSimulating && isLinkSelectMode && (
         <div className={`${styles.banner} ${styles.linkSelectBanner}`}>
           🔗 링크 선택 모드 — 지도의 도로를 클릭하세요
         </div>
       )}
 
       {/* 관광 순환 UI 표시 */}
-      {carousels.tourismCarousel.isActive && carousels.tourismCarousel.currentItem && carousels.selectedTourismCategoryForCarousel && (
+      {!isSimulating && carousels.tourismCarousel.isActive && carousels.tourismCarousel.currentItem && carousels.selectedTourismCategoryForCarousel && (
         <TourismCarouselDisplay
           categoryName={carousels.selectedTourismCategoryForCarousel}
           currentIndex={carousels.tourismCarousel.currentIndex}
@@ -600,7 +392,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
       )}
 
       {/* 공사 순환 UI 표시 */}
-      {carousels.constructionCarousel.isActive && carousels.constructionCarousel.currentItem && carousels.selectedConstructionCategoryForCarousel && (
+      {!isSimulating && carousels.constructionCarousel.isActive && carousels.constructionCarousel.currentItem && carousels.selectedConstructionCategoryForCarousel && (
         <ConstructionCarouselDisplay
           fieldCode={carousels.selectedConstructionCategoryForCarousel}
           currentIndex={carousels.constructionCarousel.currentIndex}
@@ -610,19 +402,23 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
       )}
 
       {/* 범례 */}
-      <MapLegend />
+      {!isSimulating && <MapLegend />}
 
       {/* CCTV 팝업 */}
       {selectedCctv && (
         <CctvPopup
           cctv={selectedCctv}
           isOpen={isCctvPopupOpen}
-          onClose={() => setIsCctvPopupOpen(false)}
+          onClose={() => {
+            setIsCctvPopupOpen(false);
+            autoOpenedCctvRef.current = false;
+          }}
+          variant={autoOpenedCctvRef.current ? "mini" : "default"}
         />
       )}
 
       {/* 링크 속도 히스토리 팝업 */}
-      {historyPopup && !isLinkSelectMode && (
+      {!isSimulating && historyPopup && !isLinkSelectMode && (
         <LinkSpeedHistoryPopup
           linkId={historyPopup.linkId}
           currentSpeed={historyPopup.speed}
@@ -631,241 +427,153 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
         />
       )}
 
-      {/* 로드뷰 패널 (Task 5.5) */}
-      <RoadviewPanel
-        isOpen={roadviewState.isOpen}
-        position={roadviewState.position}
-        onClose={() => setRoadviewState(prev => ({ ...prev, isOpen: false }))}
-        onPositionChange={handleRoadviewPositionChange}
-        onAvailabilityChange={handleRoadviewAvailabilityChange}
-      />
+      {/* FPV 모드 전환 버튼 (시뮬레이션 중에만 표시) */}
+      {isSimulating && (
+        <button
+          onClick={toggleFpvMode}
+          className={`${styles.fpvBtn} ${isFpvMode ? styles.fpvBtnOn : styles.fpvBtnOff}`}
+          aria-label={isFpvMode ? '3인칭 관제 뷰로 전환' : '1인칭 FPV 뷰로 전환'}
+        >
+          {isFpvMode ? '🗺️ 관제 뷰' : '🎮 1인칭 뷰'}
+        </button>
+      )}
 
-      {/* 교통 이력 패널 (Task 7.1) */}
-      <TrafficHistoryPanel
-        isOpen={isHistoryPanelOpen}
-        onClose={() => setIsHistoryPanelOpen(false)}
-        onTrafficDataChange={handleTrafficDataChange}
-      />
+      {!isSimulating && (
+        <>
+          {/* 로드뷰 패널 (Task 5.5) */}
+          <RoadviewPanel
+            isOpen={roadviewState.isOpen}
+            position={roadviewState.position}
+            onClose={() => setRoadviewState(prev => ({ ...prev, isOpen: false }))}
+            onPositionChange={handleRoadviewPositionChange}
+            onAvailabilityChange={handleRoadviewAvailabilityChange}
+          />
 
-      {/* 로드뷰 토글 버튼 (Task 5.3) */}
-      <button
-        onClick={toggleRoadviewPanel}
-        style={{
-          position: "fixed",
-          bottom: "24px",
-          right: "24px",
-          width: "56px",
-          height: "56px",
-          borderRadius: "50%",
-          background: roadviewState.isOpen
-            ? "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)"
-            : "linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%)",
-          border: "2px solid rgba(56, 189, 248, 0.4)",
-          boxShadow: roadviewState.isOpen
-            ? "0 4px 20px rgba(236, 72, 153, 0.4), 0 0 40px rgba(236, 72, 153, 0.2)"
-            : "0 4px 20px rgba(56, 189, 248, 0.4), 0 0 40px rgba(56, 189, 248, 0.2)",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "24px",
-          transition: "all 0.3s ease",
-          zIndex: 1001,
-        }}
-        aria-label={roadviewState.isOpen ? "로드뷰 패널 닫기" : "로드뷰 패널 열기"}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "scale(1.1)";
-          e.currentTarget.style.boxShadow = roadviewState.isOpen
-            ? "0 6px 30px rgba(236, 72, 153, 0.6), 0 0 60px rgba(236, 72, 153, 0.3)"
-            : "0 6px 30px rgba(56, 189, 248, 0.6), 0 0 60px rgba(56, 189, 248, 0.3)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "scale(1)";
-          e.currentTarget.style.boxShadow = roadviewState.isOpen
-            ? "0 4px 20px rgba(236, 72, 153, 0.4), 0 0 40px rgba(236, 72, 153, 0.2)"
-            : "0 4px 20px rgba(56, 189, 248, 0.4), 0 0 40px rgba(56, 189, 248, 0.2)";
-        }}
-      >
-        {roadviewState.isOpen ? "🗺️" : "👁️"}
-      </button>
+          {/* 교통 이력 패널 (Task 7.1) */}
+          <TrafficHistoryPanel
+            isOpen={isHistoryPanelOpen}
+            onClose={() => setIsHistoryPanelOpen(false)}
+            onTrafficDataChange={handleTrafficDataChange}
+          />
 
-      {/* 교통 이력 토글 버튼 (Task 7.1) */}
-      <button
-        onClick={toggleHistoryPanel}
-        style={{
-          position: "fixed",
-          bottom: "92px",
-          right: "24px",
-          width: "56px",
-          height: "56px",
-          borderRadius: "50%",
-          background: isHistoryPanelOpen
-            ? "linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)"
-            : "linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)",
-          border: "2px solid rgba(139, 92, 246, 0.4)",
-          boxShadow: isHistoryPanelOpen
-            ? "0 4px 20px rgba(245, 158, 11, 0.4), 0 0 40px rgba(245, 158, 11, 0.2)"
-            : "0 4px 20px rgba(139, 92, 246, 0.4), 0 0 40px rgba(139, 92, 246, 0.2)",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "24px",
-          transition: "all 0.3s ease",
-          zIndex: 1001,
-        }}
-        aria-label={isHistoryPanelOpen ? "교통 이력 패널 닫기" : "교통 이력 패널 열기"}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "scale(1.1)";
-          e.currentTarget.style.boxShadow = isHistoryPanelOpen
-            ? "0 6px 30px rgba(245, 158, 11, 0.6), 0 0 60px rgba(245, 158, 11, 0.3)"
-            : "0 6px 30px rgba(139, 92, 246, 0.6), 0 0 60px rgba(139, 92, 246, 0.3)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "scale(1)";
-          e.currentTarget.style.boxShadow = isHistoryPanelOpen
-            ? "0 4px 20px rgba(245, 158, 11, 0.4), 0 0 40px rgba(245, 158, 11, 0.2)"
-            : "0 4px 20px rgba(139, 92, 246, 0.4), 0 0 40px rgba(139, 92, 246, 0.2)";
-        }}
-      >
-        {isHistoryPanelOpen ? "⏱️" : "⏱️"}
-      </button>
+          {/* 날씨 헤더 */}
+          <WeatherHeader />
 
-      {/* 날씨 헤더 */}
-      <WeatherHeader />
+          {/* 하단 중앙 버튼 그룹 */}
+          <div className={styles.btnGroup}>
+            <button
+              onClick={() => setIsHeatmapVisible(prev => !prev)}
+              className={`${styles.circleBtnInline} ${isHeatmapVisible ? styles.roadviewBtnActive : styles.roadviewBtn}`}
+              aria-label={isHeatmapVisible ? "교통 히트맵 끄기" : "교통 히트맵 켜기"}
+              title="교통 혼잡 히트맵"
+            >
+              🔥
+            </button>
 
-      {/* 내 위치로 이동 버튼 */}
-      <button
-        onClick={() => {
-          if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-              (position) => {
-                const { latitude, longitude } = position.coords;
-                setViewState(prev => ({
-                  ...prev,
-                  longitude,
-                  latitude,
-                  zoom: 15,
-                  transitionDuration: 600,
-                }));
-              },
-              (error) => {
-                console.error("위치 조회 실패:", error);
-                alert("위치 정보를 가져올 수 없습니다. 브라우저 설정을 확인해주세요.");
-              }
-            );
-          } else {
-            alert("이 브라우저는 위치 정보를 지원하지 않습니다.");
-          }
-        }}
-        style={{
-          position: "fixed",
-          bottom: "24px",
-          right: "92px",
-          width: "44px",
-          height: "44px",
-          borderRadius: "50%",
-          background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
-          border: "2px solid rgba(16, 185, 129, 0.4)",
-          boxShadow: "0 4px 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(16, 185, 129, 0.2)",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "20px",
-          transition: "all 0.3s ease",
-          zIndex: 1001,
-        }}
-        aria-label="내 위치로 이동"
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "scale(1.1)";
-          e.currentTarget.style.boxShadow = "0 6px 30px rgba(16, 185, 129, 0.6), 0 0 60px rgba(16, 185, 129, 0.3)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "scale(1)";
-          e.currentTarget.style.boxShadow = "0 4px 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(16, 185, 129, 0.2)";
-        }}
-      >
-        📍
-      </button>
+            <button
+              onClick={toggleRoadviewPanel}
+              className={`${styles.circleBtnInline} ${roadviewState.isOpen ? styles.roadviewBtnActive : styles.roadviewBtn}`}
+              aria-label={roadviewState.isOpen ? "로드뷰 패널 닫기" : "로드뷰 패널 열기"}
+              title="로드뷰 보기"
+            >
+              {roadviewState.isOpen ? "🗺️" : "👁️"}
+            </button>
 
-      {/* 왼쪽 상단: 도로 테이블 (독립) */}
-      <TwinRoadPanel
-        roadData={roadData}
-        handleRoad={handleRoad}
-        clearAllHighlights={clearAllHighlights}
-        showTrafficOnly={showTrafficOnly}
-        selectedRoadId={selectedRoadId}
-      />
+            <button
+              onClick={toggleHistoryPanel}
+              className={`${styles.circleBtnInline} ${isHistoryPanelOpen ? styles.historyBtnActive : styles.historyBtn}`}
+              aria-label={isHistoryPanelOpen ? "교통 이력 패널 닫기" : "교통 이력 패널 열기"}
+              title="교통 이력"
+            >
+              ⏱️
+            </button>
 
-      {/* 오른쪽 상단: 구역 관리 / 시간 관리 (도로 선택 여부에 따라 자동 전환) */}
-      <div className={styles.topRightPanel}>
-        {selectedRoadId ? (
-          <TwinSectionPanel
-            sectionData={sectionData}
-            handleSection={handleSection}
+            <button
+              onClick={goToMyLocation}
+              className={`${styles.circleBtnInline} ${styles.locationBtn}`}
+              aria-label="내 위치로 이동"
+              title="내 위치"
+            >
+              📍
+            </button>
+          </div>
+
+          {/* 왼쪽 상단: 도로 테이블 (독립) */}
+          <TwinRoadPanel
+            roadData={roadData}
+            handleRoad={handleRoad}
+            clearAllHighlights={clearAllHighlights}
+            showTrafficOnly={showTrafficOnly}
             selectedRoadId={selectedRoadId}
-            selectedSectionId={selectedSectionId}
-            setLinkData={setLinkData}
-            setSelectedLinks={setSelectedLinks}
-            setIsLinkSelectMode={setIsLinkSelectMode}
-            clearAllHighlights={clearAllHighlights}
           />
-        ) : (
-          <TimeFilterPanel
-            startDate={timeFilterConfig.startDate}
-            endDate={timeFilterConfig.endDate}
-            ongoingOnly={timeFilterConfig.ongoingOnly}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-            onOngoingToggle={toggleOngoingOnly}
-            onReset={resetFilters}
-            visibleCount={visibleCount}
-            totalCount={totalCount}
-          />
-        )}
-      </div>
 
-      {/* 오른쪽 하단: 도로 선택 시 링크 테이블, 아니면 통계 대시보드 */}
-      <div className={styles.bottomRightPanel}>
-        {selectedRoadId ? (
-          <TwinLinkPanel
-            linkData={linkData}
-            selectedSectionId={selectedSectionId}
-            isLinkSelectMode={isLinkSelectMode}
-            selectedLinks={selectedLinks}
-            existingLinkIds={existingLinkIdsRef.current}
-            enterLinkSelectMode={() => enterLinkSelectMode(busanLinkData, setAllLinksData)}
-            handleLink={(id) => handleLink(id, busanLinkData)}
-            clearAllHighlights={clearAllHighlights}
-            saveLinks={saveLinks}
-          />
-        ) : (
-          <DashboardPanel
-            stats={stats}
-            isLoading={statsLoading}
-            boundaryData={boundaryData}
-            onDistrictClick={handleDistrictClick}
-            onTourismCategoryClick={(category) => {
-              // 관광 카테고리 클릭 시 바로 순환 시작
-              carousels.handleTourismCategoryPress(category);
-            }}
-            onConstructionFieldClick={(fieldCode) => {
-              // 공사 분야 클릭 시 바로 순환 시작
-              carousels.handleConstructionCategoryPress(fieldCode);
-            }}
-            activeCarouselCategory={carousels.activeCarouselCategory}
-            activeCarouselType={carousels.activeCarouselType}
-            isCctvOnly={isCctvOnly}
-            onStatClick={(statType) => {
-              // 도로 CCTV 카드 클릭 시 CCTV 단독 모드 토글
-              if (statType === 'cctv') {
-                setIsCctvOnly(prev => !prev);
-              }
-            }}
-          />
-        )}
-      </div>
+          {/* 오른쪽 상단: 구역 관리 / 시간 관리 (도로 선택 여부에 따라 자동 전환) */}
+          <div className={styles.topRightPanel}>
+            {selectedRoadId ? (
+              <TwinSectionPanel
+                sectionData={sectionData}
+                handleSection={handleSection}
+                selectedRoadId={selectedRoadId}
+                selectedSectionId={selectedSectionId}
+                setLinkData={setLinkData}
+                setSelectedLinks={setSelectedLinks}
+                setIsLinkSelectMode={setIsLinkSelectMode}
+                clearAllHighlights={clearAllHighlights}
+              />
+            ) : (
+              <TimeFilterPanel
+                startDate={timeFilterConfig.startDate}
+                endDate={timeFilterConfig.endDate}
+                ongoingOnly={timeFilterConfig.ongoingOnly}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+                onOngoingToggle={toggleOngoingOnly}
+                onReset={resetFilters}
+                visibleCount={visibleCount}
+                totalCount={totalCount}
+              />
+            )}
+          </div>
+
+          {/* 오른쪽 하단: 도로 선택 시 링크 테이블, 아니면 통계 대시보드 */}
+          <div className={styles.bottomRightPanel}>
+            {selectedRoadId ? (
+              <TwinLinkPanel
+                linkData={linkData}
+                selectedSectionId={selectedSectionId}
+                isLinkSelectMode={isLinkSelectMode}
+                selectedLinks={selectedLinks}
+                existingLinkIds={existingLinkIdsRef.current}
+                enterLinkSelectMode={() => enterLinkSelectMode(busanLinkData, setAllLinksData)}
+                handleLink={(id) => handleLink(id, busanLinkData)}
+                clearAllHighlights={clearAllHighlights}
+                saveLinks={saveLinks}
+              />
+            ) : (
+              <DashboardPanel
+                stats={stats}
+                isLoading={statsLoading}
+                boundaryData={boundaryData}
+                onDistrictClick={handleDistrictClick}
+                onTourismCategoryClick={(category) => {
+                  carousels.handleTourismCategoryPress(category);
+                }}
+                onConstructionFieldClick={(fieldCode) => {
+                  carousels.handleConstructionCategoryPress(fieldCode);
+                }}
+                activeCarouselCategory={carousels.activeCarouselCategory}
+                activeCarouselType={carousels.activeCarouselType}
+                isCctvOnly={isCctvOnly}
+                onStatClick={(statType) => {
+                  if (statType === 'cctv') {
+                    setIsCctvOnly(prev => !prev);
+                  }
+                }}
+              />
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

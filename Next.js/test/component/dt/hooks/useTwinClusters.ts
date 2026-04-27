@@ -8,6 +8,7 @@ interface UseTwinClustersProps {
   filteredConstructionByCategory: ConstructionPoint[];
   filteredTourismData: ThemeTravelPoint[];
   cctvData: CCTVPoint[];
+  parkingData?: any[]; // 주차장 데이터
   viewState: any;
 }
 
@@ -27,6 +28,7 @@ export function useTwinClusters({
   filteredConstructionByCategory,
   filteredTourismData,
   cctvData,
+  parkingData,
   viewState,
 }: UseTwinClustersProps) {
   // ─── Supercluster 인덱스 생성 ──────────────────────────────────
@@ -120,5 +122,24 @@ export function useTwinClusters({
     [cctvIndex, bbox, zoomInt]
   );
 
-  return { bitClusters, constructionClusters, themeTravelClusters, cctvClusters };
+  const parkingIndex = useMemo(() => {
+    const sc = new Supercluster({ radius: 80, maxZoom: 18, minZoom: 0 });
+    sc.load(
+      (parkingData || [])
+        .filter((p: any) => p.lat && p.lng)
+        .map((p: any) => ({
+          type: 'Feature' as const,
+          geometry: { type: 'Point' as const, coordinates: [p.lng, p.lat] as [number, number] },
+          properties: p,
+        }))
+    );
+    return sc;
+  }, [parkingData]);
+
+  const parkingClusters = useMemo(
+    () => parkingIndex.getClusters(bbox, zoomInt),
+    [parkingIndex, bbox, zoomInt]
+  );
+
+  return { bitClusters, constructionClusters, themeTravelClusters, cctvClusters, parkingClusters };
 }

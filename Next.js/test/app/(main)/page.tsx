@@ -27,7 +27,6 @@ const baseNavItems = [
   { href: "/SeoulTod", label: "서울 TOD", icon: "🚇", desc: "서울 대중교통 정보" },
   { href: "/api-docs", label: "API 문서", icon: "📃", desc: "Swagger 파일" },
   { href: "/ADMIN", label: "ADMIN PAGE", icon: "🔒", desc: "ADMIN PAGE" },
-  { href: "/payment", label: "결제", icon: "💸", desc: "결제 테스트" },
   { href: "/Shopping", label: "상품", icon: "🎁", desc: "상품 페이지" },
   { href: "/mypage", label: "마이페이지", icon: "👤", desc: "나의 쇼핑 활동" },
 ];
@@ -39,7 +38,7 @@ export default function Page() {
   const [weather, setWeather] = useState<any>(null);
   const [airQuality, setAirQuality] = useState<any>(null);
   const [moodTitle, setMoodTitle] = useState("");
-  const [moodItems, setMoodItems] = useState<{name: string, icon: string, link: string}[]>([]);
+  const [moodItems, setMoodItems] = useState<{ name: string, icon: string, link: string }[]>([]);
 
   useEffect(() => {
     // URL 파라미터에서 토큰 확인 및 저장 (네이버 로그인 콜백 처리)
@@ -80,10 +79,10 @@ export default function Page() {
           fetch("/api/weather/busan"),
           fetch("/api/airquality/busan"),
         ]);
-        
+
         let wData = null;
         let aData = null;
-        
+
         if (weatherRes.ok) {
           wData = await weatherRes.json();
           setWeather(wData);
@@ -147,11 +146,11 @@ export default function Page() {
       flexDirection: "column",
     }}>
       {/* Main Header (PageHeader Component) */}
-      <PageHeader 
-        title="메인 페이지" 
-        subtitle="원하는 기능을 선택하세요" 
-        icon="🏠" 
-        navLinks={[]} 
+      <PageHeader
+        title="메인 페이지"
+        subtitle="원하는 기능을 선택하세요"
+        icon="🏠"
+        navLinks={[]}
       />
 
       <div style={{ flex: 1, padding: "2rem 1rem" }}>
@@ -209,14 +208,14 @@ export default function Page() {
                     borderRadius: "12px", padding: "1rem", textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px",
                     transition: "all 0.2s"
                   }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLAnchorElement).style.borderColor = dark.accent;
-                    (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLAnchorElement).style.borderColor = dark.border;
-                    (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
-                  }}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLAnchorElement).style.borderColor = dark.accent;
+                      (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLAnchorElement).style.borderColor = dark.border;
+                      (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
+                    }}
                   >
                     <span style={{ fontSize: "28px" }}>{item.icon}</span>
                     <span style={{ fontSize: "13px", fontWeight: 600, color: dark.textPrimary }}>{item.name}</span>

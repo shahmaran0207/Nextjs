@@ -278,3 +278,305 @@
   font-size: 12px;
   color: #fed7aa;
 }
+
+/* 둥근 버튼 공통 (플로팅 버튼) */
+.circleBtn {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  transition: all 0.3s ease;
+  z-index: 1001;
+}
+
+.circleBtn:hover {
+  transform: scale(1.1);
+}
+
+/* flex 컨테이너 내부 버튼 공통 (위치 속성 없음, 부모 flex가 레이아웃 담당) */
+.circleBtnInline {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.circleBtnInline:hover {
+  transform: scale(1.1);
+}
+
+/* 로드뷰 버튼 */
+.roadviewBtn {
+  background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
+  border: 2px solid rgba(56, 189, 248, 0.4);
+  box-shadow: 0 4px 20px rgba(56, 189, 248, 0.4), 0 0 40px rgba(56, 189, 248, 0.2);
+}
+.roadviewBtn:hover {
+  box-shadow: 0 6px 30px rgba(56, 189, 248, 0.6), 0 0 60px rgba(56, 189, 248, 0.3);
+}
+
+.roadviewBtnActive {
+  background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+  border: 2px solid rgba(56, 189, 248, 0.4);
+  box-shadow: 0 4px 20px rgba(236, 72, 153, 0.4), 0 0 40px rgba(236, 72, 153, 0.2);
+}
+.roadviewBtnActive:hover {
+  box-shadow: 0 6px 30px rgba(236, 72, 153, 0.6), 0 0 60px rgba(236, 72, 153, 0.3);
+}
+
+/* 교통이력 버튼 */
+.historyBtn {
+  background: linear-gradient(135deg, #8b5cf6 0%, #c084fc 100%);
+  border: 2px solid rgba(139, 92, 246, 0.4);
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4), 0 0 40px rgba(139, 92, 246, 0.2);
+}
+.historyBtn:hover {
+  box-shadow: 0 6px 30px rgba(139, 92, 246, 0.6), 0 0 60px rgba(139, 92, 246, 0.3);
+}
+
+.historyBtnActive {
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+  border: 2px solid rgba(245, 158, 11, 0.4);
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4), 0 0 40px rgba(245, 158, 11, 0.2);
+}
+.historyBtnActive:hover {
+  box-shadow: 0 6px 30px rgba(245, 158, 11, 0.6), 0 0 60px rgba(245, 158, 11, 0.3);
+}
+
+/* 내 위치 버튼 */
+.locationBtn {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  border: 2px solid rgba(16, 185, 129, 0.4);
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(16, 185, 129, 0.2);
+}
+.locationBtn:hover {
+  box-shadow: 0 6px 30px rgba(16, 185, 129, 0.6), 0 0 60px rgba(16, 185, 129, 0.3);
+}
+
+/* 트럭 오버레이 */
+.truckOverlay {
+  position: absolute;
+  transform: translate(-50%, -50%) scaleX(-1);
+  font-size: 48px;
+  z-index: 9999;
+  pointer-events: none;
+  filter: drop-shadow(0px 8px 6px rgba(0,0,0,0.5));
+  transition: left 0.1s linear, top 0.1s linear;
+}
+
+/* 시뮬레이션 이벤트 플로팅 팝업 */
+.eventFloatingPopup {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 16px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 280px;
+}
+
+.eventPopupHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.eventPopupTitle {
+  font-size: 14px;
+  font-weight: bold;
+}
+.eventPopupTitleCctv { color: #22d3ee; }
+.eventPopupTitleConst { color: #fdba74; }
+.eventPopupDist { font-size: 12px; color: #94a3b8; }
+.eventPopupBody { font-size: 16px; line-height: 1.4; }
+.eventPopupFieldCode { color: #fdba74; margin-right: 6px; }
+.eventPopupProgress { font-size: 13px; color: #cbd5e1; }
+
+/* ─── FPV HUD ──────────────────────────────────────────────── */
+.fpvHudRoot {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 8000;
+}
+.fpvPillar {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(
+    to right,
+    rgba(0,0,0,0.35) 0%, transparent 18%,
+    transparent 82%, rgba(0,0,0,0.35) 100%
+  );
+}
+.fpvSpeedometer {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 50%;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.fpvSpeed {
+  font-size: 28px;
+  font-weight: 800;
+  color: #38bdf8;
+}
+.fpvSpeedUnit { font-size: 13px; color: #94a3b8; }
+.fpvLabel { font-size: 11px; color: #64748b; margin-top: 4px; }
+.fpvProgressBar {
+  position: absolute;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+}
+.fpvProgressFill {
+  height: 100%;
+  background: #38bdf8;
+  border-radius: 2px;
+  transition: width 0.5s;
+}
+.fpvCrosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+}
+.fpvCrosshairH {
+  position: absolute;
+  top: 50%; left: 0; right: 0;
+  height: 1px;
+  background: rgba(56,189,248,0.5);
+}
+.fpvCrosshairV {
+  position: absolute;
+  left: 50%; top: 0; bottom: 0;
+  width: 1px;
+  background: rgba(56,189,248,0.5);
+}
+
+/* ─── FPV 전환 버튼 ────────────────────────────────────────── */
+.fpvBtn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 10001;
+  border-radius: 12px;
+  padding: 10px 18px;
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+.fpvBtnOff {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border: 2px solid rgba(99,102,241,0.5);
+  box-shadow: 0 4px 20px rgba(99,102,241,0.5);
+}
+.fpvBtnOn {
+  background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+  border: 2px solid rgba(245,158,11,0.5);
+  box-shadow: 0 4px 20px rgba(245,158,11,0.5);
+}
+
+/* ─── 버튼 그룹 컨테이너 ────────────────────────────────────── */
+.btnGroup {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  z-index: 1001;
+}
+
+/* ─── 쿠폰 마커 ─────────────────────────────────────────────── */
+.couponMarker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 9998;
+  cursor: pointer;
+  animation: couponPulse 1.2s ease-in-out infinite;
+  font-size: 32px;
+  filter: drop-shadow(0 0 10px rgba(250,204,21,0.9));
+  user-select: none;
+}
+.couponBadge {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fde047;
+  color: #1a1a1a;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* ─── 쿠폰 획득 팝업 ────────────────────────────────────────── */
+.couponCollectPopup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20000;
+  background: linear-gradient(135deg, #fde047 0%, #f59e0b 100%);
+  border-radius: 20px;
+  padding: 24px 40px;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 0 60px rgba(250,204,21,0.8);
+  animation: couponCollect 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+.couponCollectIcon { font-size: 40px; margin-bottom: 8px; }
+.couponCollectAmount { font-size: 28px; font-weight: 900; color: #1a1a1a; }
+.couponCollectMsg { font-size: 14px; color: #78350f; margin-top: 4px; }
+
+/* ─── 쿠폰/FPV 애니메이션 ────────────────────────────────────── */
+@keyframes couponPulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.2); }
+}
+@keyframes couponCollect {
+  from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  to   { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
+}
