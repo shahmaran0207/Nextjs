@@ -37,6 +37,10 @@ const CHAINS = [
 const DEPLOYER_PRIVATE_KEY =
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
+// ETH를 즉시 수령할 판매자 지갑 주소
+// pay() 호출 시 결제금이 이 주소로 바로 포워딩됨
+const RECIPIENT_ADDRESS = "0x13F845A27b63EF4F693DBB4571C0104dFf232730";
+
 async function deployToChain(chain, abi, bytecode) {
   console.log(`\n📡 ${chain.name} (chainId: ${chain.chainId}) 배포 시작...`);
 
@@ -58,10 +62,10 @@ async function deployToChain(chain, abi, bytecode) {
   console.log(`  👤 배포자: ${deployer.address}`);
   console.log(`  💰 잔액:   ${ethers.formatEther(balance)} ETH`);
 
-  // 컨트랙트 배포
+  // 컨트랙트 배포 (recipient 주소를 constructor 인자로 전달)
   const factory  = new ethers.ContractFactory(abi, bytecode, deployer);
-  const contract = await factory.deploy();
-  // constructor 인자 없음 — PaymentReceiver()는 인자 없이 배포
+  const contract = await factory.deploy(RECIPIENT_ADDRESS);
+  // constructor(address payable _recipient) — 판매자 지갑 주소 주입
 
   const receipt  = await contract.deploymentTransaction().wait(1);
   const address  = receipt.contractAddress;

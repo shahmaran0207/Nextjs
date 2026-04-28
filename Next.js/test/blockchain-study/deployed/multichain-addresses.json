@@ -1,8 +1,14 @@
 {
-  "deployedAt": "2026-04-28T04:41:24.097Z",
+  "deployedAt": "2026-04-28T05:25:11.349Z",
   "abi": [
     {
-      "inputs": [],
+      "inputs": [
+        {
+          "internalType": "address payable",
+          "name": "_recipient",
+          "type": "address"
+        }
+      ],
       "stateMutability": "nonpayable",
       "type": "constructor"
     },
@@ -37,27 +43,27 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "to",
+          "name": "oldRecipient",
           "type": "address"
         },
         {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
+          "indexed": true,
+          "internalType": "address",
+          "name": "newRecipient",
+          "type": "address"
         }
       ],
-      "name": "Withdrawn",
+      "name": "RecipientChanged",
       "type": "event"
     },
     {
       "inputs": [],
-      "name": "getBalance",
+      "name": "getRecipient",
       "outputs": [
         {
-          "internalType": "uint256",
+          "internalType": "address",
           "name": "",
-          "type": "uint256"
+          "type": "address"
         }
       ],
       "stateMutability": "view",
@@ -91,7 +97,26 @@
     },
     {
       "inputs": [],
-      "name": "withdraw",
+      "name": "recipient",
+      "outputs": [
+        {
+          "internalType": "address payable",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address payable",
+          "name": "_newRecipient",
+          "type": "address"
+        }
+      ],
+      "name": "setRecipient",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

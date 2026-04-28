@@ -6,8 +6,23 @@ import styles from "./page.module.css";
 import { PageHeader } from "@/component/PageHeader";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 
+// ── 결제 서버 주소 ────────────────────────────────────────────────
+const PAYMENT_SERVER = "http://localhost:3001";
+
+// ── PaymentReceiver 컨트랙트 최소 ABI ────────────────────────────
+// pay(orderId) 함수 하나만 필요
+const RECEIVER_ABI = [
+  {
+    inputs: [{ internalType: "string", name: "orderId", type: "string" }],
+    name: "pay",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+];
+
 // ── 지원 코인 목록 (각각 다른 체인) ─────────────────────────────────
-// TODO: 각 체인에 컨트랙트 배포 후 address와 chainId를 실제 값으로 교체
+// deploy-multichain.js 실행 후 확정된 실제 컨트랙트 주소
 const COINS = [
   {
     id: "chain-a",
@@ -18,9 +33,7 @@ const COINS = [
     rpcUrl: "http://127.0.0.1:8545",
     chainName: "Local Chain A",
     color: "#6366f1",
-    // 배포 후 교체할 컨트랙트 주소 (PaymentReceiver)
-    contractAddress: "",
-    nativeCoin: true, // 네이티브 ETH로 결제
+    contractAddress: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
   },
   {
     id: "chain-b",
@@ -31,8 +44,7 @@ const COINS = [
     rpcUrl: "http://127.0.0.1:8546",
     chainName: "Local Chain B",
     color: "#10b981",
-    contractAddress: "",
-    nativeCoin: true,
+    contractAddress: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
   },
   {
     id: "chain-c",
@@ -43,27 +55,27 @@ const COINS = [
     rpcUrl: "http://127.0.0.1:8547",
     chainName: "Local Chain C",
     color: "#f59e0b",
-    contractAddress: "",
-    nativeCoin: true,
+    contractAddress: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
   },
 ] as const;
 
 type Coin = (typeof COINS)[number];
 
 // 결제 진행 단계
-// 0 = 대기, 1 = 네트워크 전환 중, 2 = 결제 트랜잭션 중, 3 = 완료
-type PayStep = 0 | 1 | 2 | 3;
+// 0 = 대기, 1 = 주문 생성 중, 2 = 네트워크 전환 중,
+// 3 = 컨트랙트 결제 서명 중, 4 = 서버 확인 대기 중, 5 = 완료
+type PayStep = 0 | 1 | 2 | 3 | 4 | 5;
 
 export default function MultiPaymentPage() {
   const [account, setAccount] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
 
   const [selectedCoin, setSelectedCoin] = useState<Coin>(COINS[0]);
-  const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
-  const [recipientError, setRecipientError] = useState<string | null>(null);
 
   const [payStep, setPayStep] = useState<PayStep>(0);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  // 서버에서 발급받은 주문번호 — 블록체인 이벤트와 매칭하는 핵심 키
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -123,35 +135,61 @@ export default function MultiPaymentPage() {
 
   // ── 결제 실행 ──────────────────────────────────────────────────────
   const handlePay = async () => {
-    if (!account || !amount || !recipient) return;
-    if (!ethers.isAddress(recipient)) {
-      setRecipientError("⚠️ 올바른 지갑 주소를 입력하세요 (0x로 시작하는 42자리)");
-      return;
-    }
+    if (!account || !amount) return;
 
     try {
       setError(null);
       setTxHash(null);
+      setOrderId(null);
 
-      // 1단계: 해당 코인의 체인으로 MetaMask 네트워크 전환
+      // 1단계: 결제 서버에 주문 생성
       setPayStep(1);
+      const orderRes = await fetch(`${PAYMENT_SERVER}/api/order`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount }),
+      });
+      if (!orderRes.ok) throw new Error("주문 생성 실패");
+      const { orderId: newOrderId } = await orderRes.json();
+      setOrderId(newOrderId);
+      // 이 orderId가 블록체인 이벤트와 DB를 연결하는 핵심 키
+
+      // 2단계: 선택한 체인으로 MetaMask 네트워크 전환
+      setPayStep(2);
       await switchToChain(selectedCoin);
 
-      // 2단계: 결제 트랜잭션 전송
-      setPayStep(2);
+      // 3단계: PaymentReceiver.pay(orderId) 호출
+      // 단순 ETH 전송이 아니라 컨트랙트 함수를 호출 — 이벤트를 발생시킴
+      setPayStep(3);
       const provider = new ethers.BrowserProvider((window as any).ethereum);
       const signer = await provider.getSigner();
-
-      // TODO: 컨트랙트 배포 후 PaymentReceiver.pay(orderId) 로 교체
-      // 현재는 단순 ETH 전송으로 동작 확인
-      const tx = await signer.sendTransaction({
-        to: recipient,
+      const contract = new ethers.Contract(
+        selectedCoin.contractAddress,
+        RECEIVER_ABI,
+        signer
+      );
+      const tx = await contract.pay(newOrderId, {
         value: ethers.parseEther(amount),
       });
       const receipt = await tx.wait();
-
       setTxHash(receipt!.hash);
-      setPayStep(3);
+
+      // 4단계: 결제 서버에 DB 업데이트 완료 확인 (폴링)
+      // 서버가 이벤트를 감지해 DB를 "paid"로 바꿀 때까지 대기
+      setPayStep(4);
+      let confirmed = false;
+      for (let i = 0; i < 20; i++) {
+        await new Promise((r) => setTimeout(r, 1500)); // 1.5초 대기
+        const statusRes = await fetch(`${PAYMENT_SERVER}/api/order/${newOrderId}`);
+        const statusData = await statusRes.json();
+        if (statusData.status === "paid") {
+          confirmed = true;
+          break;
+        }
+      }
+      if (!confirmed) throw new Error("서버 확인 시간 초과 (이벤트 감지 실패)");
+
+      setPayStep(5);
     } catch (err: any) {
       console.error("결제 실패:", err);
       setError("결제 실패: " + (err.reason || err.message));
@@ -159,7 +197,7 @@ export default function MultiPaymentPage() {
     }
   };
 
-  const isProcessing = payStep > 0 && payStep < 3;
+  const isProcessing = payStep > 0 && payStep < 5;
 
   return (
     <>
@@ -250,32 +288,6 @@ export default function MultiPaymentPage() {
 
           {/* ── 결제 정보 입력 ── */}
           <div className={styles.formSection}>
-            <label className={styles.formLabel}>받는 주소</label>
-            <input
-              type="text"
-              className={`${styles.input} ${recipientError ? styles.inputError : ""}`}
-              placeholder="0x..."
-              value={recipient}
-              onChange={(e) => {
-                setRecipient(e.target.value);
-                if (recipientError) setRecipientError(null);
-                setPayStep(0);
-              }}
-              onBlur={(e) => {
-                const val = e.target.value;
-                if (val && !ethers.isAddress(val)) {
-                  setRecipientError("⚠️ 올바른 지갑 주소 형식이 아닙니다 (0x로 시작하는 42자리)");
-                } else {
-                  setRecipientError(null);
-                }
-              }}
-            />
-            {recipientError && (
-              <div className={styles.errorText}>{recipientError}</div>
-            )}
-          </div>
-
-          <div className={styles.formSection}>
             <label className={styles.formLabel}>
               결제 금액 ({selectedCoin.symbol})
             </label>
@@ -291,7 +303,7 @@ export default function MultiPaymentPage() {
           </div>
 
           {/* ── 결제 요약 ── */}
-          {amount && recipient && !recipientError && (
+          {amount && (
             <div className={styles.summaryBox}>
               <div className={styles.summaryRow}>
                 <span className={styles.summaryKey}>결제 코인</span>
@@ -308,11 +320,17 @@ export default function MultiPaymentPage() {
                 <span className={styles.summaryVal}>{amount} ETH</span>
               </div>
               <div className={styles.summaryRow}>
-                <span className={styles.summaryKey}>받는 주소</span>
+                <span className={styles.summaryKey}>수신 컨트랙트</span>
                 <span className={styles.summaryVal}>
-                  {recipient.slice(0, 10)}...{recipient.slice(-6)}
+                  {selectedCoin.contractAddress.slice(0, 10)}...{selectedCoin.contractAddress.slice(-6)}
                 </span>
               </div>
+              {orderId && (
+                <div className={styles.summaryRow}>
+                  <span className={styles.summaryKey}>주문번호</span>
+                  <span className={styles.summaryVal} style={{ fontSize: '0.75rem' }}>{orderId}</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -325,21 +343,22 @@ export default function MultiPaymentPage() {
 
           {/* ── 결제 버튼 ── */}
           <button
-            className={`${styles.payBtn} ${isProcessing ? styles.payBtnActive : payStep === 3 ? styles.payBtnDone : ""
-              }`}
-            onClick={payStep === 3 ? () => { setPayStep(0); setTxHash(null); setAmount(""); } : handlePay}
-            disabled={isProcessing || !account || !amount || !recipient || !!recipientError}
+            className={`${styles.payBtn} ${isProcessing ? styles.payBtnActive : payStep === 5 ? styles.payBtnDone : ""}`}
+            onClick={payStep === 5 ? () => { setPayStep(0); setTxHash(null); setAmount(""); setOrderId(null); } : handlePay}
+            disabled={isProcessing || !account || !amount}
           >
             {payStep === 0 && `💳 ${selectedCoin.symbol}으로 결제하기`}
-            {payStep === 1 && `⏳ [1/2] ${selectedCoin.chainName}으로 네트워크 전환 중…`}
-            {payStep === 2 && "⏳ [2/2] 결제 트랜잭션 서명 중… MetaMask를 확인하세요"}
-            {payStep === 3 && "✅ 결제 완료! — 다시 결제하기"}
+            {payStep === 1 && "⏳ [1/4] 주문번호 생성 중…"}
+            {payStep === 2 && `⏳ [2/4] ${selectedCoin.chainName}으로 네트워크 전환 중…`}
+            {payStep === 3 && "⏳ [3/4] MetaMask 서명 중… 팝업을 확인하세요"}
+            {payStep === 4 && "⏳ [4/4] 서버 결제 확인 중… (이벤트 감지 대기)"}
+            {payStep === 5 && "✅ 결제 완료! — 다시 결제하기"}
           </button>
 
           {/* 진행 상태 바 */}
           {isProcessing && (
             <div className={styles.progressBar}>
-              {[1, 2].map((s) => (
+              {[1, 2, 3, 4].map((s) => (
                 <div
                   key={s}
                   className={`${styles.progressStep} ${payStep >= s ? styles.progressStepActive : ""}`}
@@ -355,11 +374,15 @@ export default function MultiPaymentPage() {
                 ✅ 트랜잭션 완료
               </div>
               <div className={styles.resultHash}>
+                <div style={{ color: '#64748b', marginBottom: '4px' }}>주문번호</div>
+                {orderId}
+              </div>
+              <div className={styles.resultHash} style={{ marginTop: '10px' }}>
                 <div style={{ color: '#64748b', marginBottom: '4px' }}>TX Hash</div>
                 {txHash}
               </div>
               <div style={{ marginTop: '10px', fontSize: '0.82rem', color: '#34d399' }}>
-                {selectedCoin.chainName} 체인에서 결제가 완료되었습니다.
+                {selectedCoin.chainName} 체인에서 결제가 완료되어 DB에 저장되었습니다.
               </div>
             </div>
           )}
