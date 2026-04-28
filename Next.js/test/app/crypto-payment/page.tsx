@@ -3,123 +3,223 @@
 import React, { useState, useEffect } from "react";
 import { ethers } from "ethers";
 import styles from "./page.module.css";
-import { Wallet, Send, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Wallet, Send, AlertCircle, CheckCircle2, Zap } from "lucide-react";
 import { PageHeader } from "@/component/PageHeader";
+// deployed-addresses.json에서 컨트랙트 주소 + ABI를 직접 가져옴
+import deployedData from "../../blockchain-study/deployed/deployed-addresses.json";
+
+const GAS_ADDR = deployedData.contracts.GasToken.address;
+const PAY_ADDR = deployedData.contracts.PayToken.address;
+const DUAL_ADDR = deployedData.contracts.DualPayment.address;
+const GAS_ABI = deployedData.contracts.GasToken.abi;
+const PAY_ABI = deployedData.contracts.PayToken.abi;
+const DUAL_ABI = deployedData.contracts.DualPayment.abi;
 
 export default function CryptoPaymentPage() {
-  // 상태 관리
+  // ── 지갑 상태 ──────────────────────────────────────────────────────
   const [account, setAccount] = useState<string | null>(null);
-  const [balance, setBalance] = useState<string>("0");
+  const [ethBalance, setEthBalance] = useState<string>("0");
+  const [gasBalance, setGasBalance] = useState<string>("0");
+  const [payBalance, setPayBalance] = useState<string>("0");
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 송금 관련 상태
+  // ── ETH 송금 상태 (기존) ──────────────────────────────────────────
   const [recipient, setRecipient] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
   const [isSending, setIsSending] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
 
-  // MetaMask 설치 여부 확인
+  // ── DualPayment 상태 ──────────────────────────────────────────────
+  const [payRecipient, setPayRecipient] = useState<string>("");
+  const [payAmount, setPayAmount] = useState<string>("");
+  const [feeRate, setFeeRate] = useState<number>(0);
+  const [step1Done, setStep1Done] = useState(false);
+  const [step2Done, setStep2Done] = useState(false);
+  const [isStep1Loading, setIsStep1Loading] = useState(false);
+  const [isStep2Loading, setIsStep2Loading] = useState(false);
+  const [isPayLoading, setIsPayLoading] = useState(false);
+  const [payTxHash, setPayTxHash] = useState<string | null>(null);
+  const [dualError, setDualError] = useState<string | null>(null);
+  const [recipientError, setRecipientError] = useState<string | null>(null);
+
   const isMetaMaskInstalled = typeof window !== "undefined" && (window as any).ethereum;
 
-  // 지갑 연결 함수
+  // ── 컨트랙트 잔액 + feeRate 조회 ─────────────────────────────────
+  const loadContractData = async (addr: string, provider: ethers.BrowserProvider) => {
+    try {
+      // 디버깅: 현재 연결된 네트워크와 확인할 주소 출력
+      const network = await provider.getNetwork();
+      console.log("🔍 현재 MetaMask 네트워크 chainId:", network.chainId.toString());
+      console.log("🔍 확인할 DualPayment 주소:", DUAL_ADDR);
+
+      // 컨트랙트 코드 존재 여부 먼저 확인 (0x = 배포되지 않은 주소)
+      const code = await provider.getCode(DUAL_ADDR);
+      console.log("🔍 컨트랙트 코드 길이:", code.length, "(0x이면 미배포)");
+
+      if (code === "0x") {
+        setDualError(`⚠️ 컨트랙트가 없습니다 (ChainID: ${network.chainId}) — MetaMask가 'Localhost 8545'에 연결되어 있는지 확인하세요.`);
+        return;
+      }
+      const dual = new ethers.Contract(DUAL_ADDR, DUAL_ABI, provider);
+      const [gasBal, payBal] = await dual.getUserBalances(addr);
+      setGasBalance(parseFloat(ethers.formatEther(gasBal)).toLocaleString());
+      setPayBalance(parseFloat(ethers.formatEther(payBal)).toLocaleString());
+      const rate = await dual.feeRate();
+      setFeeRate(Number(rate));
+      setDualError(null);
+    } catch (e) {
+      console.error("컨트랙트 데이터 로드 실패:", e);
+      setDualError("⚠️ 컨트랙트 연결 실패 — Ganache가 실행 중이고 deploy.js가 완료되었는지 확인하세요.");
+    }
+  };
+
+  // ── 지갑 연결 ─────────────────────────────────────────────────────
   const connectWallet = async () => {
     if (!isMetaMaskInstalled) {
-      setError("MetaMask가 설치되어 있지 않습니다. 브라우저 확장 프로그램을 설치해주세요.");
+      setError("MetaMask가 설치되어 있지 않습니다.");
       return;
     }
-
     try {
       setIsConnecting(true);
       setError(null);
-
-      // 1. MetaMask에 지갑 연결 요청 (이때 브라우저 팝업이 뜹니다)
-      // window.ethereum은 MetaMask가 브라우저에 주입(Inject)한 객체입니다.
       const accounts = await (window as any).ethereum.request({ method: "eth_requestAccounts" });
-
       if (accounts.length > 0) {
-        const address = accounts[0];
-        setAccount(address);
-
-        // 2. 연결된 지갑의 잔액 조회
-        // ethers.BrowserProvider는 window.ethereum을 감싸서 이더리움 네트워크와 통신하게 해줍니다.
+        const addr = accounts[0];
+        setAccount(addr);
         const provider = new ethers.BrowserProvider((window as any).ethereum);
-        const balanceWei = await provider.getBalance(address);
-
-        // Wei 단위를 ETH 단위로 변환 (1 ETH = 10^18 Wei)
-        const balanceEth = ethers.formatEther(balanceWei);
-        setBalance(parseFloat(balanceEth).toFixed(4));
+        const balWei = await provider.getBalance(addr);
+        setEthBalance(parseFloat(ethers.formatEther(balWei)).toFixed(4));
+        await loadContractData(addr, provider);
       }
     } catch (err: any) {
-      console.error(err);
       setError(err.message || "지갑 연결에 실패했습니다.");
     } finally {
       setIsConnecting(false);
     }
   };
 
-  // 트랜잭션 전송(결제) 함수
+  // ── ETH 직접 송금 (기존) ──────────────────────────────────────────
   const sendTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!account) return;
-
     try {
       setIsSending(true);
       setError(null);
       setTxHash(null);
-
-      // 1. Provider와 Signer 가져오기
       const provider = new ethers.BrowserProvider((window as any).ethereum);
-      // Signer는 트랜잭션에 '서명'할 수 있는 권한을 가진 객체입니다. (현재 연결된 내 계정)
       const signer = await provider.getSigner();
-
-      // 2. 트랜잭션 객체 생성
-      const tx = {
-        to: recipient,
-        // 입력받은 ETH 수량을 다시 Wei 단위로 변환
-        value: ethers.parseEther(amount)
-      };
-
-      // 3. 트랜잭션 전송 및 서명 (이때 MetaMask 결제 승인 팝업이 뜹니다)
-      const transactionResponse = await signer.sendTransaction(tx);
-
-      // 4. 전송 완료 후 해시값 저장
-      setTxHash(transactionResponse.hash);
-
-      // (선택) 트랜잭션이 블록에 완전히 기록될 때까지 기다리기
-      // await transactionResponse.wait(); 
-
-      // 잔액 갱신
-      const newBalanceWei = await provider.getBalance(account);
-      setBalance(parseFloat(ethers.formatEther(newBalanceWei)).toFixed(4));
-
+      const tx = await signer.sendTransaction({ to: recipient, value: ethers.parseEther(amount) });
+      setTxHash(tx.hash);
+      const newBal = await provider.getBalance(account);
+      setEthBalance(parseFloat(ethers.formatEther(newBal)).toFixed(4));
     } catch (err: any) {
-      console.error(err);
       setError(err.message || "트랜잭션 전송 중 오류가 발생했습니다.");
     } finally {
       setIsSending(false);
     }
   };
 
-  // 계정 변경 감지
-  useEffect(() => {
-    if (isMetaMaskInstalled) {
-      const handleAccountsChanged = (accounts: string[]) => {
-        if (accounts.length > 0) {
-          setAccount(accounts[0]);
-          // 계정이 바뀌면 잔액도 다시 불러와야 하지만 여기서는 생략
-        } else {
-          setAccount(null);
-          setBalance("0");
-        }
-      };
-
-      (window as any).ethereum.on("accountsChanged", handleAccountsChanged);
-      return () => {
-        (window as any).ethereum.removeListener("accountsChanged", handleAccountsChanged);
-      };
+  // ── Step 1: GAS approve ───────────────────────────────────────────
+  const approveGas = async () => {
+    if (!account || !payAmount) return;
+    try {
+      setIsStep1Loading(true);
+      setDualError(null);
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      const signer = await provider.getSigner();
+      const gasContract = new ethers.Contract(GAS_ADDR, GAS_ABI, signer);
+      // 수수료 계산: payAmount * feeRate / 100 (DualPayment.sol 공식과 동일)
+      const payAmountWei = ethers.parseEther(payAmount);
+      const feeAmount = (payAmountWei * BigInt(feeRate)) / BigInt(100);
+      // DualPayment 컨트랙트에게 feeAmount만큼 GAS를 쓸 수 있는 권한 부여
+      const tx = await gasContract.approve(DUAL_ADDR, feeAmount);
+      await tx.wait();
+      setStep1Done(true);
+    } catch (err: any) {
+      setDualError("GAS 허가 실패: " + (err.reason || err.message));
+    } finally {
+      setIsStep1Loading(false);
     }
+  };
+
+  // ── Step 2: PAY approve ───────────────────────────────────────────
+  const approvePay = async () => {
+    if (!account || !payAmount) return;
+    try {
+      setIsStep2Loading(true);
+      setDualError(null);
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      const signer = await provider.getSigner();
+      const payContract = new ethers.Contract(PAY_ADDR, PAY_ABI, signer);
+      const payAmountWei = ethers.parseEther(payAmount);
+      // DualPayment 컨트랙트에게 payAmount만큼 PAY를 쓸 수 있는 권한 부여
+      const tx = await payContract.approve(DUAL_ADDR, payAmountWei);
+      await tx.wait();
+      setStep2Done(true);
+    } catch (err: any) {
+      setDualError("PAY 허가 실패: " + (err.reason || err.message));
+    } finally {
+      setIsStep2Loading(false);
+    }
+  };
+
+  // ── Step 3: DualPayment.pay() 실행 ───────────────────────────────
+  const executePay = async () => {
+    if (!account || !payAmount || !payRecipient) return;
+
+    // 주소 유효성 검사: 0x로 시작하는 42자리 16진수여야 함
+    // ENS(vitalik.eth 같은 이름)는 Ganache에서 지원 안 됨
+    if (!ethers.isAddress(payRecipient)) {
+      setDualError("⚠️ 올바른 지갑 주소를 입력하세요 (0x로 시작하는 42자리 주소)");
+      return;
+    }
+
+    try {
+      setIsPayLoading(true);
+      setDualError(null);
+      setPayTxHash(null);
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      const signer = await provider.getSigner();
+      const dual = new ethers.Contract(DUAL_ADDR, DUAL_ABI, signer);
+      // pay() 호출 = 내부에서 GAS fee + PAY amount 하나의 트랜잭션으로 원자적 처리
+      const tx = await dual.pay(payRecipient, ethers.parseEther(payAmount));
+      const receipt = await tx.wait();
+      setPayTxHash(receipt.hash);
+      // 잔액 갱신
+      await loadContractData(account, provider);
+      setStep1Done(false);
+      setStep2Done(false);
+      setPayAmount("");
+    } catch (err: any) {
+      setDualError("결제 실패: " + (err.reason || err.message));
+    } finally {
+      setIsPayLoading(false);
+    }
+  };
+
+
+  // ── 계정 변경 감지 ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isMetaMaskInstalled) return;
+    const handleChange = (accounts: string[]) => {
+      if (accounts.length > 0) {
+        setAccount(accounts[0]);
+      } else {
+        setAccount(null);
+        setEthBalance("0");
+        setGasBalance("0");
+        setPayBalance("0");
+      }
+    };
+    (window as any).ethereum.on("accountsChanged", handleChange);
+    return () => (window as any).ethereum.removeListener("accountsChanged", handleChange);
   }, [isMetaMaskInstalled]);
+
+  // 예상 수수료 표시용
+  const expectedFee = payAmount && feeRate
+    ? (parseFloat(payAmount) * feeRate / 100).toFixed(4)
+    : "0";
 
   return (
     <>
@@ -127,7 +227,6 @@ export default function CryptoPaymentPage() {
         icon="💱"
         title="블록체인"
         subtitle="블록체인 테스트"
-
         navLinks={[
           { href: "/", label: "메인 페이지" },
           { href: "/list", label: "게시판" },
@@ -141,20 +240,21 @@ export default function CryptoPaymentPage() {
         </div>
 
         <div className={styles.dashboard}>
+
+          {/* 오류 패널 */}
           {error && (
-            <div className={styles.panel} style={{ borderColor: '#ff3366', backgroundColor: 'rgba(255, 51, 102, 0.1)' }}>
-              <div className={styles.panelTitle} style={{ color: '#ff3366' }}><AlertCircle size={20} /> 오류 발생</div>
+            <div className={styles.panel} style={{ borderColor: '#ff3366', backgroundColor: 'rgba(255,51,102,0.1)' }}>
+              <div className={styles.panelTitle} style={{ color: '#ff3366' }}><AlertCircle size={20} /> 오류</div>
               <p>{error}</p>
             </div>
           )}
 
-          {/* 지갑 연동 패널 */}
+          {/* ── 지갑 연결 패널 ── */}
           <div className={styles.panel}>
             <div className={styles.panelTitle}>
               <Wallet size={20} />
               1단계: 지갑 연동 (Authentication)
             </div>
-
             <div className={styles.statusBox}>
               {account ? (
                 <>
@@ -163,93 +263,203 @@ export default function CryptoPaymentPage() {
                     <span className={styles.statusValue}>{account.slice(0, 6)}...{account.slice(-4)}</span>
                   </div>
                   <div className={styles.statusRow}>
-                    <span className={styles.statusLabel}>보유 잔액</span>
-                    <span className={styles.statusValue}>{balance} ETH</span>
+                    <span className={styles.statusLabel}>ETH 잔액</span>
+                    <span className={styles.statusValue}>{ethBalance} ETH</span>
+                  </div>
+                  <div className={styles.statusRow}>
+                    <span className={styles.statusLabel}>GAS 토큰</span>
+                    <span className={styles.statusValue} style={{ color: '#00ff88' }}>{gasBalance} GAS</span>
+                  </div>
+                  <div className={styles.statusRow}>
+                    <span className={styles.statusLabel}>PAY 토큰</span>
+                    <span className={styles.statusValue} style={{ color: '#ffd700' }}>{payBalance} PAY</span>
                   </div>
                 </>
               ) : (
-                <button
-                  className={styles.connectBtn}
-                  onClick={connectWallet}
-                  disabled={isConnecting}
-                >
+                <button className={styles.connectBtn} onClick={connectWallet} disabled={isConnecting}>
                   {isConnecting ? "연결 중..." : "MetaMask 지갑 연결하기"}
                 </button>
               )}
             </div>
-
-            <div className={styles.explainBox}>
-              <div className={styles.explainTitle}>📖 로직 설명 및 테스트 코인 받기</div>
-              <p className={styles.explainText}>
-                사용자가 버튼을 누르면 <code>window.ethereum.request</code> 함수가 호출되어 브라우저에 설치된 메타마스크에 접근 권한을 요청합니다.
-              </p>
-              <div style={{ marginTop: '15px', padding: '10px', background: 'rgba(255, 165, 0, 0.1)', border: '1px solid rgba(255, 165, 0, 0.3)', borderRadius: '6px' }}>
-                <strong style={{ color: '#ffa500', display: 'block', marginBottom: '5px' }}>💡 테스트 코인(ETH)이 없으신가요?</strong>
-                <span style={{ color: '#e0e0e0', fontSize: '0.9rem' }}>
-                  실제 결제(트랜잭션) 기능을 테스트하려면 가짜 이더리움이 필요합니다.<br />
-                  1. 메타마스크 상단 네트워크를 <b>[Sepolia 테스트 네트워크]</b>로 변경하세요. (설정에서 '테스트 네트워크 표시' 켜기)<br />
-                  2. 아래 Faucet(수도꼭지) 사이트에서 지갑 주소를 넣고 무료 테스트 코인을 받으세요.<br />
-                  <a href="https://sepoliafaucet.com/" target="_blank" rel="noreferrer" style={{ color: '#00f0ff', textDecoration: 'underline', marginTop: '5px', display: 'inline-block' }}>👉 Alchemy Sepolia Faucet 가기</a><br />
-                  <a href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia" target="_blank" rel="noreferrer" style={{ color: '#00f0ff', textDecoration: 'underline', display: 'inline-block' }}>👉 Google Cloud Faucet 가기</a>
-                </span>
-              </div>
-            </div>
           </div>
 
-          {/* 결제(송금) 패널 */}
-          <div className={styles.panel} style={!account ? { opacity: 0.5, pointerEvents: 'none' } : {}}>
-            <div className={styles.panelTitle}>
-              <Send size={20} />
-              2단계: 트랜잭션 전송 (Transaction)
+          {/* ── DualPayment 패널 ── */}
+          <div
+            className={styles.panel}
+            style={{ borderLeftColor: '#a855f7', opacity: !account ? 0.5 : 1, pointerEvents: !account ? 'none' : 'auto' }}
+          >
+            <div className={styles.panelTitle} style={{ color: '#a855f7' }}>
+              <Zap size={20} />
+              2단계: 이중 토큰 결제 (DualPayment)
             </div>
 
-            <form onSubmit={sendTransaction}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>받는 사람 (Wallet Address)</label>
-                <input
-                  type="text"
-                  className={styles.input}
-                  placeholder="0x..."
-                  value={recipient}
-                  onChange={(e) => setRecipient(e.target.value)}
-                  required
-                />
+            {dualError && (
+              <div style={{ padding: '10px', marginBottom: '15px', background: 'rgba(255,51,102,0.1)', border: '1px solid #ff3366', borderRadius: '8px', color: '#ff3366', fontSize: '0.9rem' }}>
+                <AlertCircle size={14} style={{ display: 'inline', marginRight: '5px' }} />
+                {dualError}
               </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>보낼 수량 (ETH)</label>
-                <input
-                  type="number"
-                  step="0.0001"
-                  className={styles.input}
-                  placeholder="0.01"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  required
-                />
-              </div>
+            )}
 
+            <div className={styles.formGroup}>
+              <label className={styles.label}>받는 사람 지갑 주소</label>
+              <input
+                type="text"
+                className={styles.input}
+                placeholder="0x..."
+                value={payRecipient}
+                onChange={(e) => {
+                  setPayRecipient(e.target.value);
+                  setStep1Done(false);
+                  setStep2Done(false);
+                  // 입력 중에는 에러 초기화
+                  if (recipientError) setRecipientError(null);
+                }}
+                onBlur={(e) => {
+                  // 포커스를 잃을 때 주소 유효성 검사
+                  const val = e.target.value;
+                  if (val && !ethers.isAddress(val)) {
+                    setRecipientError("⚠️ 올바른 지갑 주소 형식이 아닙니다 (0x로 시작하는 42자리 주소)");
+                  } else {
+                    setRecipientError(null);
+                  }
+                }}
+                style={recipientError ? { borderColor: '#ff3366', boxShadow: '0 0 8px rgba(255,51,102,0.3)' } : {}}
+              />
+              {recipientError && (
+                <div style={{ marginTop: '6px', fontSize: '0.82rem', color: '#ff6688' }}>
+                  {recipientError}
+                </div>
+              )}
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>결제할 PAY 수량</label>
+              <input
+                type="number"
+                step="1"
+                className={styles.input}
+                placeholder="예: 100"
+                value={payAmount}
+                onChange={(e) => { setPayAmount(e.target.value); setStep1Done(false); setStep2Done(false); }}
+              />
+              {payAmount && (
+                <div style={{ marginTop: '8px', padding: '8px 12px', background: 'rgba(168,85,247,0.1)', borderRadius: '6px', fontSize: '0.85rem', color: '#c084fc' }}>
+                  💸 결제 금액: <strong>{payAmount} PAY</strong> &nbsp;|&nbsp;
+                  ⛽ 수수료: <strong>{expectedFee} GAS</strong> &nbsp;|&nbsp;
+                  요율: <strong>{feeRate / 100}%</strong>
+                </div>
+              )}
+            </div>
+
+            {/* 3단계 버튼 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' }}>
+
+              {/* Step 1 */}
               <button
-                type="submit"
-                className={styles.sendBtn}
-                disabled={isSending || !account}
+                onClick={approveGas}
+                disabled={isStep1Loading || !payAmount || !payRecipient || step1Done}
+                style={{
+                  padding: '12px 20px', borderRadius: '8px', fontWeight: 600, fontSize: '1rem',
+                  cursor: step1Done ? 'default' : 'pointer', transition: 'all 0.3s',
+                  background: step1Done ? 'rgba(0,255,136,0.15)' : 'rgba(0,255,136,0.08)',
+                  color: step1Done ? '#00ff88' : '#00cc6a',
+                  border: `1px solid ${step1Done ? '#00ff88' : 'rgba(0,255,136,0.3)'}`,
+                }}
               >
-                {isSending ? "트랜잭션 서명 및 전송 중..." : "결제 트랜잭션 실행"}
+                {isStep1Loading ? "MetaMask 서명 대기 중..." : step1Done
+                  ? `✅ 1단계 완료 — GAS 수수료 허가됨 (${expectedFee} GAS)`
+                  : `1단계: GAS 수수료 approve (${expectedFee} GAS)`}
               </button>
-            </form>
 
-            {txHash && (
-              <div className={styles.statusRow} style={{ marginTop: '20px', backgroundColor: 'rgba(0, 240, 255, 0.1)', border: '1px solid rgba(0, 240, 255, 0.3)' }}>
-                <span className={styles.statusLabel} style={{ color: '#00f0ff' }}><CheckCircle2 size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '5px' }} /> 결제 완료</span>
-                <span className={styles.statusValue} style={{ fontSize: '0.85rem' }}>{txHash.slice(0, 10)}...{txHash.slice(-10)}</span>
+              {/* Step 2 */}
+              <button
+                onClick={approvePay}
+                disabled={isStep2Loading || !step1Done || step2Done}
+                style={{
+                  padding: '12px 20px', borderRadius: '8px', fontWeight: 600, fontSize: '1rem',
+                  cursor: (!step1Done || step2Done) ? 'default' : 'pointer', transition: 'all 0.3s',
+                  background: step2Done ? 'rgba(255,215,0,0.15)' : 'rgba(255,215,0,0.08)',
+                  color: step2Done ? '#ffd700' : '#ccaa00',
+                  border: `1px solid ${step2Done ? '#ffd700' : 'rgba(255,215,0,0.3)'}`,
+                }}
+              >
+                {isStep2Loading ? "MetaMask 서명 대기 중..." : step2Done
+                  ? `✅ 2단계 완료 — PAY 결제 허가됨 (${payAmount} PAY)`
+                  : `2단계: PAY 결제 approve (${payAmount || 0} PAY)`}
+              </button>
+
+              {/* Step 3 */}
+              <button
+                onClick={executePay}
+                disabled={isPayLoading || !step1Done || !step2Done}
+                style={{
+                  padding: '14px 20px', borderRadius: '8px', fontWeight: 700, fontSize: '1rem',
+                  cursor: (!step1Done || !step2Done) ? 'not-allowed' : 'pointer', transition: 'all 0.3s',
+                  background: (step1Done && step2Done) ? 'linear-gradient(135deg, #a855f7, #ec4899)' : 'rgba(80,80,80,0.3)',
+                  color: (step1Done && step2Done) ? '#fff' : '#555',
+                  border: 'none',
+                  boxShadow: (step1Done && step2Done) ? '0 0 25px rgba(168,85,247,0.4)' : 'none',
+                }}
+              >
+                {isPayLoading ? "결제 처리 중..." : "3단계: 결제 실행 → DualPayment.pay()"}
+              </button>
+            </div>
+
+            {/* 결제 완료 */}
+            {payTxHash && (
+              <div style={{ marginTop: '20px', padding: '15px', background: 'rgba(168,85,247,0.1)', border: '1px solid #a855f7', borderRadius: '8px' }}>
+                <div style={{ color: '#a855f7', fontWeight: 600, marginBottom: '8px' }}>
+                  <CheckCircle2 size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '5px' }} />
+                  이중 토큰 결제 완료!
+                </div>
+                <div style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#c084fc', wordBreak: 'break-all' }}>
+                  TX Hash: {payTxHash}
+                </div>
               </div>
             )}
 
             <div className={styles.explainBox}>
+              <div className={styles.explainTitle}>📖 이중 토큰 결제 로직</div>
+              <p className={styles.explainText}>
+                <strong style={{ color: '#00ff88' }}>1단계 (GAS approve):</strong> DualPayment 컨트랙트에게 &quot;수수료만큼의 GAS를 가져가도 좋다&quot;고 허락합니다.<br />
+                <strong style={{ color: '#ffd700' }}>2단계 (PAY approve):</strong> DualPayment 컨트랙트에게 &quot;결제금액만큼의 PAY를 가져가도 좋다&quot;고 허락합니다.<br />
+                <strong style={{ color: '#a855f7' }}>3단계 (pay 실행):</strong> <code>DualPayment.pay()</code>를 호출하면, 컨트랙트가 GAS 수수료와 PAY 결제를 <strong>하나의 트랜잭션(원자성)</strong>으로 동시에 처리합니다.
+              </p>
+            </div>
+          </div>
+
+          {/* ── ETH 직접 송금 패널 (기존) ── */}
+          <div className={styles.panel} style={!account ? { opacity: 0.5, pointerEvents: 'none' } : {}}>
+            <div className={styles.panelTitle}>
+              <Send size={20} />
+              3단계: ETH 직접 송금 (기존 기능)
+            </div>
+            <form onSubmit={sendTransaction}>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>받는 사람 (Wallet Address)</label>
+                <input type="text" className={styles.input} placeholder="0x..." value={recipient} onChange={(e) => setRecipient(e.target.value)} required />
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>보낼 수량 (ETH)</label>
+                <input type="number" step="0.0001" className={styles.input} placeholder="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
+              </div>
+              <button type="submit" className={styles.sendBtn} disabled={isSending || !account}>
+                {isSending ? "트랜잭션 서명 및 전송 중..." : "ETH 송금 실행"}
+              </button>
+            </form>
+            {txHash && (
+              <div className={styles.statusRow} style={{ marginTop: '20px', backgroundColor: 'rgba(0,240,255,0.1)', border: '1px solid rgba(0,240,255,0.3)' }}>
+                <span className={styles.statusLabel} style={{ color: '#00f0ff' }}>
+                  <CheckCircle2 size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '5px' }} />
+                  송금 완료
+                </span>
+                <span className={styles.statusValue} style={{ fontSize: '0.85rem' }}>{txHash.slice(0, 10)}...{txHash.slice(-10)}</span>
+              </div>
+            )}
+            <div className={styles.explainBox}>
               <div className={styles.explainTitle}>📖 로직 설명</div>
               <p className={styles.explainText}>
-                송금을 위해 <code>ethers.BrowserProvider</code>를 통해 <code>Signer</code>(서명자) 객체를 가져옵니다.
-                우리가 만든 트랜잭션 정보(받는 사람, 금액)를 <code>signer.sendTransaction()</code> 함수에 넣으면,
-                메타마스크가 팝업을 띄워 사용자에게 <strong>"진짜 이 돈을 보낼 것인지 당신의 개인키로 서명하라"</strong>고 요구합니다. 서명이 완료되면 실제 블록체인 네트워크로 거래가 전송됩니다.
+                <code>ethers.BrowserProvider</code>로 <code>Signer</code>를 가져와 <code>signer.sendTransaction()</code>으로 ETH를 직접 전송합니다. MetaMask 팝업에서 사용자가 서명하면 블록체인에 전송됩니다.
               </p>
             </div>
           </div>

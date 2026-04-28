@@ -350,3 +350,753 @@ Next.js 서버는 직접 블록체인과 통신하지 않습니다.
    - [Google Cloud Faucet](https://cloud.google.com/application/web3/faucet/ethereum/sepolia)
    - [Alchemy Sepolia Faucet](https://sepoliafaucet.com/)
 3. 페이지에서 지갑 연결 후 결제 전송 → MetaMask 승인 팝업 → TxHash 수령
+
+---
+
+## 13. 🏗️ 이중 토큰 결제 시스템 구현 단계별 개념 정리
+
+> 실제 구현 위치: `blockchain-study/contracts/`
+> 구현 목표: GAS 토큰(수수료 전용) + PAY 토큰(결제 전용)이 자동으로 역할을 나눠 처리하는 결제 시스템
+
+---
+
+### 13.1 ✅ 1단계 개념 — 로컬 블록체인 환경 (Ganache)
+
+#### 왜 로컬 환경이 필요한가?
+
+스마트 컨트랙트는 실제 블록체인에 한 번 올리면 수정이 불가능하고, 올릴 때마다 실제 가스비가 발생합니다.
+그래서 개발자들은 **내 PC 안에 가짜 블록체인을 만들어** 자유롭게 배포하고 테스트합니다.
+
+```
+[비유]
+실제 이더리움 네트워크  →  진짜 은행 (돈이 오고 감)
+Ganache 로컬 네트워크  →  집 안에 만든 연습용 모형 은행 (가짜 돈, 무한 리셋)
+```
+
+#### 구성 요소
+
+| 도구 | 하는 일 | 비유 |
+|---|---|---|
+| **Ganache** | 내 PC에서 이더리움 흉내내는 가짜 서버 실행 (포트 8545) | 모형 은행 서버 |
+| **solc** | `.sol` 파일(계약서)을 블록체인이 읽을 수 있는 코드로 변환 | 번역기 |
+| **ethers.js** | Next.js에서 이 서버에 명령을 보내는 클라이언트 | 창구 직원 |
+
+#### 실행 구조
+
+```
+터미널 1: npm run dev       → Next.js 서버 (포트 3000)
+터미널 2: npx ganache       → 가짜 블록체인 서버 (포트 8545)
+
+브라우저가 둘 다 동시에 사용함:
+  - localhost:3000 → 화면(UI)
+  - localhost:8545 → 블록체인 데이터
+```
+
+---
+
+### 13.2 ✅ 2단계 개념 — 스마트 컨트랙트와 ERC-20 토큰
+
+#### 스마트 컨트랙트란?
+
+```
+[일반 계약서]
+"A가 B에게 100만원을 주면, B는 집을 넘긴다"
+→ 사람이 지켜야 하고, 안 지키면 소송해야 함
+
+[스마트 컨트랙트]
+같은 내용을 코드로 작성해 블록체인에 배포
+→ 조건이 충족되면 코드가 자동으로 실행, 아무도 막을 수 없음
+→ 배포 후 수정 불가 (한 번 올리면 영구적)
+```
+
+#### ERC-20이란?
+
+이더리움에서 "토큰을 만드는 표준 규격"입니다.
+이 규격을 따르면 MetaMask, 거래소 등 모든 곳에서 자동으로 인식됩니다.
+
+```
+ERC-20 토큰이 반드시 가져야 하는 기능:
+
+balanceOf(주소)          → 해당 주소의 잔액 조회
+transfer(받는사람, 금액) → 내 지갑에서 직접 전송
+approve(컨트랙트, 금액)  → 컨트랙트가 내 토큰을 쓸 수 있도록 허가
+transferFrom(보낸사람, 받는사람, 금액) → 허가받은 컨트랙트가 대신 전송
+```
+
+#### 우리가 만든 토큰 구조
+
+```
+ERC20.sol (공통 뼈대)
+  ├─ GasToken.sol (GAS) → 수수료 전용 토큰
+  └─ PayToken.sol (PAY) → 결제 전용 토큰
+
+DualPayment.sol → 두 토큰을 조합한 결제 컨트랙트
+```
+
+#### 이중 토큰 결제의 핵심: approve()
+
+컨트랙트가 내 토큰을 자동으로 가져가려면 반드시 먼저 **허가(approve)**가 필요합니다.
+
+```
+[결제 전 준비 (2번의 approve)]
+1. gasToken.approve(DualPayment주소, 수수료량)
+   → "DualPayment야, 내 GAS 토큰 이만큼 가져가도 돼"
+
+2. payToken.approve(DualPayment주소, 결제금액)
+   → "DualPayment야, 내 PAY 토큰 이만큼 가져가도 돼"
+
+[실제 결제 (1번의 pay)]
+3. DualPayment.pay(수신자주소, 결제금액)
+   → 컨트랙트가 자동으로:
+      A. GAS 토큰에서 수수료 차감 (feeCollector에게)
+      B. PAY 토큰으로 결제금 전달 (recipient에게)
+```
+
+#### 원자성(Atomicity) 보장
+
+```
+pay() 함수 안에서 A와 B는 하나의 트랜잭션으로 묶임.
+A만 되고 B가 실패하는 상황은 절대 발생하지 않음.
+
+→ 수수료만 빠지고 결제는 안 되는 상황: 불가능
+→ 둘 다 성공하거나, 둘 다 실패해서 원상복구됨
+
+이것이 require() 구문이 하는 역할:
+require(paySent, "...") 이 실패하면
+그 이전에 실행된 gasSent도 자동으로 되돌아감 (Revert)
+```
+
+#### decimals = 18의 의미
+
+```
+사람이 보는 값: 1 PAY 토큰
+블록체인 내부: 1,000,000,000,000,000,000 (1 * 10^18)
+
+이유: 블록체인은 소수점을 모름. 정수만 다룸.
+     그래서 18자리 정수로 소수점을 흉내냄.
+     (0.001 PAY = 내부적으로 1,000,000,000,000,000)
+
+ethers.js에서 변환:
+  ethers.parseEther("1")    → 1000000000000000000 (입력용)
+  ethers.formatEther(값)    → "1.0" (표시용)
+```
+
+---
+
+### 13.3 ✅ 3단계 개념 — 컴파일 & 배포 스크립트
+
+> 관련 파일: `blockchain-study/scripts/compile.js`, `blockchain-study/scripts/deploy.js`
+> 배포 결과: `blockchain-study/deployed/deployed-addresses.json`
+
+---
+
+#### 🔨 컴파일이란? (.sol → ABI + 바이트코드)
+
+사람이 읽는 Solidity 코드(`.sol`)를 블록체인이 실행할 수 있는 형태로 변환하는 과정입니다.
+
+```
+[컴파일 전]                     [컴파일 후]
+GasToken.sol (사람이 읽는 코드)  →  ABI (함수 설명서, JSON)
+                                 →  bytecode (기계어, 16진수 문자열)
+```
+
+**ABI (Application Binary Interface)**
+
+컨트랙트의 "메뉴판"입니다. 어떤 함수가 있고, 파라미터가 뭔지 JSON으로 정의합니다.
+프론트엔드(ethers.js)는 이 ABI가 반드시 있어야 컨트랙트의 함수를 호출할 수 있습니다.
+
+```json
+// ABI 예시 (pay() 함수 하나의 생김새)
+{
+  "name": "pay",
+  "type": "function",
+  "inputs": [
+    { "name": "recipient", "type": "address" },
+    { "name": "payAmount", "type": "uint256" }
+  ],
+  "outputs": [],
+  "stateMutability": "nonpayable"
+}
+```
+
+**바이트코드 (Bytecode)**
+
+블록체인에 실제로 올라가는 기계어입니다. 한 번 배포된 바이트코드는 블록체인에 영구 저장되며 변경 불가합니다.
+
+```
+0x608060405234801561001057600080fd5b50...
+(이 16진수 덩어리가 실제 EVM이 실행하는 코드)
+```
+
+---
+
+#### 📦 배포(Deploy)란?
+
+컴파일된 바이트코드를 블록체인에 올리는 행위입니다.
+배포가 완료되면 그 컨트랙트만의 고유한 **주소(Address)** 가 생성됩니다.
+이 주소가 곧 컨트랙트의 "영구 ID" 이며, 이후 모든 상호작용은 이 주소를 통해 이루어집니다.
+
+```
+[배포 트랜잭션의 흐름]
+
+1. ContractFactory가 배포 트랜잭션 생성
+   (bytecode + constructor 인자를 담은 특수 트랜잭션)
+
+2. deployer(개인키)가 트랜잭션에 서명
+
+3. 트랜잭션이 Ganache(또는 이더리움 네트워크)로 전송
+
+4. 채굴자(Ganache)가 트랜잭션을 블록에 담음
+
+5. 블록이 확정되면 컨트랙트 주소가 생성됨
+   (주소 = 배포자 주소 + nonce 값으로 결정론적 계산)
+
+6. waitForDeployment()가 이 완료를 감지하고 반환
+```
+
+---
+
+#### 🔌 JsonRpcProvider vs BrowserProvider
+
+배포 스크립트에서 `JsonRpcProvider`를 사용하는 이유가 궁금할 수 있습니다.
+
+```
+[프론트엔드(브라우저) 환경]
+BrowserProvider(window.ethereum)
+→ MetaMask가 중간에 있음
+→ 사용자가 MetaMask 팝업에서 서명 승인
+→ 일반 웹 사용자가 쓰는 방식
+
+[서버/스크립트 환경 ← 지금 우리 배포 스크립트]
+JsonRpcProvider("http://127.0.0.1:8545")
+→ MetaMask 없이 노드에 직접 HTTP 연결
+→ 개인키로 코드에서 자동 서명 (Wallet 객체 사용)
+→ 자동화된 배포/테스트 스크립트에서 사용
+```
+
+---
+
+#### 🔑 Wallet vs Signer 개념
+
+```
+[Signer (추상 개념)]
+트랜잭션에 "서명"할 수 있는 객체.
+ethers.js에서 서명이 필요한 모든 곳에 Signer가 필요함.
+
+[Wallet (구현체 - 스크립트용)]
+개인키 + Provider를 합친 Signer.
+코드에서 직접 개인키를 넣어 자동 서명.
+→ new ethers.Wallet(PRIVATE_KEY, provider)
+
+[MetaMask Signer (구현체 - 브라우저용)]
+BrowserProvider에서 꺼내 쓰는 Signer.
+MetaMask 팝업으로 사용자가 직접 서명.
+→ await provider.getSigner()
+```
+
+---
+
+#### 🏭 ContractFactory 개념
+
+```
+[ContractFactory의 역할]
+ABI + bytecode + Signer를 조합해 배포 준비를 하는 "공장"
+
+const factory = new ethers.ContractFactory(abi, bytecode, signer);
+const contract = await factory.deploy(...constructorArgs);
+
+→ factory.deploy() 호출 시:
+   1. bytecode + constructorArgs를 담은 트랜잭션 생성
+   2. signer가 자동 서명
+   3. 네트워크로 전송
+   4. 트랜잭션 해시 반환 (아직 채굴 전)
+
+await contract.waitForDeployment();
+→ 트랜잭션이 블록에 담길 때까지 대기
+→ 이후 contract.getAddress()로 배포된 주소 획득
+```
+
+---
+
+#### 📋 배포 순서가 중요한 이유
+
+```
+[의존성 관계]
+
+GasToken   (독립)  → 먼저 배포 가능
+PayToken   (독립)  → 먼저 배포 가능
+DualPayment (의존) → GasToken 주소 + PayToken 주소가 있어야 배포 가능
+
+constructor(
+  address _gasTokenAddress,  ← GasToken이 먼저 있어야 주소를 넘길 수 있음
+  address _payTokenAddress,  ← PayToken이 먼저 있어야 주소를 넘길 수 있음
+  ...
+)
+
+[올바른 순서]
+1. GasToken 배포 → 주소 획득
+2. PayToken 배포 → 주소 획득
+3. DualPayment 배포 (두 주소를 인자로 전달)
+
+[잘못된 순서 → 오류]
+DualPayment를 먼저 배포하려고 하면 넘길 주소가 없으므로 불가
+```
+
+---
+
+#### 📁 deployed-addresses.json 이 중요한 이유
+
+배포가 완료된 후 생성되는 이 파일이 프론트엔드(Next.js)와 스마트 컨트랙트를 연결하는 다리입니다.
+
+```json
+{
+  "network": "localhost",
+  "deployedAt": "2026-04-28T00:49:...",
+  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "contracts": {
+    "GasToken": {
+      "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      "abi": [...]
+    },
+    "PayToken": {
+      "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      "abi": [...]
+    },
+    "DualPayment": {
+      "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+      "abi": [...]
+    }
+  }
+}
+```
+
+Next.js 페이지에서 이 파일을 import해서 주소와 ABI를 꺼내 쓰면 됩니다.
+Ganache를 재시작할 때마다 주소가 바뀌므로 배포를 다시 실행해야 합니다.
+
+---
+
+#### ⚠️ 실제 서비스에서 절대 하면 안 되는 것
+
+```javascript
+// ❌ 절대 금지: 개인키를 코드에 직접 하드코딩
+const PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+// ✅ 올바른 방법: .env 파일에 보관, .gitignore에 추가
+// .env
+DEPLOYER_PRIVATE_KEY=0xac0974bec...
+
+// deploy.js
+const PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY;
+```
+
+우리 프로젝트에서는 Ganache 기본 테스트 계정(가짜 돈)이므로 코드에 넣었지만,
+실제 배포 시에는 반드시 `.env`로 관리해야 합니다.
+
+---
+
+#### 🔄 3단계 전체 흐름 요약
+
+```
+[compile.js 실행 시]
+.sol 파일 읽기 → solc 컴파일러 실행 → ABI + bytecode 추출 → 메모리에 보관
+
+[deploy.js 실행 시]
+Ganache 연결 확인
+→ Wallet(개인키) 생성
+→ compile() 호출 (3개 컨트랙트)
+→ ContractFactory로 GasToken 배포 → 주소 획득
+→ ContractFactory로 PayToken 배포 → 주소 획득
+→ ContractFactory로 DualPayment 배포 (두 주소 전달) → 주소 획득
+→ deployed-addresses.json에 모든 주소 + ABI 저장
+→ 배포 완료 출력
+```
+
+---
+
+### 13.4 🖥️ 실제 실행 가이드 — 처음부터 끝까지
+
+> 이 섹션은 `blockchain-study` 전체를 처음 실행하거나 재시작할 때 참고하는 실행 순서입니다.
+> Ganache는 종료하면 모든 상태가 리셋되므로, 켤 때마다 배포를 다시 실행해야 합니다.
+
+---
+
+#### 📋 실행 전 구조 확인
+
+```
+blockchain-study/
+  ├─ contracts/
+  │    ├─ ERC20.sol          ← ERC-20 공통 뼈대
+  │    ├─ GasToken.sol       ← 수수료 토큰
+  │    ├─ PayToken.sol       ← 결제 토큰
+  │    └─ DualPayment.sol    ← 이중 결제 컨트랙트
+  ├─ scripts/
+  │    ├─ compile.js         ← .sol → ABI + bytecode 변환
+  │    └─ deploy.js          ← Ganache에 배포 + JSON 저장
+  ├─ deployed/
+  │    └─ deployed-addresses.json  ← 배포 후 자동 생성됨
+  └─ package.json
+```
+
+---
+
+#### 🚀 실행 순서 (터미널 3개 필요)
+
+**터미널 1 — Next.js 서버 (이미 켜져 있으면 그대로)**
+
+```powershell
+cd c:\WorkSpace\study-Next\Next.js\test
+npm run dev
+```
+
+→ `http://localhost:3000` 에서 웹 페이지 접근 가능
+
+---
+
+**터미널 2 — Ganache 로컬 블록체인 시작 (이 창은 계속 켜둬야 함)**
+
+```powershell
+cd c:\WorkSpace\study-Next\Next.js\test\blockchain-study
+npx ganache --chain.chainId 31337 --wallet.accounts "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80,1000000000000000000000"
+```
+
+→ 성공 시 출력:
+```
+ganache v7.9.2
+Available Accounts
+==================
+(0) 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 (1000 ETH)
+
+Listening on 127.0.0.1:8545
+```
+
+> 옵션 설명:
+> - `--chain.chainId 31337` : MetaMask에 네트워크 등록 시 사용하는 ID
+> - `--wallet.accounts "개인키,잔액(wei)"` : 개인키와 초기 잔액(wei 단위, 1000 ETH = 10^21 wei)을 가진 계정 생성
+> - 이 개인키는 Hardhat/Ganache 공식 테스트 계정 #0 (실제 돈 아님, 공개된 키)
+
+---
+
+**터미널 3 — 컨트랙트 배포 (Ganache가 켜진 상태에서)**
+
+```powershell
+cd c:\WorkSpace\study-Next\Next.js\test\blockchain-study
+node scripts/deploy.js
+```
+
+→ 성공 시 출력:
+```
+🚀 배포 스크립트 시작
+
+✅ Ganache 연결 성공! (Chain ID: 31337)
+
+👤 배포자 주소: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+💰 배포자 잔액: 1000.0 ETH
+
+✅ GasToken  컴파일 성공! (ABI 함수 수: 14개)
+✅ PayToken  컴파일 성공! (ABI 함수 수: 14개)
+✅ DualPayment 컴파일 성공! (ABI 함수 수: 8개)
+
+✅ GasToken  배포 완료! 주소: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+✅ PayToken  배포 완료! 주소: 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+✅ DualPayment 배포 완료! 주소: 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+
+🎉 전체 배포 완료!
+```
+
+> **정상 배포 확인 기준**: 세 컨트랙트의 주소가 **모두 달라야** 합니다.
+> 같은 주소가 두 개 이상 나오면 Ganache를 완전히 종료 후 재시작하고 다시 배포해야 합니다.
+
+---
+
+#### ⚠️ 자주 겪는 문제와 해결법
+
+**문제 1: `EADDRINUSE: address already in use 127.0.0.1:8545`**
+
+```
+원인: 이전 Ganache가 아직 백그라운드에서 실행 중
+해결:
+  1. Ctrl+C 로 현재 Ganache 종료
+  2. 아래 명령으로 포트 강제 종료 후 재시작:
+     Get-NetTCPConnection -LocalPort 8545 | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
+  3. 다시 Ganache 실행
+```
+
+**문제 2: `insufficient funds for gas * price + value`**
+
+```
+원인: 배포자 계정에 ETH가 없음
+     (Ganache 재시작 시 잔액도 리셋되므로, 반드시 --wallet.accounts 옵션 포함해서 실행해야 함)
+해결: Ganache를 --wallet.accounts 옵션과 함께 다시 실행
+```
+
+**문제 3: GasToken과 PayToken 주소가 동일하게 출력됨**
+
+```
+원인: Ganache 상태가 이전 실행에서 남아 있어 nonce가 꼬인 것
+해결:
+  1. Ganache 터미널에서 Ctrl+C 로 종료
+  2. 다시 Ganache 실행 (새 인스턴스)
+  3. node scripts/deploy.js 다시 실행
+```
+
+---
+
+#### 🔁 재시작 시 체크리스트
+
+```
+□ Ganache 터미널 Ctrl+C 로 종료
+□ Ganache 다시 실행 (같은 명령어)
+□ node scripts/deploy.js 실행
+□ 세 주소가 모두 다른지 확인
+□ deployed-addresses.json 생성됐는지 확인
+□ (Next.js 연동 중이라면) 페이지 새로고침
+```
+
+---
+
+#### 📌 배포된 컨트랙트 주소 (최신 배포 기준)
+
+> Ganache를 재시작하면 아래 주소는 무효가 됩니다. 재배포 후 갱신 필요.
+
+| 컨트랙트 | 주소 | 역할 |
+|---|---|---|
+| GasToken (GAS) | `0x5FbDB2315678afecb367f032d93F642f64180aa3` | 수수료 전용 토큰 |
+| PayToken (PAY) | `0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512` | 결제 전용 토큰 |
+| DualPayment | `0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0` | 이중 결제 처리 |
+| 배포자/수수료 수취 | `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266` | 관리자 계정 |
+
+---
+
+### 13.5 ✅ 4단계 개념 & 실행 가이드 — MetaMask 로컬 네트워크 연결
+
+> 이 단계는 코드 없이 MetaMask 브라우저 확장 프로그램에서 직접 클릭하는 작업입니다.
+> Ganache가 실행 중인 상태에서 진행해야 합니다.
+
+---
+
+#### 🔌 왜 MetaMask 설정이 필요한가?
+
+```
+[현재 상태]
+Ganache: 로컬 블록체인 서버 실행 중 (포트 8545)
+         → 3개의 컨트랙트 배포 완료
+
+[문제]
+MetaMask는 기본적으로 이더리움 메인넷 또는 공개 테스트넷에 연결되어 있음.
+우리가 만든 로컬 Ganache 네트워크는 MetaMask가 모름.
+
+[해결]
+MetaMask에 Ganache 네트워크 정보를 수동으로 등록하면
+브라우저에서 Next.js 페이지를 통해 로컬 블록체인과 직접 통신 가능.
+```
+
+---
+
+#### Step 1 — MetaMask에 로컬 네트워크 추가
+
+1. MetaMask 확장 프로그램 클릭
+2. 상단 네트워크 드롭다운 클릭 (기본값: "이더리움 메인넷")
+3. **"네트워크 추가"** 클릭
+4. **"네트워크 수동 추가"** 클릭
+5. 아래 정보 입력:
+
+| 항목 | 입력값 | 설명 |
+|---|---|---|
+| 네트워크 이름 | `Localhost 8545` | 표시용 이름 (자유롭게 설정 가능) |
+| 새 RPC URL | `http://127.0.0.1:8545` | Ganache가 열어놓은 HTTP 엔드포인트 |
+| 체인 ID | `31337` | Ganache 실행 시 지정한 chainId |
+| 통화 기호 | `ETH` | 가스비로 쓰이는 기본 통화 |
+| 블록 탐색기 URL | (비워두기) | 로컬이라 탐색기 없음 |
+
+6. **저장** 클릭 → MetaMask가 자동으로 Localhost 8545 네트워크로 전환됨
+
+> **체인 ID란?**
+> 서로 다른 이더리움 네트워크를 구분하는 고유 번호.
+> 메인넷=1, Sepolia=11155111, Ganache 로컬=31337 (Hardhat 기본값과 동일)
+> MetaMask는 이 ID로 "어느 블록체인에 연결할지" 판단함.
+
+---
+
+#### Step 2 — 테스트 계정 가져오기 (Import)
+
+Ganache가 생성한 테스트 계정을 MetaMask로 불러옵니다.
+
+1. MetaMask 상단 계정 아이콘 클릭
+2. **"계정 또는 하드웨어 지갑 추가"** 클릭
+3. **"계정 가져오기 (Import Account)"** 클릭
+4. 아래 개인키 입력:
+
+```
+0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+```
+
+5. **"가져오기"** 클릭
+
+**확인:** 계정에 약 999.99 ETH가 표시되면 성공
+(1000 ETH에서 컨트랙트 3개 배포 가스비로 약 0.006 ETH 소모됨)
+
+> **왜 이 개인키인가?**
+> Ganache를 실행할 때 `--wallet.accounts` 옵션으로 지정한 개인키입니다.
+> Hardhat, Ganache에서 공식으로 사용하는 공개 테스트 키로, 실제 이더리움 메인넷에서는
+> 사용하면 절대 안 됩니다. 로컬 개발/테스트 전용 키입니다.
+
+---
+
+#### Step 3 — GAS / PAY 토큰 추가
+
+배포한 ERC-20 토큰을 MetaMask에 등록해야 잔액이 보입니다.
+
+**MetaMask → "토큰 가져오기" 클릭**
+
+**GAS 토큰:**
+
+| 항목 | 입력값 |
+|---|---|
+| 토큰 계약 주소 | `0x5FbDB2315678afecb367f032d93F642f64180aa3` |
+| 토큰 심볼 | `GAS` (자동으로 안 채워지면 직접 입력) |
+| 토큰 소수점 | `18` |
+
+**PAY 토큰:**
+
+| 항목 | 입력값 |
+|---|---|
+| 토큰 계약 주소 | `0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512` |
+| 토큰 심볼 | `PAY` (자동으로 안 채워지면 직접 입력) |
+| 토큰 소수점 | `18` |
+
+> **왜 심볼이 자동으로 안 채워지나?**
+> MetaMask는 공개 네트워크(메인넷, Sepolia 등)의 토큰 정보는 자동 조회합니다.
+> Ganache 같은 프라이빗 로컬 네트워크는 외부에 노출되지 않으므로
+> MetaMask가 토큰 정보를 자동으로 가져오지 못합니다. 직접 입력 필요.
+
+---
+
+#### ✅ 4단계 완료 확인
+
+MetaMask 토큰 탭에서 아래처럼 보이면 완료:
+
+```
+[Localhost 8545 네트워크]
+Imported Account 1
+
+이더리움    999.99 ETH
+GAS        100.00만 GAS  (= 1,000,000 GAS)
+PAY        100.00만 PAY  (= 1,000,000 PAY)
+```
+
+---
+
+#### 🔄 Ganache 재시작 시 — 실제로 할 것
+
+컴퓨터를 껐다 켜거나 Ganache를 종료하면 블록체인 상태가 초기화됩니다.
+하지만 **컨트랙트 주소는 항상 동일**합니다.
+
+```
+이유: 이더리움 컨트랙트 주소는 결정론적(Deterministic)으로 계산됨
+     주소 = keccak256(배포자주소 + nonce 순번)
+
+배포자 주소: 항상 동일 (0xf39Fd6...)
+Ganache 재시작 → nonce 0부터 다시 시작
+→ nonce 0 → GasToken  → 0x5FbDB... (항상 동일)
+→ nonce 1 → PayToken  → 0xe7f17... (항상 동일)
+→ nonce 2 → DualPayment → 0x9fE46... (항상 동일)
+```
+
+따라서 재시작 시 해야 할 일은 딱 두 가지뿐입니다:
+
+```
+[재시작 후 해야 할 것 (전부)]
+1. Ganache 다시 실행
+2. node scripts/deploy.js 재실행
+
+MetaMask 설정(네트워크, 계정, 토큰)은 처음 한 번만 → 이후 재시작해도 그대로 유지
+```
+
+단, 아래 경우에는 주소가 달라져서 토큰 재등록이 필요합니다:
+
+```
+[주소가 바뀌는 예외 상황]
+대표적인 경우: Ganache를 재시작하지 않고 deploy.js를 두 번 이상 실행한 경우
+
+예시:
+  첫 번째 deploy.js 실행:
+    nonce 0 → GasToken   → 0x5FbDB... (정상)
+    nonce 1 → PayToken   → 0xe7f17... (정상)
+    nonce 2 → DualPayment → 0x9fE46... (정상)
+
+  Ganache 유지한 채로 두 번째 deploy.js 실행:
+    nonce 3 → GasToken   → 전혀 다른 주소 ← MetaMask와 불일치!
+    nonce 4 → PayToken   → 전혀 다른 주소 ← MetaMask와 불일치!
+    nonce 5 → DualPayment → 전혀 다른 주소 ← MetaMask와 불일치!
+
+해결: 항상 "Ganache 완전 종료 → 재시작 → deploy.js 1회 실행" 순서를 지킬 것
+     Ganache가 재시작되면 nonce가 0으로 초기화되어 주소가 다시 동일해짐
+```
+
+---
+
+### 13.6 💸 수수료율(feeRate) — 누가 어떻게 정하나?
+
+#### 어디서 정해지나?
+
+수수료율은 **배포자가 `deploy.js`를 실행할 때 딱 한 번** 결정됩니다.
+
+`blockchain-study/scripts/deploy.js` 의 DualPayment 배포 부분:
+
+```javascript
+// DualPayment 배포: 앞서 배포한 두 토큰 주소와 수수료율(5%) 전달
+const { address: dualPayAddr } = await deploy(
+  "DualPayment",
+  dualPayCompiled.abi,
+  dualPayCompiled.bytecode,
+  [
+    gasTokenAddr,     // _gasTokenAddress
+    payTokenAddr,     // _payTokenAddress
+    deployer.address, // _feeCollector (수수료는 배포자에게)
+    5,                // _feeRate (5%) ← 여기서 결정
+  ]
+);
+```
+
+이 숫자 `5`가 `DualPayment` 컨트랙트의 생성자로 전달되어 블록체인에 영구 저장됩니다.
+
+---
+
+#### 계산 공식
+
+`DualPayment.sol` 내부 로직:
+
+```solidity
+uint256 feeAmount = (payAmount * feeRate) / 100;
+// feeRate = 5일 때:
+// 100 PAY 결제 → 100 * 5 / 100 = 5 GAS 수수료
+```
+
+| 결제 금액 | feeRate | 수수료 |
+|---|---|---|
+| 100 PAY | 5 | 5 GAS |
+| 1,000 PAY | 5 | 50 GAS |
+| 100 PAY | 10 | 10 GAS |
+
+---
+
+#### 요율을 바꾸려면?
+
+```
+[방법]
+1. deploy.js에서 5 → 원하는 숫자로 변경
+2. Ganache 재시작 → node scripts/deploy.js 재실행
+3. 새로 배포된 DualPayment 컨트랙트에 새 요율이 적용됨
+
+[중요]
+이미 배포된 컨트랙트는 절대 수정 불가.
+블록체인에 한번 올라간 코드는 변경할 수 없음 (불변성, Immutability).
+→ 요율을 바꾸려면 새 컨트랙트를 배포해야 함.
+```
+
+> **실제 서비스에서는?**
+> `setFeeRate(uint256 newRate)` 같은 관리자 전용 함수를 컨트랙트에 추가하면
+> 재배포 없이 요율을 변경할 수 있습니다. 이때 `onlyOwner` 접근 제어로 배포자만 호출 가능하게 제한합니다.
+> 우리 컨트랙트는 학습 목적이라 이 기능은 생략했습니다.
+
+
