@@ -34,14 +34,12 @@ export default function CryptoPaymentPage() {
   const [payRecipient, setPayRecipient] = useState<string>("");
   const [payAmount, setPayAmount] = useState<string>("");
   const [feeRate, setFeeRate] = useState<number>(0);
-  const [step1Done, setStep1Done] = useState(false);
-  const [step2Done, setStep2Done] = useState(false);
-  const [isStep1Loading, setIsStep1Loading] = useState(false);
-  const [isStep2Loading, setIsStep2Loading] = useState(false);
-  const [isPayLoading, setIsPayLoading] = useState(false);
   const [payTxHash, setPayTxHash] = useState<string | null>(null);
   const [dualError, setDualError] = useState<string | null>(null);
   const [recipientError, setRecipientError] = useState<string | null>(null);
+  // payStep: 0=대기, 1=GAS approve 중, 2=PAY approve 중, 3=pay() 실행 중, 4=완료
+  const [payStep, setPayStep] = useState<number>(0);
+
 
   const isMetaMaskInstalled = typeof window !== "undefined" && (window as any).ethereum;
 
@@ -120,85 +118,55 @@ export default function CryptoPaymentPage() {
     }
   };
 
-  // ── Step 1: GAS approve ───────────────────────────────────────────
-  const approveGas = async () => {
-    if (!account || !payAmount) return;
-    try {
-      setIsStep1Loading(true);
-      setDualError(null);
-      const provider = new ethers.BrowserProvider((window as any).ethereum);
-      const signer = await provider.getSigner();
-      const gasContract = new ethers.Contract(GAS_ADDR, GAS_ABI, signer);
-      // 수수료 계산: payAmount * feeRate / 100 (DualPayment.sol 공식과 동일)
-      const payAmountWei = ethers.parseEther(payAmount);
-      const feeAmount = (payAmountWei * BigInt(feeRate)) / BigInt(100);
-      // DualPayment 컨트랙트에게 feeAmount만큼 GAS를 쓸 수 있는 권한 부여
-      const tx = await gasContract.approve(DUAL_ADDR, feeAmount);
-      await tx.wait();
-      setStep1Done(true);
-    } catch (err: any) {
-      setDualError("GAS 허가 실패: " + (err.reason || err.message));
-    } finally {
-      setIsStep1Loading(false);
-    }
-  };
-
-  // ── Step 2: PAY approve ───────────────────────────────────────────
-  const approvePay = async () => {
-    if (!account || !payAmount) return;
-    try {
-      setIsStep2Loading(true);
-      setDualError(null);
-      const provider = new ethers.BrowserProvider((window as any).ethereum);
-      const signer = await provider.getSigner();
-      const payContract = new ethers.Contract(PAY_ADDR, PAY_ABI, signer);
-      const payAmountWei = ethers.parseEther(payAmount);
-      // DualPayment 컨트랙트에게 payAmount만큼 PAY를 쓸 수 있는 권한 부여
-      const tx = await payContract.approve(DUAL_ADDR, payAmountWei);
-      await tx.wait();
-      setStep2Done(true);
-    } catch (err: any) {
-      setDualError("PAY 허가 실패: " + (err.reason || err.message));
-    } finally {
-      setIsStep2Loading(false);
-    }
-  };
-
-  // ── Step 3: DualPayment.pay() 실행 ───────────────────────────────
-  const executePay = async () => {
+  // ── DualPayment 결제 (단일 버튼: GAS approve → PAY approve → pay()) ─
+  const handlePay = async () => {
     if (!account || !payAmount || !payRecipient) return;
 
-    // 주소 유효성 검사: 0x로 시작하는 42자리 16진수여야 함
-    // ENS(vitalik.eth 같은 이름)는 Ganache에서 지원 안 됨
+    // 주소 유효성 검사
     if (!ethers.isAddress(payRecipient)) {
       setDualError("⚠️ 올바른 지갑 주소를 입력하세요 (0x로 시작하는 42자리 주소)");
       return;
     }
 
     try {
-      setIsPayLoading(true);
       setDualError(null);
       setPayTxHash(null);
       const provider = new ethers.BrowserProvider((window as any).ethereum);
       const signer = await provider.getSigner();
+      const payAmountWei = ethers.parseEther(payAmount);
+      const feeAmount = (payAmountWei * BigInt(feeRate)) / BigInt(100);
+
+      // ── 1단계: GAS approve (MetaMask 팝업 1) ──────────────────────
+      setPayStep(1);
+      const gasContract = new ethers.Contract(GAS_ADDR, GAS_ABI, signer);
+      // DualPayment 컨트랙트에게 feeAmount만큼 GAS를 가져갈 수 있는 권한 부여
+      const gasTx = await gasContract.approve(DUAL_ADDR, feeAmount);
+      await gasTx.wait();
+
+      // ── 2단계: PAY approve (MetaMask 팝업 2) ──────────────────────
+      setPayStep(2);
+      const payContract = new ethers.Contract(PAY_ADDR, PAY_ABI, signer);
+      // DualPayment 컨트랙트에게 payAmount만큼 PAY를 가져갈 수 있는 권한 부여
+      const payTx = await payContract.approve(DUAL_ADDR, payAmountWei);
+      await payTx.wait();
+
+      // ── 3단계: DualPayment.pay() 실행 (MetaMask 팝업 3) ───────────
+      setPayStep(3);
       const dual = new ethers.Contract(DUAL_ADDR, DUAL_ABI, signer);
-      // pay() 호출 = 내부에서 GAS fee + PAY amount 하나의 트랜잭션으로 원자적 처리
-      const tx = await dual.pay(payRecipient, ethers.parseEther(payAmount));
+      // GAS fee + PAY 결제를 하나의 트랜잭션으로 원자적 처리
+      const tx = await dual.pay(payRecipient, payAmountWei);
       const receipt = await tx.wait();
+
       setPayTxHash(receipt.hash);
+      setPayStep(4); // 완료
       // 잔액 갱신
       await loadContractData(account, provider);
-      setStep1Done(false);
-      setStep2Done(false);
       setPayAmount("");
     } catch (err: any) {
       setDualError("결제 실패: " + (err.reason || err.message));
-    } finally {
-      setIsPayLoading(false);
+      setPayStep(0); // 오류 시 초기화
     }
   };
-
-
   // ── 계정 변경 감지 ────────────────────────────────────────────────
   useEffect(() => {
     if (!isMetaMaskInstalled) return;
@@ -309,8 +277,7 @@ export default function CryptoPaymentPage() {
                 value={payRecipient}
                 onChange={(e) => {
                   setPayRecipient(e.target.value);
-                  setStep1Done(false);
-                  setStep2Done(false);
+                  setPayStep(0); // 입력 변경 시 진행 상태 초기화
                   // 입력 중에는 에러 초기화
                   if (recipientError) setRecipientError(null);
                 }}
@@ -340,7 +307,7 @@ export default function CryptoPaymentPage() {
                 className={styles.input}
                 placeholder="예: 100"
                 value={payAmount}
-                onChange={(e) => { setPayAmount(e.target.value); setStep1Done(false); setStep2Done(false); }}
+                onChange={(e) => { setPayAmount(e.target.value); setPayStep(0); }}
               />
               {payAmount && (
                 <div style={{ marginTop: '8px', padding: '8px 12px', background: 'rgba(168,85,247,0.1)', borderRadius: '6px', fontSize: '0.85rem', color: '#c084fc' }}>
@@ -351,58 +318,44 @@ export default function CryptoPaymentPage() {
               )}
             </div>
 
-            {/* 3단계 버튼 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' }}>
 
-              {/* Step 1 */}
+            {/* 결제 버튼 (단일) */}
+            <div style={{ marginTop: '20px' }}>
               <button
-                onClick={approveGas}
-                disabled={isStep1Loading || !payAmount || !payRecipient || step1Done}
+                onClick={handlePay}
+                disabled={payStep > 0 && payStep < 4 || !payAmount || !payRecipient || !!recipientError}
                 style={{
-                  padding: '12px 20px', borderRadius: '8px', fontWeight: 600, fontSize: '1rem',
-                  cursor: step1Done ? 'default' : 'pointer', transition: 'all 0.3s',
-                  background: step1Done ? 'rgba(0,255,136,0.15)' : 'rgba(0,255,136,0.08)',
-                  color: step1Done ? '#00ff88' : '#00cc6a',
-                  border: `1px solid ${step1Done ? '#00ff88' : 'rgba(0,255,136,0.3)'}`,
+                  width: '100%', padding: '16px 20px', borderRadius: '10px',
+                  fontWeight: 700, fontSize: '1.1rem', cursor: 'pointer',
+                  transition: 'all 0.3s', border: 'none',
+                  background: payStep === 4
+                    ? 'rgba(0,255,136,0.2)'
+                    : (payStep > 0 && payStep < 4)
+                      ? 'rgba(168,85,247,0.3)'
+                      : 'linear-gradient(135deg, #a855f7, #ec4899)',
+                  color: payStep === 4 ? '#00ff88' : '#fff',
+                  boxShadow: (payStep === 0 || payStep === 4) ? '0 0 25px rgba(168,85,247,0.4)' : 'none',
                 }}
               >
-                {isStep1Loading ? "MetaMask 서명 대기 중..." : step1Done
-                  ? `✅ 1단계 완료 — GAS 수수료 허가됨 (${expectedFee} GAS)`
-                  : `1단계: GAS 수수료 approve (${expectedFee} GAS)`}
+                {payStep === 0 && '💳 결제하기'}
+                {payStep === 1 && '⏳ [1/3] GAS 수수료 허가 중… MetaMask 팝업을 확인하세요'}
+                {payStep === 2 && '⏳ [2/3] PAY 결제 허가 중… MetaMask 팝업을 확인하세요'}
+                {payStep === 3 && '⏳ [3/3] 결제 실행 중… MetaMask 팝업을 확인하세요'}
+                {payStep === 4 && '✅ 결제 완료!'}
               </button>
 
-              {/* Step 2 */}
-              <button
-                onClick={approvePay}
-                disabled={isStep2Loading || !step1Done || step2Done}
-                style={{
-                  padding: '12px 20px', borderRadius: '8px', fontWeight: 600, fontSize: '1rem',
-                  cursor: (!step1Done || step2Done) ? 'default' : 'pointer', transition: 'all 0.3s',
-                  background: step2Done ? 'rgba(255,215,0,0.15)' : 'rgba(255,215,0,0.08)',
-                  color: step2Done ? '#ffd700' : '#ccaa00',
-                  border: `1px solid ${step2Done ? '#ffd700' : 'rgba(255,215,0,0.3)'}`,
-                }}
-              >
-                {isStep2Loading ? "MetaMask 서명 대기 중..." : step2Done
-                  ? `✅ 2단계 완료 — PAY 결제 허가됨 (${payAmount} PAY)`
-                  : `2단계: PAY 결제 approve (${payAmount || 0} PAY)`}
-              </button>
-
-              {/* Step 3 */}
-              <button
-                onClick={executePay}
-                disabled={isPayLoading || !step1Done || !step2Done}
-                style={{
-                  padding: '14px 20px', borderRadius: '8px', fontWeight: 700, fontSize: '1rem',
-                  cursor: (!step1Done || !step2Done) ? 'not-allowed' : 'pointer', transition: 'all 0.3s',
-                  background: (step1Done && step2Done) ? 'linear-gradient(135deg, #a855f7, #ec4899)' : 'rgba(80,80,80,0.3)',
-                  color: (step1Done && step2Done) ? '#fff' : '#555',
-                  border: 'none',
-                  boxShadow: (step1Done && step2Done) ? '0 0 25px rgba(168,85,247,0.4)' : 'none',
-                }}
-              >
-                {isPayLoading ? "결제 처리 중..." : "3단계: 결제 실행 → DualPayment.pay()"}
-              </button>
+              {/* 진행 상태 바 */}
+              {payStep > 0 && payStep < 4 && (
+                <div style={{ marginTop: '10px', display: 'flex', gap: '6px' }}>
+                  {[1, 2, 3].map((s) => (
+                    <div key={s} style={{
+                      flex: 1, height: '4px', borderRadius: '2px',
+                      background: payStep >= s ? '#a855f7' : 'rgba(168,85,247,0.2)',
+                      transition: 'background 0.3s',
+                    }} />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* 결제 완료 */}
@@ -421,12 +374,14 @@ export default function CryptoPaymentPage() {
             <div className={styles.explainBox}>
               <div className={styles.explainTitle}>📖 이중 토큰 결제 로직</div>
               <p className={styles.explainText}>
-                <strong style={{ color: '#00ff88' }}>1단계 (GAS approve):</strong> DualPayment 컨트랙트에게 &quot;수수료만큼의 GAS를 가져가도 좋다&quot;고 허락합니다.<br />
-                <strong style={{ color: '#ffd700' }}>2단계 (PAY approve):</strong> DualPayment 컨트랙트에게 &quot;결제금액만큼의 PAY를 가져가도 좋다&quot;고 허락합니다.<br />
-                <strong style={{ color: '#a855f7' }}>3단계 (pay 실행):</strong> <code>DualPayment.pay()</code>를 호출하면, 컨트랙트가 GAS 수수료와 PAY 결제를 <strong>하나의 트랜잭션(원자성)</strong>으로 동시에 처리합니다.
+                버튼 하나를 누르면 MetaMask 팝업이 순서대로 3번 뜹니다.<br />
+                <strong style={{ color: '#00ff88' }}>[1/3] GAS approve:</strong> DualPayment가 수수료({expectedFee} GAS)를 가져갈 수 있도록 허락합니다.<br />
+                <strong style={{ color: '#ffd700' }}>[2/3] PAY approve:</strong> DualPayment가 결제금({payAmount || '?'} PAY)을 가져갈 수 있도록 허락합니다.<br />
+                <strong style={{ color: '#a855f7' }}>[3/3] pay() 실행:</strong> <code>DualPayment.pay()</code>가 GAS 수수료와 PAY 결제를 <strong>하나의 트랜잭션(원자성)</strong>으로 처리합니다.
               </p>
             </div>
           </div>
+
 
           {/* ── ETH 직접 송금 패널 (기존) ── */}
           <div className={styles.panel} style={!account ? { opacity: 0.5, pointerEvents: 'none' } : {}}>

@@ -1,0 +1,376 @@
+/* ── 기본 레이아웃 ─────────────────────────────────────── */
+.container {
+  min-height: 100vh;
+  background: #060612;
+  color: #e2e8f0;
+  font-family: 'Inter', sans-serif;
+  padding: 40px 20px;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.08), transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(236, 72, 153, 0.06), transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.03), transparent 60%);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.title {
+  font-size: 2.6rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #818cf8, #ec4899, #10b981);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 12px;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  color: #64748b;
+  font-size: 1.05rem;
+}
+
+/* ── 메인 카드 ─────────────────────────────────────────── */
+.card {
+  max-width: 720px;
+  margin: 0 auto;
+  background: rgba(15, 20, 40, 0.7);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 20px;
+  padding: 36px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+}
+
+.sectionLabel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #64748b;
+  margin-bottom: 16px;
+}
+
+/* ── 코인 선택 그리드 ──────────────────────────────────── */
+.coinGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+  margin-bottom: 32px;
+}
+
+.coinCard {
+  position: relative;
+  padding: 18px;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  user-select: none;
+}
+
+.coinCard:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+  background: rgba(99, 102, 241, 0.06);
+  transform: translateY(-2px);
+}
+
+.coinCardSelected {
+  border-color: var(--coin-color, #818cf8);
+  background: rgba(99, 102, 241, 0.1);
+  box-shadow: 0 0 24px rgba(99, 102, 241, 0.2), inset 0 0 16px rgba(99, 102, 241, 0.05);
+}
+
+.coinCardSelected:hover {
+  transform: none;
+}
+
+/* 선택 라디오 표시 */
+.coinCard input[type="radio"] {
+  display: none;
+}
+
+.radioMark {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.2s;
+  background: transparent;
+}
+
+.coinCardSelected .radioMark {
+  border-color: var(--coin-color, #818cf8);
+  background: var(--coin-color, #818cf8);
+  box-shadow: 0 0 8px var(--coin-color, #818cf8);
+}
+
+.coinCardSelected .radioMark::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.coinIcon {
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.coinName {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: 4px;
+}
+
+.coinChain {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.coinPort {
+  font-size: 0.72rem;
+  font-family: 'Courier New', monospace;
+  color: #475569;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* ── 폼 영역 ───────────────────────────────────────────── */
+.formSection {
+  margin-bottom: 24px;
+}
+
+.formLabel {
+  display: block;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.input {
+  width: 100%;
+  padding: 14px 16px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #f1f5f9;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.input::placeholder {
+  color: #334155;
+}
+
+.inputError {
+  border-color: rgba(239, 68, 68, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+.errorText {
+  margin-top: 6px;
+  font-size: 0.82rem;
+  color: #f87171;
+}
+
+/* ── 결제 요약 박스 ────────────────────────────────────── */
+.summaryBox {
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.88rem;
+}
+
+.summaryKey {
+  color: #64748b;
+}
+
+.summaryVal {
+  color: #f1f5f9;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+}
+
+/* ── 결제 버튼 ─────────────────────────────────────────── */
+.payBtn {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #6366f1, #ec4899);
+  color: #fff;
+  box-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
+  letter-spacing: 0.3px;
+}
+
+.payBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 40px rgba(99, 102, 241, 0.5);
+}
+
+.payBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: rgba(100, 116, 139, 0.3);
+  box-shadow: none;
+  transform: none;
+}
+
+.payBtnActive {
+  background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+}
+
+.payBtnDone {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+}
+
+/* ── 진행 상태 바 ──────────────────────────────────────── */
+.progressBar {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.progressStep {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(99, 102, 241, 0.15);
+  transition: background 0.4s ease;
+}
+
+.progressStepActive {
+  background: #6366f1;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+}
+
+/* ── 결과 박스 ─────────────────────────────────────────── */
+.resultBox {
+  margin-top: 20px;
+  padding: 18px 20px;
+  border-radius: 12px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.resultTitle {
+  color: #10b981;
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.resultHash {
+  font-family: 'Courier New', monospace;
+  font-size: 0.78rem;
+  color: #34d399;
+  word-break: break-all;
+  line-height: 1.6;
+}
+
+/* ── 에러 박스 ─────────────────────────────────────────── */
+.errorBox {
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 10px;
+  color: #f87171;
+  font-size: 0.88rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* ── 연결 버튼 ─────────────────────────────────────────── */
+.connectBtn {
+  width: 100%;
+  padding: 14px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  border-radius: 10px;
+  color: #818cf8;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.connectBtn:hover {
+  background: rgba(99, 102, 241, 0.2);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin: 28px 0;
+}
+
+/* ── 네트워크 배지 ─────────────────────────────────────── */
+.networkBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}

@@ -140,6 +140,7 @@
 3. **시각적 애니메이션**: 캐싱된 교통 데이터가 `trafficMap` 상태를 덮어씁니다. 이때 도로의 선 색상(PathLayer)뿐만 아니라, **교통 히트맵(HeatmapLayer)의 붉은 연기 강도까지 실시간으로 커졌다 작아졌다를 반복하며** 아름다운 타임랩스 애니메이션을 만들어냅니다.
 
 ## 8. 🏆 마이페이지 및 게이미피케이션 지갑 (`/mypage/wallet`)
+
 단순한 주문 내역을 넘어, 쇼핑과 메타버스의 융합 경험을 제공하는 개인화 공간입니다.
 
 1. **홀로그램 맵 쿠폰 지갑**: 트럭 시뮬레이션을 통해 획득한 지도 쿠폰을 NFT 형태의 화려한 홀로그램 카드로 시각화하여 수집욕을 자극합니다.
@@ -148,6 +149,7 @@
 ---
 
 ## 9. 📊 최고 관리자 대시보드 (`/admin-dashboard`)
+
 비즈니스 현황을 한눈에 볼 수 있는 Recharts 기반의 실시간 데이터 시각화 페이지입니다.
 
 * **매출 추이**: 7일간의 누적 수익 및 주문수를 꺾은선 차트로 렌더링.
@@ -210,26 +212,36 @@
 프로젝트 전체의 라우팅 통제, 인증/인가 로직, 그리고 배포 파이프라인은 다음 핵심 파일들에 의해 중앙에서 제어됩니다.
 
 ### 11.1 전역 라우트 프록시 (`proxy.ts`)
+
 Next.js의 라우트를 가로채어 페이지 렌더링 전, 혹은 API 접근 전에 **접근 권한을 검증하는 문지기(Middleware)** 역할입니다.
+
 * **기능**: `adminPages` (예: `/ADMIN`, `/admin-dashboard`) 배열이나 `protectedPaths` 배열에 등록된 경로에 접근할 때, 쿠키에 있는 `accessToken`을 가로채어 `verifyAccessToken`으로 복호화합니다.
 * **보안 로직**: 토큰이 없거나, 유효하지 않거나, 요구되는 Role(예: `ADMIN`)을 충족하지 못하면 브라우저를 `/Login`이나 `/forbidden` 페이지로 강제 리다이렉트 시킵니다. API 요청의 경우 `401/403 HTTP Status`를 즉시 반환합니다.
 
 ### 11.2 서버 기반 OAuth 통합 인증 (`auth.ts`)
+
 NextAuth.js 프레임워크를 기반으로 구축된 소셜 로그인 및 세션 매니저입니다.
+
 * **기능**: Naver OAuth (`Naver Provider`)를 통해 유저 프로필 정보를 가져옵니다.
 * **DB 연동 (`linkAccountByEmail`)**: 네이버 로그인 성공 시 JWT 콜백 안에서 Prisma DB를 조회해, 기존 회원인지 판별하고 네이버 ID와 로컬 DB 계정을 연동(Link)하는 핵심 로직이 들어있습니다.
 
 ### 11.3 클라이언트 사이드 인증 가드 (`app/hooks/useAuthGuard.ts`)
+
 프록시가 서버단에서 막아준다면, 이 훅은 **클라이언트(React) 단에서 유저 세션을 검증**합니다.
+
 * **기능**: 페이지가 로딩되자마자 백엔드 `/api/auth/Me` 엔드포인트를 찔러 유저 정보를 가져옵니다.
 * **토큰 자동 갱신(Refresh)**: 엑세스 토큰이 만료되어 401 에러가 반환되면, 즉각적으로 `/api/auth/refresh` API를 백그라운드에서 호출해 토큰을 재발급받은 뒤 원래 요청을 재시도합니다. 실패 시 로그인 창으로 보냅니다.
 
 ### 11.4 실시간 동기화 웹소켓 서버 (`ws-server.js`)
+
 쇼핑몰의 "공유 장바구니" 기능이나 "플래시몹(Flash Mob)" 등 실시간 양방향 통신이 필요한 곳에 쓰이는 독립적인 Node.js + WebSocket 서버입니다.
+
 * **Redis 연동**: `redis://localhost:6379`에 연결되어 여러 인스턴스 간에도 유저 상태를 동기화하고 캐싱합니다.
 
 ### 11.5 무중단 배포 및 인프라 (Blue-Green Deployment)
+
 서비스 장애 없이 코드를 업데이트하기 위한 데브옵스 인프라 설정 파일들입니다.
+
 * **`nginx.conf` & `nginx-blue/green.conf`**: Nginx 리버스 프록시를 통해 로드밸런싱 및 블루-그린 스위칭 라우팅을 수행합니다.
 * **`deploy.sh` & `deploy.ps1`**: 배포 스크립트로, 새 버전을 컨테이너에 올린 뒤 Nginx 포트를 스왑(Swap)하여 무중단 배포를 실현합니다.
 * **`ecosystem.config.js`**: PM2 프로세스 매니저를 통해 Next.js 서버의 메모리 누수 방지, 프로세스 데몬화 및 로깅을 담당합니다.
@@ -347,8 +359,8 @@ Next.js 서버는 직접 블록체인과 통신하지 않습니다.
 1. MetaMask → 네트워크 선택 → **[Sepolia 테스트 네트워크]** 선택
    *(설정 → 고급 → '테스트 네트워크 표시' 활성화 필요)*
 2. 아래 Faucet(수도꼭지)에서 내 지갑 주소를 입력하여 **무료 테스트 ETH 수령**
-   - [Google Cloud Faucet](https://cloud.google.com/application/web3/faucet/ethereum/sepolia)
-   - [Alchemy Sepolia Faucet](https://sepoliafaucet.com/)
+   * [Google Cloud Faucet](https://cloud.google.com/application/web3/faucet/ethereum/sepolia)
+   * [Alchemy Sepolia Faucet](https://sepoliafaucet.com/)
 3. 페이지에서 지갑 연결 후 결제 전송 → MetaMask 승인 팝업 → TxHash 수령
 
 ---
@@ -760,6 +772,7 @@ npx ganache --chain.chainId 31337 --wallet.accounts "0xac0974bec39a17e36ba4a6b4d
 ```
 
 → 성공 시 출력:
+
 ```
 ganache v7.9.2
 Available Accounts
@@ -770,9 +783,10 @@ Listening on 127.0.0.1:8545
 ```
 
 > 옵션 설명:
-> - `--chain.chainId 31337` : MetaMask에 네트워크 등록 시 사용하는 ID
-> - `--wallet.accounts "개인키,잔액(wei)"` : 개인키와 초기 잔액(wei 단위, 1000 ETH = 10^21 wei)을 가진 계정 생성
-> - 이 개인키는 Hardhat/Ganache 공식 테스트 계정 #0 (실제 돈 아님, 공개된 키)
+>
+> * `--chain.chainId 31337` : MetaMask에 네트워크 등록 시 사용하는 ID
+> * `--wallet.accounts "개인키,잔액(wei)"` : 개인키와 초기 잔액(wei 단위, 1000 ETH = 10^21 wei)을 가진 계정 생성
+> * 이 개인키는 Hardhat/Ganache 공식 테스트 계정 #0 (실제 돈 아님, 공개된 키)
 
 ---
 
@@ -784,6 +798,7 @@ node scripts/deploy.js
 ```
 
 → 성공 시 출력:
+
 ```
 🚀 배포 스크립트 시작
 
@@ -908,7 +923,7 @@ MetaMask에 Ganache 네트워크 정보를 수동으로 등록하면
 | 통화 기호 | `ETH` | 가스비로 쓰이는 기본 통화 |
 | 블록 탐색기 URL | (비워두기) | 로컬이라 탐색기 없음 |
 
-6. **저장** 클릭 → MetaMask가 자동으로 Localhost 8545 네트워크로 전환됨
+1. **저장** 클릭 → MetaMask가 자동으로 Localhost 8545 네트워크로 전환됨
 
 > **체인 ID란?**
 > 서로 다른 이더리움 네트워크를 구분하는 고유 번호.
@@ -930,7 +945,7 @@ Ganache가 생성한 테스트 계정을 MetaMask로 불러옵니다.
 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 ```
 
-5. **"가져오기"** 클릭
+1. **"가져오기"** 클릭
 
 **확인:** 계정에 약 999.99 ETH가 표시되면 성공
 (1000 ETH에서 컨트랙트 3개 배포 가스비로 약 0.006 ETH 소모됨)
@@ -1099,4 +1114,302 @@ uint256 feeAmount = (payAmount * feeRate) / 100;
 > 재배포 없이 요율을 변경할 수 있습니다. 이때 `onlyOwner` 접근 제어로 배포자만 호출 가능하게 제한합니다.
 > 우리 컨트랙트는 학습 목적이라 이 기능은 생략했습니다.
 
+---
 
+## 14. 🌐 크로스체인 멀티 결제 시스템 (`/multi-payment`)
+
+### 14.1 왜 만드는가? (배경 및 목적)
+
+앞서 구현한 `DualPayment`는 **하나의 체인** 위에서 두 종류의 토큰(GAS, PAY)으로 결제하는 구조였습니다.
+그러나 실제 서비스에서는 사용자가 **"비트코인으로 결제", "이더리움으로 결제", "솔라나로 결제"** 처럼
+서로 다른 블록체인에 존재하는 코인을 자유롭게 선택해 결제해야 합니다.
+
+이 요구사항을 해결하려면 다음 문제를 마주하게 됩니다:
+
+```
+문제: 블록체인끼리는 직접 통신이 불가능하다.
+      Ethereum 체인은 Solana에서 무슨 일이 벌어지는지 전혀 모른다.
+
+→ 해결: 각 체인을 동시에 모니터링하는 "결제 서버(백엔드)"가 필요하다.
+```
+
+이 모듈은 **크로스체인 결제의 핵심 구조**를 로컬 환경에서 직접 체험하기 위한 학습용 구현입니다.
+3개의 Ganache 인스턴스를 각각 독립 체인으로 사용해 실제 멀티체인 환경을 시뮬레이션합니다.
+
+---
+
+### 14.2 전체 아키텍처
+
+```
+[사용자 브라우저]
+  └─ /multi-payment 페이지
+       ├─ Chain A / B / C 코인 중 선택
+       ├─ MetaMask 자동 네트워크 전환
+       └─ 결제 트랜잭션 전송
+
+[블록체인 레이어] (Ganache 3개)
+  ├─ Chain A (port 8545, chainId 1337)
+  │    └─ PaymentReceiver.sol 배포
+  ├─ Chain B (port 8546, chainId 1338)
+  │    └─ PaymentReceiver.sol 배포
+  └─ Chain C (port 8547, chainId 1339)
+       └─ PaymentReceiver.sol 배포
+
+[결제 서버 백엔드] (Node.js)
+  ├─ 3개 체인 동시 모니터링 (ethers.js WebSocket Provider)
+  ├─ PaymentReceived 이벤트 감지
+  └─ 주문 DB에 결제 완료 처리 → 프론트엔드에 응답
+```
+
+---
+
+### 14.3 구현 단계 로드맵
+
+#### 1단계: UI 구현 ✅ (완료)
+
+* 파일: `app/multi-payment/page.tsx`
+
+* 코인 선택 카드 UI (Chain A / B / C)
+* MetaMask 자동 네트워크 전환 (`wallet_switchEthereumChain`)
+* 결제 진행 상태 표시 (1/2 네트워크 전환 → 2/2 트랜잭션)
+* 현재는 단순 ETH 전송으로 동작 확인 가능
+
+#### 2단계: 컨트랙트 배포
+
+* 파일: `blockchain-study/contracts/PaymentReceiver.sol`
+
+* 각 3개 체인에 배포 (`deploy-multichain.js`)
+* 역할: 입금을 받으면 `PaymentReceived(payer, amount, orderId)` 이벤트 발생
+
+#### 3단계: 결제 서버 구축
+
+* 파일: `server/index.js` (Node.js + Express)
+
+* 3개 체인의 `PaymentReceiver` 이벤트를 동시 구독
+* 이벤트 감지 시 주문 상태를 메모리 Map에 저장
+* REST API 제공: `GET /order/:orderId` → `{ status: 'paid' | 'pending' }`
+
+#### 4단계: 프론트 ↔ 서버 연동
+
+* 결제 후 서버에 주문번호로 상태 폴링
+
+* 서버가 `paid` 응답 시 완료 화면 표시
+
+---
+
+### 14.4 핵심 학습 포인트
+
+| 개념 | 내용 |
+|---|---|
+| **크로스체인 불가** | 체인끼리는 직접 통신 불가 → 서버가 중간 역할 |
+| **이벤트 구독** | `ethers.Contract.on("EventName", handler)` |
+| **다중 체인 모니터링** | WebSocket Provider로 여러 노드에 동시 연결 |
+| **MetaMask 네트워크 전환** | `wallet_switchEthereumChain` / `wallet_addEthereumChain` |
+| **폴링 vs 웹소켓** | 프론트는 폴링, 서버는 웹소켓으로 체인 감시 |
+
+---
+
+### 14.5 로컬 실행 환경 (완성 후)
+
+```bash
+# 터미널 1: Chain A
+npx ganache --chain.chainId 1337 --server.port 8545 ...
+
+# 터미널 2: Chain B
+npx ganache --chain.chainId 1338 --server.port 8546 ...
+
+# 터미널 3: Chain C
+npx ganache --chain.chainId 1339 --server.port 8547 ...
+
+# 터미널 4: 각 체인에 컨트랙트 배포
+node scripts/deploy-multichain.js
+
+# 터미널 5: 결제 서버 실행
+node server/index.js
+
+# 터미널 6: Next.js 프론트엔드
+npm run dev
+```
+
+---
+
+### 14.6 2단계: 컨트랙트 설계 및 배포
+
+#### PaymentReceiver.sol 핵심 설계
+
+`blockchain-study/contracts/PaymentReceiver.sol`
+
+```solidity
+// 핵심 이벤트: 결제 서버가 이것을 감지해 주문 완료 처리
+event PaymentReceived(
+    address indexed payer,  // 결제자 주소
+    uint256 amount,         // 결제 금액 (wei)
+    string  orderId         // 주문 번호 (프론트-서버 매칭용)
+);
+
+// 핵심 함수: 사용자가 ETH와 함께 호출
+function pay(string calldata orderId) external payable {
+    require(msg.value > 0, "amount must be > 0");
+    emit PaymentReceived(msg.sender, msg.value, orderId);
+}
+```
+
+`pay(orderId)` 하나가 전부입니다. ETH를 보내면 이벤트가 블록체인에 기록되고, 결제 서버가 감지합니다.
+
+#### orderId의 역할
+
+```
+프론트엔드가 결제 전 고유 주문번호 생성 (예: "ORDER-1234")
+    ↓
+pay("ORDER-1234") 호출 → 블록체인에 이벤트 기록
+    ↓
+결제 서버: PaymentReceived 이벤트에서 orderId 추출
+    ↓
+서버 DB에서 "ORDER-1234" 주문을 "paid" 상태로 변경
+    ↓
+프론트엔드: GET /api/order/ORDER-1234 폴링 → paid → 완료 화면
+```
+
+#### 배포 스크립트 실행 (완성 후)
+
+```bash
+# blockchain-study 디렉토리에서
+node scripts/deploy-multichain.js
+```
+
+성공 시 `blockchain-study/deployed/multichain-addresses.json` 자동 생성:
+
+```json
+{
+  "deployedAt": "2026-04-28T...",
+  "abi": [...],
+  "chains": {
+    "Chain A": { "chainId": 1337, "rpcUrl": "http://127.0.0.1:8545", "address": "0x..." },
+    "Chain B": { "chainId": 1338, "rpcUrl": "http://127.0.0.1:8546", "address": "0x..." },
+    "Chain C": { "chainId": 1339, "rpcUrl": "http://127.0.0.1:8547", "address": "0x..." }
+  }
+}
+```
+
+프론트엔드와 결제 서버 모두 이 파일을 읽어 체인별 컨트랙트 주소를 참조합니다.
+
+> **주의**: Ganache 재시작 시 컨트랙트 주소가 변경됩니다.
+> 재시작 후에는 반드시 `deploy-multichain.js`를 다시 실행하세요.
+
+#### 실제 배포 결과 (2026-04-28 기준)
+
+```
+Chain A (chainId: 1337, port: 8545): 0x5FbDB2315678afecb367f032d93F642f64180aa3
+Chain B (chainId: 1338, port: 8546): 0x5FbDB2315678afecb367f032d93F642f64180aa3
+Chain C (chainId: 1339, port: 8547): 0x5FbDB2315678afecb367f032d93F642f64180aa3
+```
+
+3개 체인 모두 주소가 동일한 것은 정상입니다.
+동일한 개인키(배포자)와 동일한 nonce(0)에서 배포하면 EVM은 항상 같은 주소를 결정론적으로 생성합니다.
+
+---
+
+### 14.7 현재 진행 상황
+
+| 단계 | 상태 | 내용 |
+|---|---|---|
+| 1단계: UI | ✅ 완료 | `/multi-payment` 코인 선택 + MetaMask 네트워크 전환 |
+| 2단계: 컨트랙트 | ✅ 완료 | `PaymentReceiver.sol` 3개 체인 배포 완료 |
+| 3단계: 결제 서버 | ✅ 완료 | Node.js 서버, 3개 체인 이벤트 동시 모니터링 |
+| 4단계: 프론트 연동 | 🔲 진행 예정 | orderId 생성, 서버 폴링, 완료 화면 |
+
+---
+
+### 14.8 3단계: 결제 서버 구축
+
+#### 파일 위치
+
+`blockchain-study/server/index.js`
+
+#### 핵심 역할
+
+```
+역할 1: 이벤트 구독 (3개 체인 동시)
+  Chain A Provider → contract.on("PaymentReceived") → 주문 DB 업데이트
+  Chain B Provider → contract.on("PaymentReceived") → 주문 DB 업데이트
+  Chain C Provider → contract.on("PaymentReceived") → 주문 DB 업데이트
+
+역할 2: REST API 제공
+  POST /api/order       → 주문번호 생성 (결제 시작 전 호출)
+  GET  /api/order/:id   → 주문 상태 조회 (프론트가 폴링)
+  GET  /api/health      → 서버 상태 확인
+```
+
+#### 핵심 코드: 이벤트 구독
+
+```javascript
+const contract = new ethers.Contract(address, abi, provider);
+
+contract.on("PaymentReceived", (payer, amount, orderId, event) => {
+  // 이벤트 발생 시 주문 DB를 "paid"로 업데이트
+  orders.set(orderId, {
+    status: "paid",
+    chainName,
+    payer,
+    txHash: event.log.transactionHash,
+    amount: ethers.formatEther(amount),
+    paidAt: new Date().toISOString(),
+  });
+});
+```
+
+#### 사용 패키지
+
+| 패키지 | 용도 |
+|---|---|
+| `express` | REST API 서버 |
+| `cors` | Next.js(3000)에서 서버(3001) 요청 허용 |
+| `ethers` | 블록체인 이벤트 구독 |
+| `dotenv` | Next.js 프로젝트 루트의 `.env`에서 `DATABASE_URL` 로드 |
+| `@prisma/client` | PostgreSQL 주문 DB 읽기/쓰기 (Next.js 공유 클라이언트 사용) |
+
+#### 서버 실행 방법
+
+```bash
+# blockchain-study 디렉토리에서
+node server/index.js
+```
+
+성공 시 출력:
+
+```
+✅ PostgreSQL 연결 성공
+✅ Chain A 연결 성공 (chainId: 1337)
+✅ Chain B 연결 성공 (chainId: 1338)
+✅ Chain C 연결 성공 (chainId: 1339)
+✅ 결제 서버 실행 중: http://localhost:3001
+```
+
+#### DB 구성: PostgreSQL (Prisma)
+
+`schema.prisma`에 `crypto_payment_orders` 모델을 추가하고 `npx prisma db push`로 테이블을 생성했습니다.
+
+```prisma
+model crypto_payment_orders {
+  id         Int       @id @default(autoincrement())
+  order_id   String    @unique   // 주문 고유번호
+  status     String    @default("pending")  // "pending" | "paid"
+  amount     String?   // 결제 금액 (ETH)
+  chain_name String?   // 결제된 체인 이름
+  payer      String?   // 결제자 지갑 주소
+  tx_hash    String?   // 트랜잭션 해시
+  paid_at    DateTime? // 결제 완료 시각
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+}
+```
+
+이벤트 감지 시 `prisma.crypto_payment_orders.upsert()`를 사용해 주문을 생성하거나 업데이트합니다.
+upsert를 쓰는 이유: 서버 재시작 전에 발생한 이벤트가 재처리될 경우에도 중복 없이 안전하게 처리됩니다.
+
+| 특성 | 이전 (메모리 Map) | 현재 (PostgreSQL) |
+|---|---|---|
+| 서버 재시작 시 | 데이터 소멸 | ✅ 데이터 유지 |
+| 조회 속도 | 매우 빠름 | 빠름 (인덱스 적용) |
+| 중복 처리 | 수동 처리 필요 | ✅ upsert로 자동 처리 |
+| 이관 시 변경 사항 | 코드 전체 수정 | orders.set/get → prisma 쿼리만 교체 |

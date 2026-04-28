@@ -626,3 +626,34 @@ model product_price_history {
   @@index([recorded_at])
 }
 
+// ── 크로스체인 결제 주문 테이블 ─────────────────────────────────────
+// /multi-payment 페이지에서 생성되는 블록체인 결제 주문 저장
+model crypto_payment_orders {
+  id         Int      @id @default(autoincrement())
+  order_id   String   @unique @db.VarChar(100)
+  // 주문 고유번호 (예: ORDER-1714284000000-ABCD)
+
+  status     String   @default("pending") @db.VarChar(20)
+  // "pending" | "paid"
+
+  amount     String?  @db.VarChar(100)
+  // 결제 금액 (ETH 단위 문자열, 예: "0.01")
+
+  chain_name String?  @db.VarChar(50)
+  // 결제된 체인 (예: "Chain A")
+
+  payer      String?  @db.VarChar(100)
+  // 결제자 지갑 주소 (0x...)
+
+  tx_hash    String?  @db.VarChar(100)
+  // 결제 트랜잭션 해시
+
+  paid_at    DateTime? @db.Timestamp(6)
+  // 결제 완료 시각
+
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+  @@index([status])
+  @@index([created_at])
+}
