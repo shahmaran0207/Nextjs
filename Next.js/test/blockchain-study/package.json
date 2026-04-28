@@ -1,0 +1,23 @@
+{
+  "name": "blockchain-study",
+  "version": "1.0.0",
+  "description": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "node": "hardhat node",
+    "compile": "hardhat compile",
+    "deploy": "hardhat run scripts/deploy.js --network localhost"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.0.9",
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2",
+    "ethers": "^6.16.0",
+    "ganache": "^7.9.2",
+    "hardhat": "^2.19.5",
+    "solc": "^0.8.34"
+  }
+}
