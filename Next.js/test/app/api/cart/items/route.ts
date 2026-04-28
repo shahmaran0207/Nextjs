@@ -55,6 +55,7 @@ export async function GET(req: Request) {
         product_image: product ? !!(product as any).image_data : false,
         product_stock: product?.stock || 0,
         is_active: product?.is_active || false,
+        seller_id: product?.seller_id ?? null,  // 암호화폐 결제 라우팅용
       };
     });
 

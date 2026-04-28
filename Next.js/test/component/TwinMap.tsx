@@ -16,6 +16,7 @@ import WeatherHeader from "@/component/dt/WeatherHeader";
 import { TourismCarouselDisplay, ConstructionCarouselDisplay } from "@/component/CarouselInfoDisplay";
 import MapLegend from "@/component/MapLegend";
 import CctvPopup from "@/component/dt/popups/CctvPopup";
+import CctvPlayer from "@/component/dt/modules/CctvPlayer";
 import LinkSpeedHistoryPopup from "@/component/dt/popups/LinkSpeedHistoryPopup";
 import { useEffect, useRef, useMemo } from "react";
 import { createBoundaryLayer, createPathLayer } from "@/component/dt/layers/createBaseLayers";
@@ -213,9 +214,13 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
       });
   }, [couponBoxes, viewState]);
 
+  const showSplitScreen = isSimulating && isFpvMode;
+
   return (
-    <div className={styles.mapContainer}>
-      <DeckGL
+    <div className={showSplitScreen ? styles.splitContainer : styles.mapContainer}>
+      {/* ─── 왼쪽 (지도 영역) ─── */}
+      <div className={showSplitScreen ? styles.leftPane : ""} style={showSplitScreen ? {} : { width: '100%', height: '100%', position: 'relative' }}>
+        <DeckGL
         viewState={viewState}
         onViewStateChange={({ viewState: vs, interactionState }: any) => {
           setViewState(vs);
@@ -280,7 +285,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
         </MapGL>
       </DeckGL>
 
-      {/* 날씨에 따른 비 내리는 효과 (지도 위에 오버레이) */}ㅁ
+      {/* 날씨에 따른 비 내리는 효과 (지도 위에 오버레이) */}
       {isRainy && <RainOverlay />}
 
       {/* FPV 모드 HUD 오버레이 */}
@@ -302,6 +307,36 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
           </div>
         </div>
       )}
+
+      </div>
+
+      {/* ─── 오른쪽 (로드뷰 / CCTV 분할 영역) ─── */}
+      {showSplitScreen && (
+        <div className={styles.rightPane}>
+          {nearbyEvent && nearbyEvent.type === 'cctv' ? (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#000' }}>
+              <div style={{ padding: '12px 16px', background: 'rgba(10,14,26,0.9)', borderBottom: '1px solid rgba(56,189,248,0.3)' }}>
+                <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>🎥 전방 CCTV 화면 ({nearbyEvent.data.name})</span>
+              </div>
+              <div style={{ flex: 1, position: 'relative' }}>
+                <CctvPlayer url={nearbyEvent.data.url} />
+              </div>
+            </div>
+          ) : (
+            <div style={{ flex: 1, position: 'relative' }}>
+              <RoadviewPanel
+                isOpen={true}
+                position={{ lat: truckPos?.latitude || 0, lng: truckPos?.longitude || 0 }}
+                onClose={() => {}}
+                onPositionChange={() => {}}
+                onAvailabilityChange={() => {}}
+                mode="split"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
 
       {/* 최상단 HTML 오버레이: 배송 트럭 아이콘 */}
       {truckScreenPos && (
@@ -338,7 +373,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
 
 
       {/* 주변 CCTV / 공사 감지 UI */}
-      {nearbyEvent && (
+      {nearbyEvent && !showSplitScreen && (
         <div
           className={styles.eventFloatingPopup}
           style={{ borderColor: nearbyEvent.type === 'cctv' ? '#06b6d4' : '#f97316', boxShadow: `0 0 20px ${nearbyEvent.type === 'cctv' ? 'rgba(6,182,212,0.3)' : 'rgba(249,115,22,0.3)'}` }}
@@ -405,7 +440,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
       {!isSimulating && <MapLegend />}
 
       {/* CCTV 팝업 */}
-      {selectedCctv && (
+      {selectedCctv && !showSplitScreen && (
         <CctvPopup
           cctv={selectedCctv}
           isOpen={isCctvPopupOpen}
@@ -440,13 +475,14 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
 
       {!isSimulating && (
         <>
-          {/* 로드뷰 패널 (Task 5.5) */}
+          {/* 로드뷰 패널 (Task 5.5) - Overlay 모드 (분할 화면 아닐 때) */}
           <RoadviewPanel
             isOpen={roadviewState.isOpen}
             position={roadviewState.position}
             onClose={() => setRoadviewState(prev => ({ ...prev, isOpen: false }))}
             onPositionChange={handleRoadviewPositionChange}
             onAvailabilityChange={handleRoadviewAvailabilityChange}
+            mode="overlay"
           />
 
           {/* 교통 이력 패널 (Task 7.1) */}

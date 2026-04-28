@@ -148,6 +148,16 @@ model users {
   points         Decimal          @default(0) @db.Decimal(12, 2)
   refresh_tokens refresh_tokens[]
   todos          todos[]
+
+  wallet_address     String?   @unique @db.VarChar(100)
+  // 검증된 이더리움 지갑 주소 (0x...)
+  // MetaMask 서명 검증을 통해 소유권이 확인된 주소만 저장됨
+
+  wallet_verified_at DateTime? @db.Timestamp(6)
+  // 서명 검증 완료 시각
+
+  wallet_nonce       String?   @db.VarChar(100)
+  // 서명용 일회성 nonce (매 요청마다 새로 발급, 사용 후 초기화)
 }
 
 model todos {
@@ -458,6 +468,8 @@ model orders {
   shipping_address     String?
   shipping_message     String?
   is_gift              Boolean  @default(false)
+  return_reason        String?  @db.VarChar(200)  // 반품 사유
+  return_requested_at  DateTime?                   // 반품 요청 시각
   ordered_at           DateTime @default(now()) @db.Timestamp(6)
   created_at           DateTime @default(now()) @db.Timestamp(6)
   updated_at           DateTime @default(now()) @db.Timestamp(6)
@@ -629,31 +641,45 @@ model product_price_history {
 // ── 크로스체인 결제 주문 테이블 ─────────────────────────────────────
 // /multi-payment 페이지에서 생성되는 블록체인 결제 주문 저장
 model crypto_payment_orders {
-  id         Int      @id @default(autoincrement())
-  order_id   String   @unique @db.VarChar(100)
+  id            Int      @id @default(autoincrement())
+  order_id      String   @unique @db.VarChar(100)
   // 주문 고유번호 (예: ORDER-1714284000000-ABCD)
 
-  status     String   @default("pending") @db.VarChar(20)
+  status        String   @default("pending") @db.VarChar(20)
   // "pending" | "paid"
 
-  amount     String?  @db.VarChar(100)
+  amount        String?  @db.VarChar(100)
   // 결제 금액 (ETH 단위 문자열, 예: "0.01")
 
-  chain_name String?  @db.VarChar(50)
+  chain_name    String?  @db.VarChar(50)
   // 결제된 체인 (예: "Chain A")
 
-  payer      String?  @db.VarChar(100)
+  payer         String?  @db.VarChar(100)
   // 결제자 지갑 주소 (0x...)
 
-  tx_hash    String?  @db.VarChar(100)
+  seller_wallet String?  @db.VarChar(100)
+  // 결제 당시 판매자 지갑 주소 (영수증 역할)
+  // products.seller_id → users.wallet_address 로 조회한 값
+
+  product_id    Int?
+  // 연결된 상품 ID (products.id)
+
+  tx_hash       String?  @db.VarChar(100)
   // 결제 트랜잭션 해시
 
-  paid_at    DateTime? @db.Timestamp(6)
+  paid_at       DateTime? @db.Timestamp(6)
   // 결제 완료 시각
 
-  created_at DateTime @default(now()) @db.Timestamp(6)
-  updated_at DateTime @default(now()) @updatedAt @db.Timestamp(6)
+  token_symbol  String?  @db.VarChar(20)
+  // 결제에 사용된 토큰 (예: "ETH", "USDC", "DAI")
+
+  buyer_email   String?  @db.VarChar(255)
+  // 구매자 이메일 (주문 생성 시 프론트에서 전달)
+
+  created_at    DateTime @default(now()) @db.Timestamp(6)
+  updated_at    DateTime @default(now()) @updatedAt @db.Timestamp(6)
 
   @@index([status])
   @@index([created_at])
+  @@index([product_id])
 }

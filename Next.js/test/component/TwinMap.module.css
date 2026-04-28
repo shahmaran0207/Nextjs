@@ -279,7 +279,7 @@
   color: #fed7aa;
 }
 
-/* 둥근 버튼 공통 (플로팅 버튼) */
+/* 원형 버튼 공통 (절대 위치 버튼) */
 .circleBtn {
   position: absolute;
   width: 48px;
@@ -376,7 +376,7 @@
   transition: left 0.1s linear, top 0.1s linear;
 }
 
-/* 시뮬레이션 이벤트 플로팅 팝업 */
+/* 근처 이벤트 플로팅 팝업 */
 .eventFloatingPopup {
   position: fixed;
   top: 80px;
@@ -411,7 +411,7 @@
 .eventPopupFieldCode { color: #fdba74; margin-right: 6px; }
 .eventPopupProgress { font-size: 13px; color: #cbd5e1; }
 
-/* ─── FPV HUD ──────────────────────────────────────────────── */
+/* 배송 FPV HUD 오버레이 */
 .fpvHudRoot {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -487,7 +487,7 @@
   background: rgba(56,189,248,0.5);
 }
 
-/* ─── FPV 전환 버튼 ────────────────────────────────────────── */
+/* 배송 FPV 전환 버튼 */
 .fpvBtn {
   position: fixed;
   bottom: 24px;
@@ -515,7 +515,7 @@
   box-shadow: 0 4px 20px rgba(245,158,11,0.5);
 }
 
-/* ─── 버튼 그룹 컨테이너 ────────────────────────────────────── */
+/* 하단 버튼 그룹 컨테이너 */
 .btnGroup {
   position: fixed;
   bottom: 24px;
@@ -527,7 +527,7 @@
   z-index: 1001;
 }
 
-/* ─── 쿠폰 마커 ─────────────────────────────────────────────── */
+/* 배송 쿠폰 마커 */
 .couponMarker {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -552,7 +552,7 @@
   white-space: nowrap;
 }
 
-/* ─── 쿠폰 획득 팝업 ────────────────────────────────────────── */
+/* 배송 쿠폰 획득 팝업 */
 .couponCollectPopup {
   position: fixed;
   top: 50%;
@@ -571,7 +571,7 @@
 .couponCollectAmount { font-size: 28px; font-weight: 900; color: #1a1a1a; }
 .couponCollectMsg { font-size: 14px; color: #78350f; margin-top: 4px; }
 
-/* ─── 쿠폰/FPV 애니메이션 ────────────────────────────────────── */
+/* 배송 쿠폰/FPV 애니메이션 */
 @keyframes couponPulse {
   0%, 100% { transform: translate(-50%, -50%) scale(1); }
   50% { transform: translate(-50%, -50%) scale(1.2); }
@@ -579,4 +579,54 @@
 @keyframes couponCollect {
   from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
   to   { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
+}
+
+/* 배송 FPV 분할 화면 (Split Screen) */
+.splitContainer {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
+}
+
+.leftPane {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  flex: 1;
+  position: relative;
+  height: 100%;
+}
+
+.rightPane {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  flex: 1;
+  position: relative;
+  height: 100%;
+  background: #111827;
+  border-left: 2px solid rgba(56, 189, 248, 0.5);
+  display: flex;
+  flex-direction: column;
+}
+
+/* 모바일 좁은 화면 대응 */
+@media (max-width: 768px) {
+  .splitContainer {
+    flex-direction: column;
+  }
+  .rightPane {
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    border-left: none;
+    border-top: 2px solid rgba(56, 189, 248, 0.5);
+  }
+}
+
+@keyframes dtFadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }

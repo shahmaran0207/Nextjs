@@ -182,6 +182,18 @@ export default function MyPage() {
                 </div>
               </Link>
 
+              {/* 블록체인 지갑 잔액조회 카드 */}
+              <Link href="/wallet-balance" className="text-decoration-none">
+                <div className="card-container shop-surface border-default menu-card">
+                  <div className="flex-row-between mb-sm">
+                    <div style={{ fontSize: "32px" }}>🔭</div>
+                    <div className="text-24-bold text-accent">-</div>
+                  </div>
+                  <h3 className="text-16-bold text-primary margin-0">지갑 잔액 조회"</h3>
+                  <p className="text-13 text-secondary mt-6px margin-0">ETH·USDC·DAI 3체인 잔액 확인.</p>
+                </div>
+              </Link>
+
               {/* 판매자 전용 메뉴 (나의 등록 상품 + 주문/배송 관리) */}
               {role === "SELLER" && (
                 <>
@@ -215,6 +227,17 @@ export default function MyPage() {
                       </div>
                       <h3 className="text-16-bold text-primary margin-0">매출 통계</h3>
                       <p className="text-13 text-secondary mt-6px margin-0">월별 매출 및 상품별 판매 건수 그래프.</p>
+                    </div>
+                  </Link>
+
+                  <Link href="/mypage/crypto-wallet" className="text-decoration-none">
+                    <div className="card-container shop-surface border-default menu-card">
+                      <div className="flex-row-between mb-sm">
+                        <div style={{ fontSize: "32px" }}>👛</div>
+                        <div className="text-24-bold text-accent">-</div>
+                      </div>
+                      <h3 className="text-16-bold text-primary margin-0">crypto-wallet</h3>
+                      <p className="text-13 text-secondary mt-6px margin-0">crypto 지갑 등록 및 확인</p>
                     </div>
                   </Link>
                 </>

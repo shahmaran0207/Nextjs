@@ -17,10 +17,11 @@ interface CartItem {
   product_stock: number;
   is_active: boolean;
   option_name?: string | null;
+  seller_id?: number | null;  // 암호화폐 결제 라우팅용
 }
 
 export default function CartPage() {
-  const { email, name } = useAuthGuard();
+  const { email } = useAuthGuard();
   const [items, setItems] = useState<CartItem[]>([]);
   const [selectedItemIds, setSelectedItemIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,7 +153,9 @@ export default function CartPage() {
         product_id: item.product_id,
         product_name: item.product_name,
         unit_price: item.unit_price,
-        quantity: item.quantity
+        quantity: item.quantity,
+        option_name: item.option_name ?? null,
+        seller_id: item.seller_id ?? null,  // 암호화폐 결제 라우팅용
       }))
     ));
     sessionStorage.setItem("checkout_from_cart", "true");

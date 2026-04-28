@@ -1,22 +1,23 @@
 /**
  * deploy-multichain.js
  * ─────────────────────────────────────────────────────────────────
- * PaymentReceiver.sol을 3개의 로컬 Ganache 체인에 동시 배포합니다.
+ * 3개 Ganache 체인에 MockUSDC, MockDAI, PaymentReceiver를 배포합니다.
  *
- * [실행 전 필수 조건]
- * 다음 3개의 Ganache를 모두 실행한 뒤 이 스크립트를 실행하세요:
+ * [실행 전 필수: 3개 Ganache 실행]
+ *   npx ganache --chain.chainId 1337 --server.port 8545 \
+ *     --wallet.accounts "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80,1000000000000000000000"
  *
- *   Chain A: npx ganache --chain.chainId 1337 --server.port 8545 \
- *              --wallet.accounts "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80,1000000000000000000000"
+ *   npx ganache --chain.chainId 1338 --server.port 8546 \
+ *     --wallet.accounts "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80,1000000000000000000000"
  *
- *   Chain B: npx ganache --chain.chainId 1338 --server.port 8546 \
- *              --wallet.accounts "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80,1000000000000000000000"
- *
- *   Chain C: npx ganache --chain.chainId 1339 --server.port 8547 \
- *              --wallet.accounts "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80,1000000000000000000000"
+ *   npx ganache --chain.chainId 1339 --server.port 8547 \
+ *     --wallet.accounts "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80,1000000000000000000000"
  *
  * [실행]
  *   node scripts/deploy-multichain.js
+ *
+ * [결과]
+ *   deployed/multichain-addresses.json 에 체인별 컨트랙트 주소 저장
  * ─────────────────────────────────────────────────────────────────
  */
 
@@ -25,103 +26,132 @@ const fs         = require("fs");
 const path       = require("path");
 const { compile } = require("./compile");
 
-// ── 배포할 3개 체인 설정 ──────────────────────────────────────────
+// ── 3개 체인 설정 ─────────────────────────────────────────────────
 const CHAINS = [
   { name: "Chain A", chainId: 1337, rpcUrl: "http://127.0.0.1:8545" },
   { name: "Chain B", chainId: 1338, rpcUrl: "http://127.0.0.1:8546" },
   { name: "Chain C", chainId: 1339, rpcUrl: "http://127.0.0.1:8547" },
 ];
 
-// 모든 체인에서 동일한 배포자 개인키 사용 (Ganache 기본 계정 #0)
-// ★ 실제 서비스에서는 절대 코드에 개인키를 하드코딩하면 안 됨!
-const DEPLOYER_PRIVATE_KEY =
-  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+// Ganache 기본 계정 #0 (테스트용 — 실서비스에서 절대 사용 금지)
+const DEPLOYER_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
-// ETH를 즉시 수령할 판매자 지갑 주소
-// pay() 호출 시 결제금이 이 주소로 바로 포워딩됨
-const RECIPIENT_ADDRESS = "0x13F845A27b63EF4F693DBB4571C0104dFf232730";
+// 테스트용 초기 발행량
+const MINT_USDC = ethers.parseUnits("1000000", 6);  // 1,000,000 USDC (decimals=6)
+const MINT_DAI  = ethers.parseUnits("1000000", 18); // 1,000,000 DAI  (decimals=18)
 
-async function deployToChain(chain, abi, bytecode) {
-  console.log(`\n📡 ${chain.name} (chainId: ${chain.chainId}) 배포 시작...`);
+// ── 체인 1개에 배포 ───────────────────────────────────────────────
+async function deployToChain(chain, receiverAbi, receiverBytecode, erc20Abi, erc20Bytecode) {
+  console.log(`\n📡 [${chain.name}] chainId=${chain.chainId} 배포 시작...`);
 
-  // 해당 체인의 Ganache에 연결
   const provider = new ethers.JsonRpcProvider(chain.rpcUrl);
 
   // 연결 확인
   try {
-    const network = await provider.getNetwork();
-    console.log(`  ✅ 연결 성공 (실제 chainId: ${network.chainId})`);
+    const net = await provider.getNetwork();
+    console.log(`  ✅ 연결 성공 (chainId: ${net.chainId})`);
   } catch (e) {
-    console.error(`  ❌ ${chain.name}에 연결 실패. Ganache가 실행 중인지 확인하세요.`);
-    console.error(`     RPC URL: ${chain.rpcUrl}`);
+    console.error(`  ❌ 연결 실패: ${chain.rpcUrl}`);
     throw e;
   }
 
-  const deployer = new ethers.Wallet(DEPLOYER_PRIVATE_KEY, provider);
-  const balance  = await provider.getBalance(deployer.address);
-  console.log(`  👤 배포자: ${deployer.address}`);
-  console.log(`  💰 잔액:   ${ethers.formatEther(balance)} ETH`);
+  const deployer = new ethers.Wallet(DEPLOYER_KEY, provider);
+  const bal = await provider.getBalance(deployer.address);
+  console.log(`  👤 배포자: ${deployer.address}  잔액: ${ethers.formatEther(bal)} ETH`);
 
-  // 컨트랙트 배포 (recipient 주소를 constructor 인자로 전달)
-  const factory  = new ethers.ContractFactory(abi, bytecode, deployer);
-  const contract = await factory.deploy(RECIPIENT_ADDRESS);
-  // constructor(address payable _recipient) — 판매자 지갑 주소 주입
+  // 현재 nonce를 명시적으로 읽어서 순서대로 사용 (이전 실패 트랜잭션으로 인한 nonce 꼬임 방지)
+  let nonce = await deployer.getNonce();
+  console.log(`  🔢 현재 nonce: ${nonce}`);
 
-  const receipt  = await contract.deploymentTransaction().wait(1);
-  const address  = receipt.contractAddress;
+  // MockUSDC 배포
+  const erc20Factory = new ethers.ContractFactory(erc20Abi, erc20Bytecode, deployer);
+  const usdc = await erc20Factory.deploy("Mock USDC", "USDC", 6, { gasLimit: 3_000_000n, nonce: nonce++ });
+  await usdc.deploymentTransaction().wait(1);
+  const usdcAddress = await usdc.getAddress();
+  console.log(`  🪙 MockUSDC: ${usdcAddress}`);
 
-  console.log(`  🚀 PaymentReceiver 배포 완료!`);
-  console.log(`  📍 주소: ${address}`);
+  // MockDAI 배포
+  const dai = await erc20Factory.deploy("Mock DAI", "DAI", 18, { gasLimit: 3_000_000n, nonce: nonce++ });
+  await dai.deploymentTransaction().wait(1);
+  const daiAddress = await dai.getAddress();
+  console.log(`  🪙 MockDAI:  ${daiAddress}`);
 
-  return address;
+  // PaymentReceiver 배포
+  const receiverFactory = new ethers.ContractFactory(receiverAbi, receiverBytecode, deployer);
+  const receiver = await receiverFactory.deploy({ gasLimit: 3_000_000n, nonce: nonce++ });
+  await receiver.deploymentTransaction().wait(1);
+  const receiverAddress = await receiver.getAddress();
+  console.log(`  📦 PaymentReceiver: ${receiverAddress}`);
+
+  // 배포자 계정에 테스트 토큰 mint
+  const usdcContract = new ethers.Contract(usdcAddress, erc20Abi, deployer);
+  await (await usdcContract.mint(deployer.address, MINT_USDC, { gasLimit: 500_000n, nonce: nonce++ })).wait(1);
+  console.log(`  💵 MockUSDC 1,000,000 mint 완료`);
+
+  const daiContract = new ethers.Contract(daiAddress, erc20Abi, deployer);
+  await (await daiContract.mint(deployer.address, MINT_DAI, { gasLimit: 500_000n, nonce: nonce++ })).wait(1);
+  console.log(`  💵 MockDAI  1,000,000 mint 완료`);
+
+  return {
+    chainId:         chain.chainId,
+    rpcUrl:          chain.rpcUrl,
+    paymentReceiver: receiverAddress,
+    tokens: {
+      ETH:  { symbol: "ETH",  decimals: 18, address: null },
+      USDC: { symbol: "USDC", decimals: 6,  address: usdcAddress },
+      DAI:  { symbol: "DAI",  decimals: 18, address: daiAddress },
+    },
+  };
 }
 
+// ── 메인 ─────────────────────────────────────────────────────────
 async function main() {
-  console.log("🌐 멀티체인 배포 스크립트 시작\n");
+  console.log("🌐 멀티코인 멀티체인 배포 시작");
   console.log("=".repeat(60));
 
-  // PaymentReceiver.sol 컴파일 (한 번만)
-  const compiled = compile("PaymentReceiver.sol", "PaymentReceiver");
-  console.log(`✅ 컴파일 성공! (ABI 함수 수: ${compiled.abi.length}개)\n`);
+  // 컴파일
+  const receiver = compile("PaymentReceiver.sol", "PaymentReceiver");
+  const erc20    = compile("MockERC20.sol", "MockERC20");
 
   // 3개 체인에 순서대로 배포
-  const results = {};
+  const chains = {};
   for (const chain of CHAINS) {
-    const address = await deployToChain(chain, compiled.abi, compiled.bytecode);
-    results[chain.name] = {
-      chainId: chain.chainId,
-      rpcUrl:  chain.rpcUrl,
-      address,
-    };
+    chains[chain.name] = await deployToChain(
+      chain,
+      receiver.abi, receiver.bytecode,
+      erc20.abi,    erc20.bytecode
+    );
   }
 
-  // ── 배포 결과를 JSON으로 저장 ─────────────────────────────────
-  // 프론트엔드와 결제 서버가 이 파일을 읽어 컨트랙트 주소를 사용
-  const outputDir  = path.join(__dirname, "..", "deployed");
+  // 결과 저장
+  const outputDir = path.join(__dirname, "..", "deployed");
   if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
 
-  const outputData = {
-    deployedAt: new Date().toISOString(),
-    abi: compiled.abi,  // ABI는 3개 체인 모두 동일
-    chains: results,
+  const output = {
+    deployedAt:          new Date().toISOString(),
+    paymentReceiverAbi:  receiver.abi,
+    erc20Abi:            erc20.abi,
+    chains,
   };
 
   const outputPath = path.join(outputDir, "multichain-addresses.json");
-  fs.writeFileSync(outputPath, JSON.stringify(outputData, null, 2));
-  console.log(`\n📄 배포 정보 저장: ${outputPath}`);
+  fs.writeFileSync(outputPath, JSON.stringify(output, null, 2));
+  console.log(`\n📄 결과 저장: ${outputPath}`);
 
-  // ── 배포 요약 ─────────────────────────────────────────────────
+  // 요약
   console.log("\n" + "=".repeat(60));
-  console.log("🎉 멀티체인 배포 완료!");
+  console.log("🎉 배포 완료!");
   console.log("=".repeat(60));
-  for (const [name, info] of Object.entries(results)) {
-    console.log(`  ${name} (chainId: ${info.chainId}): ${info.address}`);
+  for (const [name, info] of Object.entries(chains)) {
+    console.log(`\n  ${name} (chainId: ${info.chainId})`);
+    console.log(`    PaymentReceiver : ${info.paymentReceiver}`);
+    console.log(`    MockUSDC        : ${info.tokens.USDC.address}`);
+    console.log(`    MockDAI         : ${info.tokens.DAI.address}`);
   }
-  console.log("=".repeat(60));
-  console.log("\n다음 단계: node server/index.js 로 결제 서버 실행");
+  console.log("\n다음 단계: node server/index.js");
 }
 
-main().catch((err) => {
+main().catch(err => {
   console.error("\n❌ 배포 실패:", err.message);
   process.exit(1);
 });

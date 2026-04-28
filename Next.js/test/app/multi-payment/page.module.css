@@ -1,376 +1,283 @@
-/* ── 기본 레이아웃 ─────────────────────────────────────── */
-.container {
+.page {
   min-height: 100vh;
-  background: #060612;
-  color: #e2e8f0;
-  font-family: 'Inter', sans-serif;
-  padding: 40px 20px;
-  background-image:
-    radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.08), transparent 40%),
-    radial-gradient(circle at 80% 80%, rgba(236, 72, 153, 0.06), transparent 40%),
-    radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.03), transparent 60%);
+  background: #0a0e1a;
 }
 
-.header {
-  text-align: center;
-  margin-bottom: 48px;
-}
-
-.title {
-  font-size: 2.6rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, #818cf8, #ec4899, #10b981);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 12px;
-  letter-spacing: -0.5px;
-}
-
-.subtitle {
-  color: #64748b;
-  font-size: 1.05rem;
-}
-
-/* ── 메인 카드 ─────────────────────────────────────────── */
-.card {
-  max-width: 720px;
+.container {
+  max-width: 520px;
   margin: 0 auto;
-  background: rgba(15, 20, 40, 0.7);
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  border-radius: 20px;
-  padding: 36px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(20px);
+  padding: 32px 16px 64px;
 }
 
-.sectionLabel {
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: #64748b;
-  margin-bottom: 16px;
-}
-
-/* ── 코인 선택 그리드 ──────────────────────────────────── */
-.coinGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 14px;
-  margin-bottom: 32px;
-}
-
-.coinCard {
-  position: relative;
-  padding: 18px;
-  border-radius: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.03);
-  cursor: pointer;
-  transition: all 0.25s ease;
-  user-select: none;
-}
-
-.coinCard:hover {
-  border-color: rgba(99, 102, 241, 0.4);
-  background: rgba(99, 102, 241, 0.06);
-  transform: translateY(-2px);
-}
-
-.coinCardSelected {
-  border-color: var(--coin-color, #818cf8);
-  background: rgba(99, 102, 241, 0.1);
-  box-shadow: 0 0 24px rgba(99, 102, 241, 0.2), inset 0 0 16px rgba(99, 102, 241, 0.05);
-}
-
-.coinCardSelected:hover {
-  transform: none;
-}
-
-/* 선택 라디오 표시 */
-.coinCard input[type="radio"] {
-  display: none;
-}
-
-.radioMark {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  transition: all 0.2s;
-  background: transparent;
-}
-
-.coinCardSelected .radioMark {
-  border-color: var(--coin-color, #818cf8);
-  background: var(--coin-color, #818cf8);
-  box-shadow: 0 0 8px var(--coin-color, #818cf8);
-}
-
-.coinCardSelected .radioMark::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #fff;
-}
-
-.coinIcon {
-  font-size: 2rem;
-  margin-bottom: 10px;
-}
-
-.coinName {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #f1f5f9;
-  margin-bottom: 4px;
-}
-
-.coinChain {
-  font-size: 0.78rem;
-  color: #64748b;
-  margin-bottom: 8px;
-}
-
-.coinPort {
-  font-size: 0.72rem;
-  font-family: 'Courier New', monospace;
-  color: #475569;
-  background: rgba(0, 0, 0, 0.3);
-  padding: 2px 8px;
-  border-radius: 4px;
-  display: inline-block;
-}
-
-/* ── 폼 영역 ───────────────────────────────────────────── */
-.formSection {
-  margin-bottom: 24px;
-}
-
-.formLabel {
-  display: block;
-  font-size: 0.85rem;
-  color: #94a3b8;
-  margin-bottom: 10px;
-  font-weight: 500;
-}
-
-.input {
-  width: 100%;
-  padding: 14px 16px;
-  background: rgba(0, 0, 0, 0.4);
+.card {
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  color: #f1f5f9;
-  font-size: 0.95rem;
-  outline: none;
-  transition: border-color 0.2s;
-  box-sizing: border-box;
-}
-
-.input:focus {
-  border-color: rgba(99, 102, 241, 0.5);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-}
-
-.input::placeholder {
-  color: #334155;
-}
-
-.inputError {
-  border-color: rgba(239, 68, 68, 0.6) !important;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
-}
-
-.errorText {
-  margin-top: 6px;
-  font-size: 0.82rem;
-  color: #f87171;
-}
-
-/* ── 결제 요약 박스 ────────────────────────────────────── */
-.summaryBox {
-  margin-bottom: 24px;
-  padding: 16px 20px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 28px 24px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
 }
 
-.summaryRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.88rem;
-}
-
-.summaryKey {
-  color: #64748b;
-}
-
-.summaryVal {
-  color: #f1f5f9;
-  font-weight: 600;
-  font-family: 'Courier New', monospace;
-}
-
-/* ── 결제 버튼 ─────────────────────────────────────────── */
-.payBtn {
-  width: 100%;
-  padding: 16px;
-  border: none;
-  border-radius: 12px;
-  font-size: 1.05rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: linear-gradient(135deg, #6366f1, #ec4899);
-  color: #fff;
-  box-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
-  letter-spacing: 0.3px;
-}
-
-.payBtn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 40px rgba(99, 102, 241, 0.5);
-}
-
-.payBtn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  background: rgba(100, 116, 139, 0.3);
-  box-shadow: none;
-  transform: none;
-}
-
-.payBtnActive {
-  background: linear-gradient(135deg, #8b5cf6, #06b6d4);
-}
-
-.payBtnDone {
-  background: rgba(16, 185, 129, 0.2);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.4);
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
-}
-
-/* ── 진행 상태 바 ──────────────────────────────────────── */
-.progressBar {
-  display: flex;
-  gap: 6px;
-  margin-top: 12px;
-}
-
-.progressStep {
-  flex: 1;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(99, 102, 241, 0.15);
-  transition: background 0.4s ease;
-}
-
-.progressStepActive {
-  background: #6366f1;
-  box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
-}
-
-/* ── 결과 박스 ─────────────────────────────────────────── */
-.resultBox {
-  margin-top: 20px;
-  padding: 18px 20px;
-  border-radius: 12px;
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.resultTitle {
-  color: #10b981;
-  font-weight: 700;
-  font-size: 1rem;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.resultHash {
-  font-family: 'Courier New', monospace;
-  font-size: 0.78rem;
-  color: #34d399;
-  word-break: break-all;
-  line-height: 1.6;
-}
-
-/* ── 에러 박스 ─────────────────────────────────────────── */
-.errorBox {
-  margin-bottom: 20px;
-  padding: 14px 16px;
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: 10px;
-  color: #f87171;
-  font-size: 0.88rem;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-/* ── 연결 버튼 ─────────────────────────────────────────── */
+/* ── MetaMask 연결 ───────────────────────────────────────────── */
 .connectBtn {
   width: 100%;
   padding: 14px;
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.4);
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  color: #fff;
+  border: none;
   border-radius: 10px;
-  color: #818cf8;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: opacity 0.2s;
+  margin-bottom: 4px;
+}
+.connectBtn:hover { opacity: 0.9; }
+.connectBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.accountBadge {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.networkBadge {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-family: monospace;
 }
 
-.connectBtn:hover {
-  background: rgba(99, 102, 241, 0.2);
-  box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+/* ── 판매자 지갑 ─────────────────────────────────────────────── */
+.sellerBox {
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+.sellerBox[data-state="ok"] {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.sellerBox[data-state="error"] {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.sellerBox[data-state="loading"] {
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #94a3b8;
+}
+.sellerLabel {
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
+/* ── 섹션 라벨 ──────────────────────────────────────────────── */
+.sectionLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 20px 0 10px;
+}
+
+/* ── 체인 그리드 ─────────────────────────────────────────────── */
+.chainGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.chainBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.18s;
+  font-size: 13px;
+}
+.chainBtn:hover {
+  border-color: rgba(99, 102, 241, 0.5);
+  color: #c4b5fd;
+}
+.chainBtnActive {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: #6366f1;
+  color: #fff;
+}
+.chainName {
+  font-weight: 600;
+  font-size: 13px;
+}
+.chainId {
+  font-size: 10px;
+  color: #64748b;
+  font-family: monospace;
+}
+
+/* ── 토큰 그리드 ─────────────────────────────────────────────── */
+.tokenGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.tokenBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 12px 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.tokenBtn:hover {
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #6ee7b7;
+}
+.tokenBtnActive {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: #10b981;
+  color: #fff;
+}
+.tokenIcon   { font-size: 22px; }
+.tokenSymbol { font-size: 13px; font-weight: 700; }
+.tokenType   { font-size: 10px; color: #64748b; }
+
+/* ── 잔액 ───────────────────────────────────────────────────── */
+.balanceRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* ── 금액 입력 ──────────────────────────────────────────────── */
+.amountRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.amountInput {
+  flex: 1;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: #f1f5f9;
+  font-size: 18px;
+  font-weight: 600;
+  font-family: monospace;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.amountInput:focus { border-color: #6366f1; }
+.amountUnit {
+  font-size: 14px;
+  font-weight: 700;
+  color: #94a3b8;
+  min-width: 48px;
+}
+
+/* ── 결제 버튼 ──────────────────────────────────────────────── */
+.payBtn {
+  width: 100%;
+  padding: 14px;
+  margin-top: 20px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+}
+.payBtn:hover:not(:disabled)    { opacity: 0.92; transform: translateY(-1px); }
+.payBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── 진행 단계 ──────────────────────────────────────────────── */
+.stepBox {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 10px;
+}
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(99, 102, 241, 0.3);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.stepLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #a5b4fc;
+}
+
+/* ── 완료 ───────────────────────────────────────────────────── */
+.successMsg {
+  font-size: 22px;
+  font-weight: 700;
+  color: #10b981;
+  margin-top: 16px;
+}
+.resetBtn {
+  margin-top: 16px;
+  padding: 10px 24px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #cbd5e1;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+.resetBtn:hover { background: rgba(255, 255, 255, 0.12); }
+
+/* ── 에러 ───────────────────────────────────────────────────── */
+.errorMsg {
+  margin-top: 14px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #fca5a5;
+  font-size: 13px;
+}
+
+/* ── 구분선 ─────────────────────────────────────────────────── */
 .divider {
   border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  margin: 28px 0;
-}
-
-/* ── 네트워크 배지 ─────────────────────────────────────── */
-.networkBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  margin: 16px 0;
 }

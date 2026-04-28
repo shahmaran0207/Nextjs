@@ -31,13 +31,10 @@ const baseNavItems = [
   { href: "/mypage", label: "마이페이지", icon: "👤", desc: "나의 쇼핑 활동" },
   { href: "/todo", label: "TODO", icon: "📋", desc: "todo list" },
   {
-    href: "/crypto-payment", label: "Crypto 결제", icon: "💎",
-    desc: "Web3 블록체인 결제 학습"
-  },
-  {
     href: "/multi-payment", label: "멀티코인 결제", icon: "🪙",
     desc: "멀티코인 블록체인 결제 학습"
   },
+
 ];
 
 const naverLinkItem = { href: "/settings", label: "네이버 계정 연동", icon: "🍀", desc: "NAVER" };

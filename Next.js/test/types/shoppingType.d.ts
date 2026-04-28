@@ -7,6 +7,7 @@ export type Product = {
     sku: string | null;
     has_image: boolean;
     is_active: boolean;
+    seller_id: number | null;
     created_at: string;
     updated_at: string;
 };

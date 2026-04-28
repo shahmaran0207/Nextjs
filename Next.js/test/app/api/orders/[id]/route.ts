@@ -58,7 +58,7 @@ export async function PATCH(
 ) {
   try {
     const { id: orderId } = await params;
-    const { action, email } = await req.json();
+    const { action, email, return_reason } = await req.json();
 
     if (!email || !action) {
       return NextResponse.json({ error: "필수 정보가 누락되었습니다." }, { status: 400 });
@@ -127,7 +127,11 @@ export async function PATCH(
       const updated = await prisma.$transaction(async (tx) => {
         const o = await tx.orders.update({
           where: { id: Number(orderId) },
-          data: { order_status: "RETURN_REQUEST" }
+          data: {
+            order_status: "RETURN_REQUEST",
+            return_reason: return_reason || null,
+            return_requested_at: new Date(),
+          }
         });
         await tx.order_items.updateMany({
           where: { order_id: Number(orderId) },

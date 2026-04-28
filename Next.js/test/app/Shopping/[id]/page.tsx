@@ -84,11 +84,10 @@ export default function ProductDetailPage() {
   const reviewsPerPage = 10;
   const highlightReviewId = searchParams.get('highlightReviewId');
 
-  // 침묵의 데이터 (반품 통계 - 가상 데이터)
-  const returnRate = product ? (Number(product.id) % 12) + 4 : 0;
-  const reasonIndex = product ? (Number(product.id) % 4) : 0;
-  const returnReasons = ["생각보다 핏이 타이트함", "화면과 색상이 약간 다름", "생각보다 얇은 소재", "배송 지연"];
-  const topReturnReason = returnReasons[reasonIndex];
+  // 실제 데이터 (반품 통계 - 실제 DB 데이터)
+  const [returnRate, setReturnRate] = useState<number>(0);
+  const [topReturnReason, setTopReturnReason] = useState<string | null>(null);
+  const [returnTotalOrders, setReturnTotalOrders] = useState<number>(0);
 
   // 최애핏 비교를 위한 상품 가상 실측 사이즈
   const productWaist = product ? 35 + (Number(product.id) % 10) : 40; // 35 ~ 44 cm
@@ -114,6 +113,20 @@ export default function ProductDetailPage() {
       if (res.ok) {
         const fetchedReviews = await res.json();
         setReviews(fetchedReviews);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchReturnStats = async () => {
+    try {
+      const res = await fetch(`/api/Shopping/Products/${id}/return-stats`);
+      if (res.ok) {
+        const data = await res.json();
+        setReturnRate(data.returnRate || 0);
+        setTopReturnReason(data.topReturnReason || null);
+        setReturnTotalOrders(data.totalOrders || 0);
       }
     } catch (err) {
       console.error(err);
@@ -148,6 +161,7 @@ export default function ProductDetailPage() {
     if (id) {
       fetchProduct();
       fetchReviews();
+      fetchReturnStats();
 
       // 최근 본 상품 저장
       const MAX_RECENT = 10;
@@ -353,7 +367,8 @@ export default function ProductDetailPage() {
       product_name: product.name,
       unit_price: Number(product.price) + (selectedOption ? Number(selectedOption.add_price) : 0),
       quantity: qty,
-      option_name: selectedOption ? selectedOption.option_name : null
+      option_name: selectedOption ? selectedOption.option_name : null,
+      seller_id: product.seller_id ?? null,  // 암호화폐 결제 라우팅용
     }]));
     sessionStorage.setItem("checkout_from_cart", "false");
     window.location.href = "/checkout";
@@ -433,33 +448,7 @@ export default function ProductDetailPage() {
         <button
           onClick={toggleZenMode}
           title="마케팅 팝업과 화려한 알림을 숨기고 온전히 상품에만 집중하세요."
-          style={{
-            backgroundColor: isZenMode ? "#10b981" : "rgba(255, 255, 255, 0.08)",
-            color: isZenMode ? "#ffffff" : "#e8eaf0",
-            border: isZenMode ? "1px solid #10b981" : "1px solid rgba(255, 255, 255, 0.2)",
-            borderRadius: "20px",
-            padding: "6px 14px",
-            fontSize: "13px",
-            fontWeight: "bold",
-            cursor: "pointer",
-            transition: "all 0.2s ease-in-out",
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            boxShadow: isZenMode ? "0 0 10px rgba(16, 185, 129, 0.4)" : "0 2px 4px rgba(0,0,0,0.2)",
-          }}
-          onMouseEnter={e => {
-            if (!isZenMode) {
-              (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(255, 255, 255, 0.15)";
-              (e.currentTarget as HTMLElement).style.borderColor = "rgba(255, 255, 255, 0.4)";
-            }
-          }}
-          onMouseLeave={e => {
-            if (!isZenMode) {
-              (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(255, 255, 255, 0.08)";
-              (e.currentTarget as HTMLElement).style.borderColor = "rgba(255, 255, 255, 0.2)";
-            }
-          }}
+          className={`zen-btn ${isZenMode ? 'zen-btn--on' : 'zen-btn--off'}`}
         >
           {isZenMode ? "🌿 젠 모드 ON" : "⚡ 일반 모드"}
         </button>
@@ -482,19 +471,19 @@ export default function ProductDetailPage() {
               {/* 상품 정보 카드 */}
               <div className="product-detail-layout">
                 <div className="card-container shop-surface border-default border-left-accent product-header-card relative">
-                  <button onClick={toggleWishlist} style={{ position: "absolute", top: "16px", left: "16px", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "50%", width: "40px", height: "40px", fontSize: "20px", cursor: "pointer", zIndex: 10 }}>
+                  <button onClick={toggleWishlist} className="btn-wishlist">
                     {isWished ? "❤️" : "🤍"}
                   </button>
                   <div className="product-img-box" style={{ position: "relative" }}>
                     {product.has_image ? (
-                      <img 
-                        src={`/api/images/products/${product.id}`} 
-                        alt={product.name} 
-                        className="product-img-full" 
-                        style={{ 
-                          filter: activeHue === 0 ? "none" : `sepia(0.8) saturate(3) hue-rotate(${activeHue}deg)`, 
-                          transition: "filter 0.5s ease-in-out" 
-                        }} 
+                      <img
+                        src={`/api/images/products/${product.id}`}
+                        alt={product.name}
+                        className="product-img-full"
+                        style={{
+                          filter: activeHue === 0 ? "none" : `sepia(0.8) saturate(3) hue-rotate(${activeHue}deg)`,
+                          transition: "filter 0.5s ease-in-out"
+                        }}
                       />
                     ) : (
                       <div className="product-img-empty">
@@ -504,7 +493,7 @@ export default function ProductDetailPage() {
                     )}
 
                     {/* AR 컬러 체인저 UI */}
-                    <div style={{ position: "absolute", bottom: "16px", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "10px", background: "rgba(10, 14, 26, 0.7)", padding: "10px 16px", borderRadius: "30px", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.1)", zIndex: 10, boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}>
+                    <div className="ar-color-bar">
                       {[
                         { color: "#ffffff", hue: 0, name: "오리지널" },
                         { color: "#ef4444", hue: 320, name: "레드 체인지" },
@@ -516,13 +505,11 @@ export default function ProductDetailPage() {
                           key={idx}
                           title={swatch.name}
                           onClick={() => setActiveHue(swatch.hue)}
+                          className="color-swatch"
                           style={{
-                            width: "28px", height: "28px", borderRadius: "50%",
                             background: swatch.color,
                             border: activeHue === swatch.hue ? "2px solid #fff" : "1px solid rgba(255,255,255,0.2)",
-                            cursor: "pointer",
                             transform: activeHue === swatch.hue ? "scale(1.2)" : "scale(1)",
-                            transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                             boxShadow: activeHue === swatch.hue ? `0 0 10px ${swatch.color}` : "none"
                           }}
                         />
@@ -552,16 +539,16 @@ export default function ProductDetailPage() {
 
                       {/* 구매 이력 기반 경고 및 추천 UI */}
                       {!isZenMode && hasBoughtThis && (
-                        <div style={{ background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "8px", padding: "12px", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "8px" }}>
-                          <span style={{ fontSize: "18px" }}>⚠️</span>
-                          <span style={{ color: "#fca5a5", fontSize: "13px", fontWeight: 600 }}>회원님은 이전에 이 상품을 구매한 이력이 있습니다. 중복 구매에 주의하세요!</span>
+                        <div className="alert-box alert-box--warning">
+                          <span className="alert-emoji">⚠️</span>
+                          <span className="alert-text--warning">회원님은 이전에 이 상품을 구매한 이력이 있습니다. 중복 구매에 주의하세요!</span>
                         </div>
                       )}
 
                       {!isZenMode && recommendMessage && !hasBoughtThis && (
-                        <div style={{ background: "rgba(56, 189, 248, 0.1)", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "8px", padding: "12px", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "8px" }}>
-                          <span style={{ fontSize: "18px" }}>✨</span>
-                          <span style={{ color: "#38bdf8", fontSize: "13px", fontWeight: 600 }}>{recommendMessage}</span>
+                        <div className="alert-box alert-box--info">
+                          <span className="alert-emoji">✨</span>
+                          <span className="alert-text--info">{recommendMessage}</span>
                         </div>
                       )}
 
@@ -569,57 +556,51 @@ export default function ProductDetailPage() {
 
                       {/* 최애핏 비교기 (Fit Migrator) */}
                       {!isZenMode && (
-                        <div style={{ marginTop: "16px", padding: "16px", background: "rgba(139, 92, 246, 0.05)", borderRadius: "8px", border: "1px solid rgba(139, 92, 246, 0.2)" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                            <h3 style={{ margin: 0, fontSize: "14px", color: "#8b5cf6", display: "flex", alignItems: "center", gap: "6px" }}>
+                        <div className="fit-box">
+                          <div className="fit-box-header">
+                            <h3 className="fit-box-title">
                               🩳 내 최애핏 비교기
                             </h3>
-                            <button onClick={() => setShowFitModal(true)} style={{ background: "#8b5cf6", color: "#fff", border: "none", padding: "4px 10px", borderRadius: "12px", fontSize: "12px", cursor: "pointer" }}>
+                            <button onClick={() => setShowFitModal(true)} className="fit-register-btn">
                               {myFit ? "내 사이즈 수정" : "내 사이즈 등록"}
                             </button>
                           </div>
 
                           {!myFit ? (
-                            <p style={{ fontSize: "13px", color: "var(--color-muted)", margin: 0 }}>평소 가장 잘 맞는 바지의 실측 사이즈를 등록하고 이 상품과 비교해보세요!</p>
+                            <p className="fit-hint">평소 가장 잘 맞는 바지의 실측 사이즈를 등록하고 이 상품과 비교해보세요!</p>
                           ) : (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                            <div className="fit-bars">
                               <div>
-                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "4px" }}>
+                                <div className="fit-bar-labels">
                                   <span>허리 단면 (상품: {productWaist}cm / 최애핏: {myFit.waist}cm)</span>
                                   <span style={{ color: productWaist > myFit.waist ? "#ef4444" : (productWaist < myFit.waist ? "#10b981" : "var(--color-muted)"), fontWeight: "bold" }}>
                                     {productWaist === myFit.waist ? "사이즈가 동일합니다" : `${Math.abs(productWaist - myFit.waist)}cm ${productWaist > myFit.waist ? "더 큽니다" : "더 작습니다"}`}
                                   </span>
                                 </div>
-                                <div style={{ width: "100%", height: "8px", background: "rgba(0,0,0,0.05)", borderRadius: "4px", position: "relative" }}>
+                                <div className="fit-bar-track">
                                   {/* 내 최애핏 기준 마커 (중앙) */}
-                                  <div style={{ position: "absolute", left: "50%", top: "-4px", width: "2px", height: "16px", background: "#8b5cf6", zIndex: 1 }} />
+                                  <div className="fit-bar-marker" />
                                   {/* 상품 사이즈 비교 바 (최대 10cm 차이까지만 시각화) */}
-                                  <div style={{
-                                    position: "absolute",
+                                  <div className="fit-bar-fill" style={{
                                     left: productWaist > myFit.waist ? "50%" : `calc(50% - ${Math.min(50, Math.abs(myFit.waist - productWaist) * 5)}%)`,
                                     width: `${Math.min(50, Math.abs(productWaist - myFit.waist) * 5)}%`,
-                                    height: "100%",
                                     background: productWaist > myFit.waist ? "#ef4444" : "#10b981",
-                                    borderRadius: "4px"
                                   }} />
                                 </div>
                               </div>
                               <div>
-                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "4px" }}>
+                                <div className="fit-bar-labels">
                                   <span>총기장 (상품: {productLength}cm / 최애핏: {myFit.length}cm)</span>
                                   <span style={{ color: productLength > myFit.length ? "#ef4444" : (productLength < myFit.length ? "#10b981" : "var(--color-muted)"), fontWeight: "bold" }}>
                                     {productLength === myFit.length ? "사이즈가 동일합니다" : `${Math.abs(productLength - myFit.length)}cm ${productLength > myFit.length ? "더 깁니다" : "더 짧습니다"}`}
                                   </span>
                                 </div>
-                                <div style={{ width: "100%", height: "8px", background: "rgba(0,0,0,0.05)", borderRadius: "4px", position: "relative" }}>
-                                  <div style={{ position: "absolute", left: "50%", top: "-4px", width: "2px", height: "16px", background: "#8b5cf6", zIndex: 1 }} />
-                                  <div style={{
-                                    position: "absolute",
+                                <div className="fit-bar-track">
+                                  <div className="fit-bar-marker" />
+                                  <div className="fit-bar-fill" style={{
                                     left: productLength > myFit.length ? "50%" : `calc(50% - ${Math.min(50, Math.abs(myFit.length - productLength) * 2)}%)`,
                                     width: `${Math.min(50, Math.abs(productLength - myFit.length) * 2)}%`,
-                                    height: "100%",
                                     background: productLength > myFit.length ? "#ef4444" : "#10b981",
-                                    borderRadius: "4px"
                                   }} />
                                 </div>
                               </div>
@@ -644,20 +625,17 @@ export default function ProductDetailPage() {
 
                   {/* 플래시몹 진행 상황 바 */}
                   {!isZenMode && (
-                    <div style={{ marginBottom: "1rem", padding: "16px", background: "rgba(245, 158, 11, 0.1)", borderRadius: "8px", border: "1px solid rgba(245, 158, 11, 0.3)" }}>
+                    <div className="flashmob-box">
                       <div className="flex-justify-between mb-xs">
-                        <span className="text-14-bold" style={{ color: "#fbbf24" }}>🔥 Flash Mob 공동구매</span>
+                        <span className="text-14-bold flashmob-title">🔥 Flash Mob 공동구매</span>
                         <span className="text-13-mono text-accent">{participantCount} / {targetParticipants} 명</span>
                       </div>
-                      <div style={{ width: "100%", height: "8px", background: "rgba(255,255,255,0.1)", borderRadius: "4px", overflow: "hidden" }}>
-                        <div style={{
-                          width: `${Math.min(100, (participantCount / targetParticipants) * 100)}%`,
-                          height: "100%",
-                          background: "linear-gradient(90deg, #f59e0b, #ef4444)",
-                          transition: "width 0.5s ease-in-out"
+                      <div className="progress-track">
+                        <div className="progress-fill" style={{
+                          width: `${Math.min(100, (participantCount / targetParticipants) * 100)}%`
                         }} />
                       </div>
-                      <p style={{ fontSize: "12px", color: flashMobSuccess ? "#ef4444" : "#fbbf24", margin: "8px 0 0 0", fontWeight: flashMobSuccess ? "bold" : "normal", lineHeight: 1.4 }}>
+                      <p className={`flashmob-msg ${flashMobSuccess ? 'flashmob-msg--success' : 'flashmob-msg--default'}`}>
                         {flashMobSuccess
                           ? "🎉 목표 인원 달성 완료! 지금 결제하시면 결제 금액의 50%가 포인트로 즉시 페이백됩니다!"
                           : `💡 먼저 결제하셔도 손해 없습니다! ${targetParticipants}명 달성 시, 이미 결제하신 분들을 포함해 참여자 전원에게 결제 금액의 50%를 포인트로 환급(페이백) 해드립니다.`}
@@ -769,29 +747,31 @@ export default function ProductDetailPage() {
                 </div>
 
                 {/* 침묵의 데이터 (Silent Review) */}
-                <div style={{ padding: "16px", background: "rgba(239, 68, 68, 0.05)", borderBottom: "1px solid var(--color-border)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                    <h3 style={{ margin: 0, fontSize: "14px", color: "var(--color-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                <div className="return-stats-box">
+                  <div className="return-stats-header">
+                    <h3 className="return-stats-title">
                       📊 침묵의 데이터 (최근 6개월 반품 통계)
                     </h3>
-                    <span style={{ fontSize: "12px", color: "var(--color-muted)", background: "var(--color-surface)", padding: "2px 8px", borderRadius: "12px", border: "1px solid var(--color-border)" }}>
+                    <span className="return-stats-badge">
                       투명한 쇼핑 리포트
                     </span>
                   </div>
 
-                  <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                        <span style={{ fontSize: "13px", color: "var(--color-secondary)" }}>평균 반품률</span>
-                        <span style={{ fontSize: "13px", fontWeight: "bold", color: "#ef4444" }}>{returnRate}%</span>
+                  <div className="return-stats-body">
+                    <div className="return-rate-col">
+                      <div className="return-rate-header">
+                        <span className="return-rate-label">평균 반품률</span>
+                        <span className="return-rate-value">{returnRate}%</span>
                       </div>
-                      <div style={{ width: "100%", height: "6px", background: "rgba(0,0,0,0.1)", borderRadius: "3px", overflow: "hidden" }}>
-                        <div style={{ width: `${returnRate}%`, height: "100%", background: "#ef4444" }} />
+                      <div className="return-rate-track">
+                        <div className="return-rate-fill" style={{ width: `${returnRate}%` }} />
                       </div>
                     </div>
-                    <div style={{ flex: 2, background: "var(--color-surface)", padding: "10px", borderRadius: "8px", border: "1px solid var(--color-border)" }}>
-                      <div style={{ fontSize: "12px", color: "var(--color-muted)", marginBottom: "4px" }}>가장 많은 반품 사유 (Top 1)</div>
-                      <div style={{ fontSize: "14px", color: "var(--color-primary)", fontWeight: 500 }}>"{topReturnReason}"</div>
+                    <div className="return-reason-col">
+                      <div className="return-reason-label">가장 많은 반품 사유 (Top 1)</div>
+                      <div className="return-reason-value">
+                        {topReturnReason ? `"${topReturnReason}"` : returnTotalOrders === 0 ? "반품 데이터 없음" : "반품 사유 미기록"}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -857,10 +837,10 @@ export default function ProductDetailPage() {
                             </div>
                           </div>
                           <div className="text-13 text-accent mb-6px">{"⭐".repeat(review.rating)}</div>
-                          <p className="text-14 text-secondary margin-0 mb-6px" style={{ lineHeight: "1.5" }}>{review.content}</p>
+                          <p className="text-14 text-secondary margin-0 mb-6px review-content">{review.content}</p>
                           {review.has_image && (
                             <div className="mt-xs mb-xs">
-                              <img src={`/api/images/reviews/${review.id}`} alt="리뷰 이미지" style={{ maxWidth: "200px", maxHeight: "200px", borderRadius: "8px", objectFit: "cover" }} />
+                              <img src={`/api/images/reviews/${review.id}`} alt="리뷰 이미지" className="review-img" />
                             </div>
                           )}
                         </div>
@@ -880,8 +860,7 @@ export default function ProductDetailPage() {
                             <button
                               key={i + 1}
                               onClick={() => setReviewPage(i + 1)}
-                              className={`btn-sm ${reviewPage === i + 1 ? "btn-accent" : "btn-outline-secondary"}`}
-                              style={{ minWidth: "32px" }}
+                              className={`btn-sm btn-page-num ${reviewPage === i + 1 ? "btn-accent" : "btn-outline-secondary"}`}
                             >
                               {i + 1}
                             </button>
@@ -906,23 +885,23 @@ export default function ProductDetailPage() {
 
       {/* 최애핏 등록 모달 */}
       {showFitModal && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ background: "var(--color-surface)", padding: "24px", borderRadius: "16px", width: "320px", boxShadow: "0 10px 25px rgba(0,0,0,0.2)" }}>
-            <h3 style={{ margin: "0 0 16px 0", color: "var(--color-primary)" }}>🩳 내 최애핏 등록</h3>
-            <p style={{ fontSize: "13px", color: "var(--color-muted)", marginBottom: "20px" }}>가장 잘 맞는 바지의 실측 사이즈를 입력하세요.</p>
+        <div className="modal-overlay">
+          <div className="modal-card">
+            <h3 className="modal-title">🩳 내 최애핏 등록</h3>
+            <p className="modal-hint">가장 잘 맞는 바지의 실측 사이즈를 입력하세요.</p>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "24px" }}>
+            <div className="modal-fields">
               <div>
-                <label style={{ display: "block", fontSize: "12px", marginBottom: "4px", color: "var(--color-secondary)" }}>허리 단면 (cm)</label>
+                <label className="modal-label">허리 단면 (cm)</label>
                 <input type="number" className="input-field w-full" placeholder="예: 38" value={tempWaist} onChange={e => setTempWaist(e.target.value)} />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "12px", marginBottom: "4px", color: "var(--color-secondary)" }}>총기장 (cm)</label>
+                <label className="modal-label">총기장 (cm)</label>
                 <input type="number" className="input-field w-full" placeholder="예: 102" value={tempLength} onChange={e => setTempLength(e.target.value)} />
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: "8px" }}>
+            <div className="modal-actions">
               <button onClick={() => setShowFitModal(false)} className="btn-outline-secondary flex-1">취소</button>
               <button onClick={saveMyFit} className="btn-accent flex-1">저장하기</button>
             </div>

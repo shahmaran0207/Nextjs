@@ -9,6 +9,7 @@ interface RoadviewPanelProps {
   onClose: () => void;
   onPositionChange: (position: { lat: number; lng: number }, direction: number) => void;
   onAvailabilityChange: (isAvailable: boolean) => void;
+  mode?: 'overlay' | 'split';
 }
 
 export default function RoadviewPanel({
@@ -17,6 +18,7 @@ export default function RoadviewPanel({
   onClose,
   onPositionChange,
   onAvailabilityChange,
+  mode = 'overlay',
 }: RoadviewPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [panelWidth, setPanelWidth] = useState(40); // 기본 40%
@@ -99,24 +101,26 @@ export default function RoadviewPanel({
   // 패널을 DOM에 유지하되 visibility로 숨김 처리
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
+  const isSplit = mode === 'split';
+
   return (
     <div
       ref={containerRef}
       style={{
-        position: "fixed",
-        top: 0,
-        right: 0,
-        width: isMobile ? "100%" : `${panelWidth}%`,
+        position: isSplit ? "relative" : "fixed",
+        top: isSplit ? "auto" : 0,
+        right: isSplit ? "auto" : 0,
+        width: isSplit ? "100%" : (isMobile ? "100%" : `${panelWidth}%`),
         height: "100%",
         background: "rgba(10, 14, 26, 0.95)",
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
-        border: "1px solid rgba(56, 189, 248, 0.2)",
+        backdropFilter: isSplit ? "none" : "blur(16px)",
+        WebkitBackdropFilter: isSplit ? "none" : "blur(16px)",
+        border: isSplit ? "none" : "1px solid rgba(56, 189, 248, 0.2)",
         borderRight: "none",
-        zIndex: 1000,
+        zIndex: isSplit ? 1 : 1000,
         display: isOpen ? "flex" : "none", // display로 숨김 처리
         flexDirection: "column",
-        boxShadow: "-4px 0 20px rgba(0, 0, 0, 0.5), 0 0 20px rgba(56, 189, 248, 0.2)",
+        boxShadow: isSplit ? "none" : "-4px 0 20px rgba(0, 0, 0, 0.5), 0 0 20px rgba(56, 189, 248, 0.2)",
       }}
       role="dialog"
       aria-label="네이버 로드뷰"
@@ -145,30 +149,32 @@ export default function RoadviewPanel({
         >
           🗺️ 네이버 로드뷰
         </h3>
-        <button
-          onClick={onClose}
-          style={{
-            background: "transparent",
-            border: "1px solid rgba(56, 189, 248, 0.3)",
-            borderRadius: "6px",
-            color: "#38bdf8",
-            cursor: "pointer",
-            fontSize: "18px",
-            padding: "4px 12px",
-            transition: "all 0.2s",
-          }}
-          aria-label="로드뷰 패널 닫기"
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(56, 189, 248, 0.1)";
-            e.currentTarget.style.borderColor = "rgba(56, 189, 248, 0.6)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.borderColor = "rgba(56, 189, 248, 0.3)";
-          }}
-        >
-          ✕
-        </button>
+        {!isSplit && (
+          <button
+            onClick={onClose}
+            style={{
+              background: "transparent",
+              border: "1px solid rgba(56, 189, 248, 0.3)",
+              borderRadius: "6px",
+              color: "#38bdf8",
+              cursor: "pointer",
+              fontSize: "18px",
+              padding: "4px 12px",
+              transition: "all 0.2s",
+            }}
+            aria-label="로드뷰 패널 닫기"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(56, 189, 248, 0.1)";
+              e.currentTarget.style.borderColor = "rgba(56, 189, 248, 0.6)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.borderColor = "rgba(56, 189, 248, 0.3)";
+            }}
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Roadview Container */}
@@ -260,7 +266,7 @@ export default function RoadviewPanel({
       </div>
 
       {/* Resize Handle (데스크톱만) */}
-      {!isMobile && (
+      {!isMobile && !isSplit && (
         <div
           style={{
             position: "absolute",

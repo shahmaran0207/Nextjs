@@ -51,8 +51,10 @@ function compile(fileName, contractName) {
       [fileName]: { content: source },
     },
     settings: {
+      // evmVersion: "paris" → PUSH0 opcode 미사용
+      // Solidity 0.8.20+의 기본값은 "shanghai"인데 Ganache가 PUSH0를 지원 안 함
+      evmVersion: "paris",
       outputSelection: {
-        // '*' = 모든 파일, '*' = 모든 컨트랙트에서 abi와 바이트코드를 추출
         "*": { "*": ["abi", "evm.bytecode"] },
       },
     },

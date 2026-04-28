@@ -1,100 +1,157 @@
 "use client";
 
-import { useState } from "react";
-import { ethers } from "ethers";
-import styles from "./page.module.css";
-import { PageHeader } from "@/component/PageHeader";
-import { useAuthGuard } from "../hooks/useAuthGuard";
+import { useState, useEffect } from "react";
+import { ethers }              from "ethers";
+import { useRouter }           from "next/navigation";
+import styles                  from "./page.module.css";
+import { PageHeader }          from "@/component/PageHeader";
+import { useAuthGuard }        from "../hooks/useAuthGuard";
+import { useSearchParams }     from "next/navigation";
 
 // ── 결제 서버 주소 ────────────────────────────────────────────────
 const PAYMENT_SERVER = "http://localhost:3001";
 
-// ── PaymentReceiver 컨트랙트 최소 ABI ────────────────────────────
-// pay(orderId) 함수 하나만 필요
-const RECEIVER_ABI = [
-  {
-    inputs: [{ internalType: "string", name: "orderId", type: "string" }],
-    name: "pay",
-    outputs: [],
-    stateMutability: "payable",
-    type: "function",
-  },
-];
+// ── 타입 ─────────────────────────────────────────────────────────
+interface TokenInfo {
+  symbol:   string;
+  decimals: number;
+  address:  string | null; // null = ETH native
+}
 
-// ── 지원 코인 목록 (각각 다른 체인) ─────────────────────────────────
-// deploy-multichain.js 실행 후 확정된 실제 컨트랙트 주소
-const COINS = [
-  {
-    id: "chain-a",
-    symbol: "ETH-A",
-    name: "Chain A (Ether)",
-    icon: "🔵",
-    chainId: 1337,
-    rpcUrl: "http://127.0.0.1:8545",
-    chainName: "Local Chain A",
-    color: "#6366f1",
-    contractAddress: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-  },
-  {
-    id: "chain-b",
-    symbol: "ETH-B",
-    name: "Chain B (Ether)",
-    icon: "🟢",
-    chainId: 1338,
-    rpcUrl: "http://127.0.0.1:8546",
-    chainName: "Local Chain B",
-    color: "#10b981",
-    contractAddress: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-  },
-  {
-    id: "chain-c",
-    symbol: "ETH-C",
-    name: "Chain C (Ether)",
-    icon: "🟡",
-    chainId: 1339,
-    rpcUrl: "http://127.0.0.1:8547",
-    chainName: "Local Chain C",
-    color: "#f59e0b",
-    contractAddress: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-  },
-] as const;
-
-type Coin = (typeof COINS)[number];
+interface ChainInfo {
+  name:            string;
+  chainId:         number;
+  rpcUrl:          string;
+  paymentReceiver: string;
+  tokens:          TokenInfo[];
+}
 
 // 결제 진행 단계
-// 0 = 대기, 1 = 주문 생성 중, 2 = 네트워크 전환 중,
-// 3 = 컨트랙트 결제 서명 중, 4 = 서버 확인 대기 중, 5 = 완료
-type PayStep = 0 | 1 | 2 | 3 | 4 | 5;
+// 0=대기  1=주문생성  2=네트워크전환  3=approve(ERC-20)  4=결제서명  5=확인대기  6=완료
+type PayStep = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+const STEP_LABELS: Record<PayStep, string> = {
+  0: "대기",
+  1: "주문 생성 중...",
+  2: "네트워크 전환 중...",
+  3: "토큰 승인(approve) 중...",
+  4: "결제 서명 중...",
+  5: "블록체인 확인 대기 중...",
+  6: "결제 완료!",
+};
+
+// ERC-20 최소 ABI (approve + allowance + balanceOf)
+const ERC20_ABI = [
+  "function approve(address spender, uint256 amount) external returns (bool)",
+  "function allowance(address owner, address spender) external view returns (uint256)",
+  "function balanceOf(address account) external view returns (uint256)",
+];
 
 export default function MultiPaymentPage() {
-  const [account, setAccount] = useState<string | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-
-  const [selectedCoin, setSelectedCoin] = useState<Coin>(COINS[0]);
-  const [amount, setAmount] = useState("");
-
-  const [payStep, setPayStep] = useState<PayStep>(0);
-  const [orderId, setOrderId] = useState<string | null>(null);
-  // 서버에서 발급받은 주문번호 — 블록체인 이벤트와 매칭하는 핵심 키
-  const [txHash, setTxHash] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const searchParams   = useSearchParams();
+  const sellerIdParam  = searchParams.get("sellerId");
+  const productIdParam = searchParams.get("productId");
+  const router         = useRouter();
 
   const { email } = useAuthGuard();
 
-  const isMetaMaskInstalled =
-    typeof window !== "undefined" && !!(window as any).ethereum;
+  // ── 체인/토큰 설정 (서버에서 로드) ────────────────────────────
+  const [chains, setChains]           = useState<ChainInfo[]>([]);
+  const [configLoading, setConfigLoading] = useState(true);
+  const [configError, setConfigError] = useState<string | null>(null);
 
-  // ── 지갑 연결 ──────────────────────────────────────────────────────
-  const connectWallet = async () => {
-    if (!isMetaMaskInstalled) {
-      alert("MetaMask가 설치되어 있지 않습니다.");
+  // ── 사용자 선택 ────────────────────────────────────────────────
+  const [selectedChain, setSelectedChain] = useState<ChainInfo | null>(null);
+  const [selectedToken, setSelectedToken] = useState<TokenInfo | null>(null);
+  const [amount, setAmount]               = useState("");
+
+  // ── MetaMask 연결 ──────────────────────────────────────────────
+  const [account, setAccount]     = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  // ── 토큰 잔액 ──────────────────────────────────────────────────
+  const [balance, setBalance] = useState<string | null>(null);
+
+  // ── 판매자 지갑 ────────────────────────────────────────────────
+  const [sellerWallet, setSellerWallet]   = useState<string | null>(null);
+  const [sellerLoading, setSellerLoading] = useState(false);
+  const [sellerError, setSellerError]     = useState<string | null>(null);
+
+  // ── 결제 상태 ──────────────────────────────────────────────────
+  const [payStep, setPayStep] = useState<PayStep>(0);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [txHash, setTxHash]   = useState<string | null>(null);
+  const [error, setError]     = useState<string | null>(null);
+
+  const isMetaMaskInstalled = typeof window !== "undefined" && !!(window as any).ethereum;
+
+  // ── 서버에서 체인/토큰 설정 로드 ─────────────────────────────
+  useEffect(() => {
+    fetch(`${PAYMENT_SERVER}/api/crypto/chains`)
+      .then(r => r.json())
+      .then(data => {
+        setChains(data.chains);
+        if (data.chains.length > 0) {
+          setSelectedChain(data.chains[0]);
+          setSelectedToken(data.chains[0].tokens[0]);
+        }
+      })
+      .catch(() => setConfigError("결제 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인하세요."))
+      .finally(() => setConfigLoading(false));
+  }, []);
+
+  // ── sellerId → 판매자 지갑 자동 조회 ─────────────────────────
+  useEffect(() => {
+    if (!sellerIdParam) return;
+    setSellerLoading(true);
+    setSellerError(null);
+    fetch(`/api/wallet/seller/${sellerIdParam}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.address) {
+          setSellerWallet(data.address);
+        } else {
+          setSellerError("판매자가 아직 지갑을 등록하지 않았습니다.");
+        }
+      })
+      .catch(() => setSellerError("판매자 지갑 조회에 실패했습니다."))
+      .finally(() => setSellerLoading(false));
+  }, [sellerIdParam]);
+
+  // ── 토큰 잔액 조회 ────────────────────────────────────────────
+  useEffect(() => {
+    if (!account || !selectedToken || !selectedChain) {
+      setBalance(null);
       return;
     }
+    fetchBalance();
+  }, [account, selectedToken, selectedChain]);
+
+  const fetchBalance = async () => {
+    if (!account || !selectedToken || !selectedChain) return;
+    try {
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      if (!selectedToken.address) {
+        // ETH
+        const bal = await provider.getBalance(account);
+        setBalance(ethers.formatEther(bal));
+      } else {
+        // ERC-20
+        const contract = new ethers.Contract(selectedToken.address, ERC20_ABI, provider);
+        const bal = await contract.balanceOf(account);
+        setBalance(ethers.formatUnits(bal, selectedToken.decimals));
+      }
+    } catch {
+      setBalance(null);
+    }
+  };
+
+  // ── MetaMask 연결 ─────────────────────────────────────────────
+  const connectWallet = async () => {
+    if (!isMetaMaskInstalled) return alert("MetaMask가 설치되어 있지 않습니다.");
     try {
       setIsConnecting(true);
-      const accounts = await (window as any).ethereum.request({
-        method: "eth_requestAccounts",
-      });
+      const accounts = await (window as any).ethereum.request({ method: "eth_requestAccounts" });
       setAccount(accounts[0]);
     } catch (e) {
       console.error("지갑 연결 실패:", e);
@@ -103,29 +160,24 @@ export default function MultiPaymentPage() {
     }
   };
 
-  // ── MetaMask 네트워크 전환 ─────────────────────────────────────────
-  // 선택한 코인의 체인으로 MetaMask를 자동 전환
-  const switchToChain = async (coin: Coin) => {
-    const chainIdHex = "0x" + coin.chainId.toString(16);
+  // ── 네트워크 전환 ─────────────────────────────────────────────
+  const switchToChain = async (chain: ChainInfo) => {
+    const chainIdHex = "0x" + chain.chainId.toString(16);
     try {
-      // 이미 등록된 체인이면 전환
       await (window as any).ethereum.request({
         method: "wallet_switchEthereumChain",
         params: [{ chainId: chainIdHex }],
       });
     } catch (err: any) {
-      // 4902 = 등록되지 않은 체인 → 새로 추가
       if (err.code === 4902) {
         await (window as any).ethereum.request({
           method: "wallet_addEthereumChain",
-          params: [
-            {
-              chainId: chainIdHex,
-              chainName: coin.chainName,
-              rpcUrls: [coin.rpcUrl],
-              nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-            },
-          ],
+          params: [{
+            chainId:  chainIdHex,
+            chainName: chain.name,
+            rpcUrls:  [chain.rpcUrl],
+            nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+          }],
         });
       } else {
         throw err;
@@ -133,262 +185,319 @@ export default function MultiPaymentPage() {
     }
   };
 
-  // ── 결제 실행 ──────────────────────────────────────────────────────
+  // ── 결제 실행 ─────────────────────────────────────────────────
   const handlePay = async () => {
-    if (!account || !amount) return;
+    if (!account || !amount || !selectedChain || !selectedToken) return;
+    if (!sellerWallet) {
+      return setError(sellerIdParam
+        ? "판매자가 지갑을 등록하지 않았습니다."
+        : "판매자 지갑 주소가 없습니다.");
+    }
 
     try {
       setError(null);
       setTxHash(null);
       setOrderId(null);
 
-      // 1단계: 결제 서버에 주문 생성
+      // 1단계: 주문 생성
       setPayStep(1);
       const orderRes = await fetch(`${PAYMENT_SERVER}/api/order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount }),
+        body: JSON.stringify({
+          amount,
+          tokenSymbol:  selectedToken.symbol,
+          sellerWallet,
+          productId:    productIdParam ? Number(productIdParam) : undefined,
+          buyerEmail:   email ?? undefined,  // 구매자 이메일 전달
+        }),
       });
       if (!orderRes.ok) throw new Error("주문 생성 실패");
       const { orderId: newOrderId } = await orderRes.json();
       setOrderId(newOrderId);
-      // 이 orderId가 블록체인 이벤트와 DB를 연결하는 핵심 키
 
-      // 2단계: 선택한 체인으로 MetaMask 네트워크 전환
+      // 2단계: 네트워크 전환
       setPayStep(2);
-      await switchToChain(selectedCoin);
+      await switchToChain(selectedChain);
 
-      // 3단계: PaymentReceiver.pay(orderId) 호출
-      // 단순 ETH 전송이 아니라 컨트랙트 함수를 호출 — 이벤트를 발생시킴
-      setPayStep(3);
       const provider = new ethers.BrowserProvider((window as any).ethereum);
-      const signer = await provider.getSigner();
-      const contract = new ethers.Contract(
-        selectedCoin.contractAddress,
-        RECEIVER_ABI,
-        signer
-      );
-      const tx = await contract.pay(newOrderId, {
-        value: ethers.parseEther(amount),
-      });
-      const receipt = await tx.wait();
-      setTxHash(receipt!.hash);
+      const signer   = await provider.getSigner();
 
-      // 4단계: 결제 서버에 DB 업데이트 완료 확인 (폴링)
-      // 서버가 이벤트를 감지해 DB를 "paid"로 바꿀 때까지 대기
-      setPayStep(4);
-      let confirmed = false;
-      for (let i = 0; i < 20; i++) {
-        await new Promise((r) => setTimeout(r, 1500)); // 1.5초 대기
+      if (!selectedToken.address) {
+        // ── ETH 결제 ────────────────────────────────────────────
+        setPayStep(4);
+        const contract = new ethers.Contract(
+          selectedChain.paymentReceiver,
+          [
+            "function pay(string calldata orderId, address payable recipient) external payable",
+          ],
+          signer
+        );
+        const valueWei = ethers.parseEther(amount);
+        const tx = await contract.pay(newOrderId, sellerWallet, { value: valueWei });
+        setTxHash(tx.hash);
+        setPayStep(5);
+        await tx.wait(1);
+
+      } else {
+        // ── ERC-20 결제 ─────────────────────────────────────────
+        const tokenContract = new ethers.Contract(selectedToken.address, ERC20_ABI, signer);
+        const amountUnits   = ethers.parseUnits(amount, selectedToken.decimals);
+
+        // 3단계: allowance 확인 후 approve
+        setPayStep(3);
+        const allowance = await tokenContract.allowance(account, selectedChain.paymentReceiver);
+        if (allowance < amountUnits) {
+          const approveTx = await tokenContract.approve(selectedChain.paymentReceiver, amountUnits);
+          await approveTx.wait(1);
+        }
+
+        // 4단계: payERC20 호출
+        setPayStep(4);
+        const receiverContract = new ethers.Contract(
+          selectedChain.paymentReceiver,
+          [
+            "function payERC20(string calldata orderId, address payable recipient, address tokenAddress, uint256 amount) external",
+          ],
+          signer
+        );
+        const tx = await receiverContract.payERC20(
+          newOrderId,
+          sellerWallet,
+          selectedToken.address,
+          amountUnits
+        );
+        setTxHash(tx.hash);
+        setPayStep(5);
+        await tx.wait(1);
+      }
+
+      // 6단계: 서버 확인 폴링 (최대 30초)
+      for (let i = 0; i < 30; i++) {
+        await new Promise(r => setTimeout(r, 1000));
         const statusRes = await fetch(`${PAYMENT_SERVER}/api/order/${newOrderId}`);
         const statusData = await statusRes.json();
         if (statusData.status === "paid") {
-          confirmed = true;
-          break;
+          setPayStep(6);
+          await fetchBalance();
+          // 3초 후 주문내역으로 이동
+          setTimeout(() => router.push("/orders"), 3000);
+          return;
         }
       }
-      if (!confirmed) throw new Error("서버 확인 시간 초과 (이벤트 감지 실패)");
+      // 타임아웃이어도 TX가 있으면 완료로 처리
+      setPayStep(6);
+      await fetchBalance();
+      setTimeout(() => router.push("/orders"), 3000);
 
-      setPayStep(5);
-    } catch (err: any) {
-      console.error("결제 실패:", err);
-      setError("결제 실패: " + (err.reason || err.message));
+    } catch (e: any) {
+      console.error("결제 오류:", e);
+      setError(e.message ?? "결제 중 오류가 발생했습니다.");
       setPayStep(0);
     }
   };
 
-  const isProcessing = payStep > 0 && payStep < 5;
+  const reset = () => {
+    setPayStep(0);
+    setOrderId(null);
+    setTxHash(null);
+    setError(null);
+    setAmount("");
+  };
 
+  // ── 렌더링 ────────────────────────────────────────────────────
   return (
-    <>
+    <div className={styles.page}>
       <PageHeader
         icon="⛓️"
-        title="Multi-Chain Payment"
-        subtitle="원하는 코인 체인을 선택하고 결제하세요"
-
-        navLinks={[
-          { href: "/", label: "메인 페이지" },
-        ]}
+        title="Multi-Coin Payment"
+        subtitle="체인과 토큰을 선택해 결제하세요"
+        navLinks={[{ href: "/", label: "메인 페이지" }]}
       />
 
       <div className={styles.container}>
-        <div className={styles.header}>
-          <h1 className={styles.title}>Multi-Chain Payment</h1>
-          <p className={styles.subtitle}>
-            원하는 코인 체인을 선택하고 결제하세요
-          </p>
-        </div>
 
-        <div className={styles.card}>
+        {/* ── 설정 로딩 / 에러 ─────────────────────────────── */}
+        {configLoading && (
+          <div className={styles.card} style={{ textAlign: "center", color: "#94a3b8" }}>
+            ⏳ 결제 서버에서 체인 정보 로드 중...
+          </div>
+        )}
 
-          {/* ── 지갑 연결 ── */}
-          {!account ? (
-            <button
-              className={styles.connectBtn}
-              onClick={connectWallet}
-              disabled={isConnecting}
-            >
-              {isConnecting ? "연결 중..." : "🦊 MetaMask 지갑 연결"}
-            </button>
-          ) : (
-            <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '0.85rem', color: '#64748b' }}>연결된 지갑</div>
-              <div
-                className={styles.networkBadge}
-                style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)' }}
+        {configError && (
+          <div className={styles.card} style={{ color: "#ef4444", textAlign: "center" }}>
+            ⚠️ {configError}
+          </div>
+        )}
+
+        {!configLoading && !configError && (
+          <div className={styles.card}>
+
+            {/* ── MetaMask 연결 ─────────────────────────────── */}
+            {!account ? (
+              <button
+                className={styles.connectBtn}
+                onClick={connectWallet}
+                disabled={isConnecting}
               >
-                <span className={styles.dot} />
-                {account.slice(0, 6)}...{account.slice(-4)}
+                {isConnecting ? "연결 중..." : "🦊 MetaMask 연결"}
+              </button>
+            ) : (
+              <div className={styles.accountBadge}>
+                <span style={{ fontSize: "12px", color: "#64748b" }}>연결된 지갑</span>
+                <span className={styles.networkBadge}>
+                  🟢 {account.slice(0, 6)}...{account.slice(-4)}
+                </span>
               </div>
-            </div>
-          )}
+            )}
 
-          <hr className={styles.divider} />
+            <hr className={styles.divider} />
 
-          {/* ── 코인 선택 ── */}
-          <div className={styles.sectionLabel}>결제 수단 선택</div>
-          <div className={styles.coinGrid}>
-            {COINS.map((coin) => {
-              const isSelected = selectedCoin.id === coin.id;
-              return (
-                <label
-                  key={coin.id}
-                  className={`${styles.coinCard} ${isSelected ? styles.coinCardSelected : ""}`}
-                  style={{ "--coin-color": coin.color } as React.CSSProperties}
+            {/* ── 판매자 지갑 상태 ─────────────────────────── */}
+            {sellerIdParam && (
+              <div className={styles.sellerBox} data-state={sellerError ? "error" : sellerWallet ? "ok" : "loading"}>
+                <div className={styles.sellerLabel}>판매자 수신 지갑</div>
+                {sellerLoading ? (
+                  <div>⏳ 조회 중...</div>
+                ) : sellerError ? (
+                  <div style={{ color: "#ef4444" }}>⚠️ {sellerError}</div>
+                ) : sellerWallet ? (
+                  <div style={{ color: "#10b981", wordBreak: "break-all", fontSize: "13px" }}>
+                    ✅ {sellerWallet}
+                  </div>
+                ) : null}
+              </div>
+            )}
+
+            {/* ── 체인 선택 ─────────────────────────────────── */}
+            <div className={styles.sectionLabel}>① 체인 선택</div>
+            <div className={styles.chainGrid}>
+              {chains.map(chain => (
+                <button
+                  key={chain.chainId}
+                  className={`${styles.chainBtn} ${selectedChain?.chainId === chain.chainId ? styles.chainBtnActive : ""}`}
                   onClick={() => {
-                    setSelectedCoin(coin);
+                    setSelectedChain(chain);
+                    setSelectedToken(chain.tokens[0]);
+                    setBalance(null);
                     setPayStep(0);
-                    setTxHash(null);
                     setError(null);
                   }}
                 >
-                  <input
-                    type="radio"
-                    name="coin"
-                    value={coin.id}
-                    checked={isSelected}
-                    onChange={() => { }}
-                  />
-                  <div className={styles.radioMark} />
-                  <div className={styles.coinIcon}>{coin.icon}</div>
-                  <div className={styles.coinName}>{coin.symbol}</div>
-                  <div className={styles.coinChain}>{coin.name}</div>
-                  <div className={styles.coinPort}>
-                    ChainID: {coin.chainId}
-                  </div>
-                  <div className={styles.coinPort} style={{ marginTop: '4px' }}>
-                    {coin.rpcUrl}
-                  </div>
-                </label>
-              );
-            })}
-          </div>
-
-          <hr className={styles.divider} />
-
-          {/* ── 결제 정보 입력 ── */}
-          <div className={styles.formSection}>
-            <label className={styles.formLabel}>
-              결제 금액 ({selectedCoin.symbol})
-            </label>
-            <input
-              type="number"
-              step="0.001"
-              min="0"
-              className={styles.input}
-              placeholder="예: 0.01"
-              value={amount}
-              onChange={(e) => { setAmount(e.target.value); setPayStep(0); }}
-            />
-          </div>
-
-          {/* ── 결제 요약 ── */}
-          {amount && (
-            <div className={styles.summaryBox}>
-              <div className={styles.summaryRow}>
-                <span className={styles.summaryKey}>결제 코인</span>
-                <span className={styles.summaryVal} style={{ color: selectedCoin.color }}>
-                  {selectedCoin.icon} {selectedCoin.symbol}
-                </span>
-              </div>
-              <div className={styles.summaryRow}>
-                <span className={styles.summaryKey}>체인</span>
-                <span className={styles.summaryVal}>{selectedCoin.chainName}</span>
-              </div>
-              <div className={styles.summaryRow}>
-                <span className={styles.summaryKey}>금액</span>
-                <span className={styles.summaryVal}>{amount} ETH</span>
-              </div>
-              <div className={styles.summaryRow}>
-                <span className={styles.summaryKey}>수신 컨트랙트</span>
-                <span className={styles.summaryVal}>
-                  {selectedCoin.contractAddress.slice(0, 10)}...{selectedCoin.contractAddress.slice(-6)}
-                </span>
-              </div>
-              {orderId && (
-                <div className={styles.summaryRow}>
-                  <span className={styles.summaryKey}>주문번호</span>
-                  <span className={styles.summaryVal} style={{ fontSize: '0.75rem' }}>{orderId}</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── 에러 메시지 ── */}
-          {error && (
-            <div className={styles.errorBox}>
-              ⚠️ {error}
-            </div>
-          )}
-
-          {/* ── 결제 버튼 ── */}
-          <button
-            className={`${styles.payBtn} ${isProcessing ? styles.payBtnActive : payStep === 5 ? styles.payBtnDone : ""}`}
-            onClick={payStep === 5 ? () => { setPayStep(0); setTxHash(null); setAmount(""); setOrderId(null); } : handlePay}
-            disabled={isProcessing || !account || !amount}
-          >
-            {payStep === 0 && `💳 ${selectedCoin.symbol}으로 결제하기`}
-            {payStep === 1 && "⏳ [1/4] 주문번호 생성 중…"}
-            {payStep === 2 && `⏳ [2/4] ${selectedCoin.chainName}으로 네트워크 전환 중…`}
-            {payStep === 3 && "⏳ [3/4] MetaMask 서명 중… 팝업을 확인하세요"}
-            {payStep === 4 && "⏳ [4/4] 서버 결제 확인 중… (이벤트 감지 대기)"}
-            {payStep === 5 && "✅ 결제 완료! — 다시 결제하기"}
-          </button>
-
-          {/* 진행 상태 바 */}
-          {isProcessing && (
-            <div className={styles.progressBar}>
-              {[1, 2, 3, 4].map((s) => (
-                <div
-                  key={s}
-                  className={`${styles.progressStep} ${payStep >= s ? styles.progressStepActive : ""}`}
-                />
+                  <span className={styles.chainName}>{chain.name}</span>
+                  <span className={styles.chainId}>ID {chain.chainId}</span>
+                </button>
               ))}
             </div>
-          )}
 
-          {/* ── 완료 결과 ── */}
-          {txHash && (
-            <div className={styles.resultBox}>
-              <div className={styles.resultTitle}>
-                ✅ 트랜잭션 완료
+            {/* ── 토큰 선택 ─────────────────────────────────── */}
+            {selectedChain && (
+              <>
+                <div className={styles.sectionLabel}>② 토큰 선택</div>
+                <div className={styles.tokenGrid}>
+                  {selectedChain.tokens.map(token => (
+                    <button
+                      key={token.symbol}
+                      className={`${styles.tokenBtn} ${selectedToken?.symbol === token.symbol ? styles.tokenBtnActive : ""}`}
+                      onClick={() => {
+                        setSelectedToken(token);
+                        setBalance(null);
+                        setPayStep(0);
+                        setError(null);
+                      }}
+                    >
+                      <span className={styles.tokenIcon}>
+                        {token.symbol === "ETH" ? "⟠" : token.symbol === "USDC" ? "💵" : "🔶"}
+                      </span>
+                      <span className={styles.tokenSymbol}>{token.symbol}</span>
+                      <span className={styles.tokenType}>
+                        {token.address ? "ERC-20" : "Native"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* ── 잔액 ──────────────────────────────────────── */}
+            {account && selectedToken && (
+              <div className={styles.balanceRow}>
+                <span style={{ color: "#64748b", fontSize: "13px" }}>잔액</span>
+                <span style={{ color: "#10b981", fontWeight: 600 }}>
+                  {balance !== null
+                    ? `${Number(balance).toFixed(4)} ${selectedToken.symbol}`
+                    : <button onClick={fetchBalance} style={{ background: "none", border: "none", color: "#6366f1", cursor: "pointer", fontSize: "13px" }}>조회하기</button>
+                  }
+                </span>
               </div>
-              <div className={styles.resultHash}>
-                <div style={{ color: '#64748b', marginBottom: '4px' }}>주문번호</div>
-                {orderId}
-              </div>
-              <div className={styles.resultHash} style={{ marginTop: '10px' }}>
-                <div style={{ color: '#64748b', marginBottom: '4px' }}>TX Hash</div>
-                {txHash}
-              </div>
-              <div style={{ marginTop: '10px', fontSize: '0.82rem', color: '#34d399' }}>
-                {selectedCoin.chainName} 체인에서 결제가 완료되어 DB에 저장되었습니다.
-              </div>
+            )}
+
+            <hr className={styles.divider} />
+
+            {/* ── 금액 입력 ─────────────────────────────────── */}
+            <div className={styles.sectionLabel}>③ 금액 입력</div>
+            <div className={styles.amountRow}>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                placeholder={`0.00`}
+                className={styles.amountInput}
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+                disabled={payStep > 0 && payStep < 6}
+              />
+              <span className={styles.amountUnit}>{selectedToken?.symbol ?? "—"}</span>
             </div>
-          )}
 
-        </div>
+            {/* ── 결제 버튼 ─────────────────────────────────── */}
+            {payStep === 0 || payStep === 6 ? (
+              payStep === 6 ? (
+                <div style={{ textAlign: "center" }}>
+                  <div className={styles.successMsg}>🎉 결제 완료!</div>
+                  {txHash && (
+                    <div style={{ fontSize: "12px", color: "#64748b", marginTop: "8px", wordBreak: "break-all" }}>
+                      TxHash: {txHash}
+                    </div>
+                  )}
+                  {orderId && (
+                    <div style={{ fontSize: "12px", color: "#94a3b8", marginTop: "4px" }}>
+                      주문번호: {orderId}
+                    </div>
+                  )}
+                  <button className={styles.resetBtn} onClick={reset}>다시 결제하기</button>
+                </div>
+              ) : (
+                <button
+                  className={styles.payBtn}
+                  disabled={!account || !amount || !selectedChain || !selectedToken || (sellerIdParam ? !sellerWallet : false)}
+                  onClick={handlePay}
+                >
+                  {selectedToken?.address
+                    ? `💳 ${selectedToken.symbol} 결제 (approve → 전송)`
+                    : `💳 ETH 결제`}
+                </button>
+              )
+            ) : (
+              <div className={styles.stepBox}>
+                <div className={styles.spinner} />
+                <div className={styles.stepLabel}>{STEP_LABELS[payStep]}</div>
+                {txHash && (
+                  <div style={{ fontSize: "11px", color: "#64748b", marginTop: "6px", wordBreak: "break-all" }}>
+                    TxHash: {txHash}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── 에러 ──────────────────────────────────────── */}
+            {error && (
+              <div className={styles.errorMsg}>⚠️ {error}</div>
+            )}
+
+          </div>
+        )}
       </div>
-    </>
+    </div>
   );
 }

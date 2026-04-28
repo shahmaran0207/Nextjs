@@ -14,6 +14,7 @@ interface CheckoutItem {
   unit_price: number;
   quantity: number;
   option_name?: string | null;
+  seller_id?: number | null;  // 암호화폐 결제 라우팅용
 }
 
 export default function CheckoutPage() {
@@ -25,6 +26,9 @@ export default function CheckoutPage() {
   const [availablePoints, setAvailablePoints] = useState<number>(0);
   const [usePoints, setUsePoints] = useState<number>(0);
   const [sharedMembersCount, setSharedMembersCount] = useState<number>(1);
+
+  // 결제 수단: "card" | "crypto"
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "crypto">("card");
 
   const [coupons, setCoupons] = useState<any[]>([]);
   const [mapCoupons, setMapCoupons] = useState<any[]>([]); // 지도에서 획득한 쿠폰
@@ -49,7 +53,27 @@ export default function CheckoutPage() {
     const storedSharedMembersCount = sessionStorage.getItem("shared_members_count");
 
     if (storedItems) {
-      setItems(JSON.parse(storedItems));
+      const parsed: CheckoutItem[] = JSON.parse(storedItems);
+
+      // seller_id가 없는 아이템이 있으면 product API로 보완 조회
+      const missingSellerIds = parsed.some(i => !i.seller_id);
+      if (missingSellerIds) {
+        Promise.all(
+          parsed.map(async (item) => {
+            if (item.seller_id) return item;
+            try {
+              const res = await fetch(`/api/Shopping/Products/${item.product_id}`);
+              if (!res.ok) return item;
+              const data = await res.json();
+              return { ...item, seller_id: data.seller_id ?? null };
+            } catch {
+              return item;
+            }
+          })
+        ).then(filled => setItems(filled));
+      } else {
+        setItems(parsed);
+      }
     }
     if (storedFromCart === "true") {
       setFromCart(true);
@@ -61,12 +85,12 @@ export default function CheckoutPage() {
       setSharedMembersCount(Number(storedSharedMembersCount));
     }
 
-    // 사용자 포인트 조회
+    // 사용자 포인트 조회 (실패 시 0으로 처리)
     const token = localStorage.getItem("token");
     if (token) {
       axios.get(`/api/auth/Me`, { headers: { Authorization: `Bearer ${token}` } })
         .then(res => setAvailablePoints(Number(res.data.points) || 0))
-        .catch(err => console.error(err));
+        .catch(() => { /* 401 등 인증 오류 시 포인트 0으로 처리 */ });
     }
 
     // 사용자 쿠폰 조회
@@ -143,6 +167,30 @@ export default function CheckoutPage() {
     setIsPostcodeOpen(false);
   };
 
+  // 암호화폐 결제 처리
+  const handleCryptoPayment = () => {
+    if (items.length === 0) return alert("결제할 상품이 없습니다.");
+    if (!receiverName || !receiverPhone || !address || !addressDetail) {
+      return alert("배송지 정보를 모두 입력해주세요.");
+    }
+
+    // 판매자 단일여부 확인
+    const sellerIds = [...new Set(items.map(i => i.seller_id).filter(Boolean))];
+    if (sellerIds.length === 0) {
+      return alert("판매자 정보가 없는 상품입니다. 일반 결제를 이용해주세요.");
+    }
+    if (sellerIds.length > 1) {
+      return alert("암호화폐 결제는 단일 판매자의 상품만 지원합니다.\n여러 판매자 상품이 담겨 있는 경우 각각 따로 주문하거나 일반 결제를 이용해주세요.");
+    }
+
+    const sellerId = sellerIds[0];
+    const productId = items[0].product_id;  // 대표 상품 ID
+
+    // 링크 생성 후 이동
+    window.location.href = `/multi-payment?sellerId=${sellerId}&productId=${productId}`;
+  };
+
+  // 일반 결제 (PortOne 카드)
   const handlePayment = () => {
     if (!window.IMP) return;
     if (items.length === 0) return alert("결제할 상품이 없습니다.");
@@ -448,6 +496,58 @@ export default function CheckoutPage() {
               </div>
             </div>
 
+            <div className="p-1-5rem border-top-default flex-col gap-1rem">
+              <div className="title-banner p-0">
+                <h2 className="margin-0 text-primary text-16-bold">결제 수단 선택</h2>
+              </div>
+
+              {/* 결제 수단 토글 */}
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("card")}
+                  style={{
+                    flex: 1, padding: "14px", borderRadius: "10px", border: "2px solid",
+                    borderColor: paymentMethod === "card" ? "#6366f1" : "rgba(255,255,255,0.1)",
+                    background: paymentMethod === "card" ? "rgba(99,102,241,0.12)" : "rgba(255,255,255,0.03)",
+                    color: paymentMethod === "card" ? "#fff" : "#94a3b8",
+                    cursor: "pointer", fontWeight: 700, fontSize: "14px", transition: "all 0.18s",
+                  }}
+                >
+                  💳 일반 결제 (카드)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("crypto")}
+                  style={{
+                    flex: 1, padding: "14px", borderRadius: "10px", border: "2px solid",
+                    borderColor: paymentMethod === "crypto" ? "#10b981" : "rgba(255,255,255,0.1)",
+                    background: paymentMethod === "crypto" ? "rgba(16,185,129,0.12)" : "rgba(255,255,255,0.03)",
+                    color: paymentMethod === "crypto" ? "#fff" : "#94a3b8",
+                    cursor: "pointer", fontWeight: 700, fontSize: "14px", transition: "all 0.18s",
+                  }}
+                >
+                  ⛓️ 암호화폐 결제
+                </button>
+              </div>
+
+              {paymentMethod === "crypto" && (
+                <div style={{ padding: "12px 14px", background: "rgba(16,185,129,0.07)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: "8px", fontSize: "13px", color: "#6ee7b7" }}>
+                  ⚠️ ETH / USDC / DAI 중 선택해서 결제합니다. MetaMask가 필요합니다.
+                  {(() => {
+                    const sellerIds = [...new Set(items.map(i => i.seller_id).filter(Boolean))];
+                    if (sellerIds.length > 1) {
+                      return <div style={{ marginTop: "8px", color: "#f87171" }}>⛔ 여러 판매자 상품이 혼재되어 암호화폐 결제가 불가합니다. 판매자별로 따로 주문해주세요.</div>;
+                    }
+                    if (sellerIds.length === 0) {
+                      return <div style={{ marginTop: "8px", color: "#f87171" }}>⛔ 판매자 정보가 없어 암호화폐 결제를 사용할 수 없습니다.</div>;
+                    }
+                    return null;
+                  })()}
+                </div>
+              )}
+            </div>
+
             <div className="checkout-summary border-top-default flex-row-between items-center">
               <div className="flex-col gap-sm flex-1 pr-2rem">
                 <div className="flex-row-between">
@@ -483,9 +583,23 @@ export default function CheckoutPage() {
                   )}
                 </div>
               </div>
-              <button className="pay-btn flex-none w-200" onClick={handlePayment}>
-                💳 결제하기
-              </button>
+              {paymentMethod === "card" ? (
+                <button className="pay-btn flex-none w-200" onClick={handlePayment}>
+                  💳 카드로 결제하기
+                </button>
+              ) : (
+                <button
+                  className="pay-btn flex-none w-200"
+                  onClick={handleCryptoPayment}
+                  style={{ background: "linear-gradient(135deg, #10b981, #059669)" }}
+                  disabled={(() => {
+                    const sellerIds = [...new Set(items.map(i => i.seller_id).filter(Boolean))];
+                    return sellerIds.length !== 1;
+                  })()}
+                >
+                  ⛓️ 암호화폐 결제하기
+                </button>
+              )}
             </div>
           </div>
         </div>
