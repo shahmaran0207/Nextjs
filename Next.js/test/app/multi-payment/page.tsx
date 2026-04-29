@@ -70,7 +70,9 @@ export default function MultiPaymentPage() {
   const [isConnecting, setIsConnecting] = useState(false);
 
   // ── 토큰 잔액 ──────────────────────────────────────────────────
-  const [balance, setBalance] = useState<string | null>(null);
+  const [balance, setBalance]               = useState<string | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
+  const [balanceError, setBalanceError]     = useState<string | null>(null);
 
   // ── 판매자 지갑 ────────────────────────────────────────────────
   const [sellerWallet, setSellerWallet]   = useState<string | null>(null);
@@ -118,21 +120,31 @@ export default function MultiPaymentPage() {
       .finally(() => setSellerLoading(false));
   }, [sellerIdParam]);
 
-  // ── 토큰 잔액 조회 ────────────────────────────────────────────
+  // ── 체인/토큰/지갑 변경 시 이전 잔액만 초기화 ──────────────────
+  // fetchBalance()는 사용자가 "조회하기" 버튼을 클릭할 때만 호출
+  // (자동 호출 시 useEffect가 여러 번 실행되어 MetaMask 팝업 중복 발생)
   useEffect(() => {
-    if (!account || !selectedToken || !selectedChain) {
-      setBalance(null);
-      return;
-    }
-    fetchBalance();
+    setBalance(null);
+    setBalanceError(null);
   }, [account, selectedToken, selectedChain]);
 
   const fetchBalance = async () => {
     if (!account || !selectedToken || !selectedChain) return;
+    setBalanceLoading(true);
+    setBalanceError(null);
     try {
+      // ── 현재 체인 확인 → 다를 때만 전환 요청 ────────────────────
+      const currentChainIdHex = await (window as any).ethereum.request({ method: "eth_chainId" });
+      const currentChainId = parseInt(currentChainIdHex, 16);
+      if (currentChainId !== selectedChain.chainId) {
+        await switchToChain(selectedChain);
+      }
+
+      // 체인 전환 후 provider 재생성 (전환 결과 반영)
       const provider = new ethers.BrowserProvider((window as any).ethereum);
+
       if (!selectedToken.address) {
-        // ETH
+        // ETH Native
         const bal = await provider.getBalance(account);
         setBalance(ethers.formatEther(bal));
       } else {
@@ -141,8 +153,23 @@ export default function MultiPaymentPage() {
         const bal = await contract.balanceOf(account);
         setBalance(ethers.formatUnits(bal, selectedToken.decimals));
       }
-    } catch {
+    } catch (e: any) {
       setBalance(null);
+      if (e?.code === 4001) {
+        // 사용자가 MetaMask 팝업을 직접 거부한 경우
+        setBalanceError("MetaMask 체인 전환을 허용해야 잔액을 조회할 수 있습니다.");
+      } else if (e?.code === -32002 || e?.message?.includes("already pending")) {
+        // MetaMask 팝업이 이미 열려있는 경우
+        setBalanceError("MetaMask에 이미 요청이 대기 중입니다. MetaMask 창을 확인하고 처리한 뒤 다시 시도하세요.");
+      } else if (e?.code === "BAD_DATA" || e?.message?.includes("could not decode result")) {
+        setBalanceError(
+          `"${selectedToken?.symbol}" 컨트랙트가 "${selectedChain?.name}" 체인에 존재하지 않습니다. 토큰 주소를 확인하세요.`
+        );
+      } else {
+        setBalanceError(e?.message ?? "잔액 조회에 실패했습니다.");
+      }
+    } finally {
+      setBalanceLoading(false);
     }
   };
 
@@ -163,22 +190,47 @@ export default function MultiPaymentPage() {
   // ── 네트워크 전환 ─────────────────────────────────────────────
   const switchToChain = async (chain: ChainInfo) => {
     const chainIdHex = "0x" + chain.chainId.toString(16);
+
+    // MetaMask가 체인을 모른다는 신호 판별 (코드 OR 메시지)
+    const isUnknownChain = (e: any) =>
+      e?.code === 4902 ||
+      e?.message?.includes("Unrecognized chain ID") ||
+      e?.message?.includes("Try adding the chain") ||
+      e?.message?.includes("wallet_addEthereumChain");
+
     try {
       await (window as any).ethereum.request({
         method: "wallet_switchEthereumChain",
         params: [{ chainId: chainIdHex }],
       });
     } catch (err: any) {
-      if (err.code === 4902) {
-        await (window as any).ethereum.request({
-          method: "wallet_addEthereumChain",
-          params: [{
-            chainId:  chainIdHex,
-            chainName: chain.name,
-            rpcUrls:  [chain.rpcUrl],
-            nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
-          }],
-        });
+      if (isUnknownChain(err)) {
+        // MetaMask가 해당 체인을 모를 때 → 추가 시도
+        try {
+          await (window as any).ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [{
+              chainId:   chainIdHex,
+              chainName: chain.name,
+              rpcUrls:   [chain.rpcUrl],
+              nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+            }],
+          });
+        } catch (addErr: any) {
+          const msg = addErr?.message ?? "";
+          if (msg.includes("same RPC endpoint") || msg.includes("already exists") || msg.includes("already added")) {
+            // "same RPC endpoint as existing network for chain 0x7a69" 같은 메시지에서
+            // 실제 MetaMask에 등록된 chainId를 추출해서 그걸로 전환
+            const match = msg.match(/chain (0x[0-9a-fA-F]+)/i);
+            const targetChainId = match ? match[1] : chainIdHex;
+            await (window as any).ethereum.request({
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId: targetChainId }],
+            });
+          } else {
+            throw addErr;
+          }
+        }
       } else {
         throw err;
       }
@@ -424,11 +476,31 @@ export default function MultiPaymentPage() {
               <div className={styles.balanceRow}>
                 <span style={{ color: "#64748b", fontSize: "13px" }}>잔액</span>
                 <span style={{ color: "#10b981", fontWeight: 600 }}>
-                  {balance !== null
-                    ? `${Number(balance).toFixed(4)} ${selectedToken.symbol}`
-                    : <button onClick={fetchBalance} style={{ background: "none", border: "none", color: "#6366f1", cursor: "pointer", fontSize: "13px" }}>조회하기</button>
-                  }
+                  {balanceLoading ? (
+                    <span style={{ color: "#94a3b8", fontSize: "13px" }}>⏳ 조회 중...</span>
+                  ) : balance !== null ? (
+                    <span>
+                      {`${Number(balance).toFixed(4)} ${selectedToken.symbol}`}
+                      <button
+                        onClick={fetchBalance}
+                        style={{ background: "none", border: "none", color: "#6366f1", cursor: "pointer", fontSize: "11px", marginLeft: "6px" }}
+                      >↻ 새로고침</button>
+                    </span>
+                  ) : (
+                    <span>
+                      <button
+                        onClick={fetchBalance}
+                        style={{ background: "none", border: "none", color: "#6366f1", cursor: "pointer", fontSize: "13px", textDecoration: "underline" }}
+                      >조회하기</button>
+                    </span>
+                  )}
                 </span>
+              </div>
+            )}
+            {/* ── 잔액 조회 에러 ────────────────────────────── */}
+            {balanceError && (
+              <div style={{ fontSize: "12px", color: "#ef4444", marginTop: "4px", padding: "6px 0" }}>
+                ⚠️ {balanceError}
               </div>
             )}
 
