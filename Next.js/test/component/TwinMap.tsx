@@ -11,6 +11,7 @@ import TwinLinkPanel from "@/component/dt/TwinLinkPanel";
 import TimeFilterPanel from "@/component/dt/panels/TimeFilterPanel";
 import DashboardPanel from "@/component/dt/panels/DashboardPanel";
 import RoadviewPanel from "@/component/dt/panels/RoadviewPanel";
+import DeliveryTelemetryPanel from "@/component/dt/panels/DeliveryTelemetryPanel";
 import TrafficHistoryPanel from "@/component/dt/panels/TrafficHistoryPanel";
 import WeatherHeader from "@/component/dt/WeatherHeader";
 import { TourismCarouselDisplay, ConstructionCarouselDisplay } from "@/component/CarouselInfoDisplay";
@@ -288,7 +289,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
       {/* 날씨에 따른 비 내리는 효과 (지도 위에 오버레이) */}
       {isRainy && <RainOverlay />}
 
-      {/* FPV 모드 HUD 오버레이 */}
+      {/* FPV 모드 HUD 오버레이 — leftPane 안에 있어야 오른쪽으로 넘치지 않음 */}
       {isSimulating && isFpvMode && (
         <div className={styles.fpvHudRoot}>
           <div className={styles.fpvPillar} />
@@ -308,37 +309,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
         </div>
       )}
 
-      </div>
-
-      {/* ─── 오른쪽 (로드뷰 / CCTV 분할 영역) ─── */}
-      {showSplitScreen && (
-        <div className={styles.rightPane}>
-          {nearbyEvent && nearbyEvent.type === 'cctv' ? (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#000' }}>
-              <div style={{ padding: '12px 16px', background: 'rgba(10,14,26,0.9)', borderBottom: '1px solid rgba(56,189,248,0.3)' }}>
-                <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>🎥 전방 CCTV 화면 ({nearbyEvent.data.name})</span>
-              </div>
-              <div style={{ flex: 1, position: 'relative' }}>
-                <CctvPlayer url={nearbyEvent.data.url} />
-              </div>
-            </div>
-          ) : (
-            <div style={{ flex: 1, position: 'relative' }}>
-              <RoadviewPanel
-                isOpen={true}
-                position={{ lat: truckPos?.latitude || 0, lng: truckPos?.longitude || 0 }}
-                onClose={() => {}}
-                onPositionChange={() => {}}
-                onAvailabilityChange={() => {}}
-                mode="split"
-              />
-            </div>
-          )}
-        </div>
-      )}
-
-
-      {/* 최상단 HTML 오버레이: 배송 트럭 아이콘 */}
+      {/* 최상단 HTML 오버레이: 배송 트럭 아이콘 — leftPane 안에 위치해야 분할 화면에서 지도 밖으로 넘치지 않음 */}
       {truckScreenPos && (
         <div
           className={styles.truckOverlay}
@@ -348,7 +319,7 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
         </div>
       )}
 
-      {/* 쿠폰 상자 HTML 오버레이 */}
+      {/* 쿠폰 상자 HTML 오버레이 — leftPane 안에 있어야 우측 텔레메트리 패널 위로 넘치지 않음 */}
       {isSimulating && couponScreenPositions.map(box => (
         <div
           key={box.id}
@@ -361,6 +332,34 @@ export default function TwinMap({ linkData: initLinkData, trafficData: initTraff
           <div className={styles.couponBadge}>{box.discount}% OFF</div>
         </div>
       ))}
+
+      </div>
+
+      {/* ─── 오른쪽 (텔레메트리 / CCTV 분할 영역) ─── */}
+      {showSplitScreen && (
+        <div className={styles.rightPane}>
+          {nearbyEvent && nearbyEvent.type === 'cctv' ? (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#000' }}>
+              <div style={{ padding: '12px 16px', background: 'rgba(10,14,26,0.9)', borderBottom: '1px solid rgba(56,189,248,0.3)' }}>
+                <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>🎥 전방 CCTV 화면 ({nearbyEvent.data.name})</span>
+              </div>
+              <div style={{ flex: 1, position: 'relative' }}>
+                <CctvPlayer url={nearbyEvent.data.url} />
+              </div>
+            </div>
+          ) : (
+            <div style={{ flex: 1, display: 'flex', position: 'relative' }}>
+              <DeliveryTelemetryPanel
+                progress={deliveryProgress}
+                speed={Math.round(deliveryProgress * 80)}
+                trackingNumber={trackingNumber || undefined}
+                shippingAddress={shippingAddress}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
 
       {/* 쿠폰 획득 알림 */}
       {collectedCoupon && (
