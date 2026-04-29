@@ -27,10 +27,12 @@ const path       = require("path");
 const { compile } = require("./compile");
 
 // ── 3개 체인 설정 ─────────────────────────────────────────────────
+// ⚠️ chainId는 Ganache --chain.chainId 옵션과 반드시 일치해야 함
+// MetaMask에 네트워크 등록 시에도 이 값(31337/31338/31339)을 사용
 const CHAINS = [
-  { name: "Chain A", chainId: 1337, rpcUrl: "http://127.0.0.1:8545" },
-  { name: "Chain B", chainId: 1338, rpcUrl: "http://127.0.0.1:8546" },
-  { name: "Chain C", chainId: 1339, rpcUrl: "http://127.0.0.1:8547" },
+  { name: "Chain A", chainId: 31337, rpcUrl: "http://127.0.0.1:8545" },
+  { name: "Chain B", chainId: 31338, rpcUrl: "http://127.0.0.1:8546" },
+  { name: "Chain C", chainId: 31339, rpcUrl: "http://127.0.0.1:8547" },
 ];
 
 // Ganache 기본 계정 #0 (테스트용 — 실서비스에서 절대 사용 금지)

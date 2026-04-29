@@ -676,6 +676,26 @@ model crypto_payment_orders {
   buyer_email   String?  @db.VarChar(255)
   // 구매자 이메일 (주문 생성 시 프론트에서 전달)
 
+  // ── 배송 정보 ────────────────────────────────────────────────
+  receiver_name    String?  @db.VarChar(100)
+  receiver_phone   String?  @db.VarChar(50)
+  shipping_address String?  @db.Text
+  shipping_message String?  @db.Text
+
+  // ── 트랜잭션 영수증 (블록체인 공개 데이터) ─────────────────────
+  // 이벤트 감지 시 결제 서버(server/index.js)가 getTransactionReceipt()로 조회 후 저장
+  block_number  Int?
+  // 트랜잭션이 포함된 블록 번호
+
+  gas_used      String?  @db.VarChar(50)
+  // 실제 소모된 가스비 (ETH 단위, 예: "0.00021000")
+
+  gas_used_units String? @db.VarChar(30)
+  // 실제 사용한 가스 유닛 수 (예: "21000")
+
+  tx_status     Int?
+  // 트랜잭션 성공 여부: 1=Success, 0=Reverted
+
   created_at    DateTime @default(now()) @db.Timestamp(6)
   updated_at    DateTime @default(now()) @updatedAt @db.Timestamp(6)
 

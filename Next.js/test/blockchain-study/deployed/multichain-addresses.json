@@ -1,5 +1,5 @@
 {
-  "deployedAt": "2026-04-28T23:49:03.760Z",
+  "deployedAt": "2026-04-29T01:27:22.700Z",
   "paymentReceiverAbi": [
     {
       "inputs": [],
@@ -425,7 +425,7 @@
   ],
   "chains": {
     "Chain A": {
-      "chainId": 1337,
+      "chainId": 31337,
       "rpcUrl": "http://127.0.0.1:8545",
       "paymentReceiver": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
       "tokens": {
@@ -447,7 +447,7 @@
       }
     },
     "Chain B": {
-      "chainId": 1338,
+      "chainId": 31338,
       "rpcUrl": "http://127.0.0.1:8546",
       "paymentReceiver": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
       "tokens": {
@@ -469,7 +469,7 @@
       }
     },
     "Chain C": {
-      "chainId": 1339,
+      "chainId": 31339,
       "rpcUrl": "http://127.0.0.1:8547",
       "paymentReceiver": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
       "tokens": {

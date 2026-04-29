@@ -41,6 +41,11 @@ interface CryptoOrder {
   created_at: string;
   product_id: number | null;
   buyer_email: string | null;
+  // 트랜잭션 영수증
+  block_number: number | null;
+  gas_used: string | null;
+  gas_used_units: string | null;
+  tx_status: number | null;
 }
 
 export default function OrdersPage() {
@@ -135,7 +140,6 @@ export default function OrdersPage() {
     } catch (_) { alert("오류가 발생했습니다."); }
   };
 
-  // 암호화폐 주문 카드 렌더링
   const renderCryptoOrder = (order: CryptoOrder, direction: "sent" | "received") => (
     <div key={order.id} style={{
       background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)",
@@ -153,9 +157,14 @@ export default function OrdersPage() {
           </span>
           <span style={{ fontSize: "12px", color: "#64748b", fontFamily: "monospace" }}>{order.order_id}</span>
         </div>
-        <span style={{ fontSize: "12px", color: "#64748b" }}>
-          {new Date(order.created_at).toLocaleString("ko-KR")}
-        </span>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <span style={{ fontSize: "12px", color: "#64748b" }}>
+            {new Date(order.created_at).toLocaleString("ko-KR")}
+          </span>
+          <Link href={`/orders/${order.id}`} className="btn-outline-secondary btn-sm" style={{ padding: "4px 10px", fontSize: "11px", height: "auto" }}>
+            주문 상세 보기
+          </Link>
+        </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "13px" }}>
@@ -187,6 +196,51 @@ export default function OrdersPage() {
           </div>
         )}
       </div>
+
+      {/* ── 트랜잭션 영수증 패널 (DB에 저장된 경우만 표시) ───────────── */}
+      {order.block_number && (
+        <div style={{
+          marginTop: "12px",
+          background: "rgba(16,185,129,0.05)",
+          border: "1px solid rgba(16,185,129,0.15)",
+          borderRadius: "8px",
+          padding: "10px 14px",
+          fontSize: "12px",
+        }}>
+          <div style={{ color: "#10b981", fontWeight: 700, marginBottom: "8px", fontSize: "13px" }}>
+            🧾 트랜잭션 영수증
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+            <div>
+              <div style={{ color: "#64748b", fontSize: "10px" }}>🔒 블록 번호</div>
+              <div style={{ color: "#a5b4fc", fontWeight: 600, marginTop: "2px" }}>#{order.block_number.toLocaleString()}</div>
+            </div>
+            <div>
+              <div style={{ color: "#64748b", fontSize: "10px" }}>⛽ 실제 가스비</div>
+              <div style={{ color: "#f59e0b", fontWeight: 600, marginTop: "2px" }}>≈ {order.gas_used} ETH</div>
+            </div>
+            <div>
+              <div style={{ color: "#64748b", fontSize: "10px" }}>사용 가스 유닛</div>
+              <div style={{ color: "#94a3b8", marginTop: "2px" }}>{Number(order.gas_used_units).toLocaleString()} units</div>
+            </div>
+            <div>
+              <div style={{ color: "#64748b", fontSize: "10px" }}>📅 결제 시각</div>
+              <div style={{ color: "#94a3b8", marginTop: "2px" }}>
+                {order.paid_at ? new Date(order.paid_at).toLocaleString("ko-KR") : "—"}
+              </div>
+            </div>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <div style={{ color: "#64748b", fontSize: "10px" }}>상태</div>
+              <div style={{
+                color: order.tx_status === 1 ? "#10b981" : "#ef4444",
+                fontWeight: 600, marginTop: "2px",
+              }}>
+                {order.tx_status === 1 ? "✅ Success" : "❌ Reverted"}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 

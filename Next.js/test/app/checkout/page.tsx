@@ -186,6 +186,14 @@ export default function CheckoutPage() {
     const sellerId = sellerIds[0];
     const productId = items[0].product_id;  // 대표 상품 ID
 
+    // 배송 정보 임시 저장
+    sessionStorage.setItem("crypto_shipping_info", JSON.stringify({
+      receiverName,
+      receiverPhone,
+      shippingAddress: `[${zipcode}] ${address} ${addressDetail}`,
+      shippingMessage: message
+    }));
+
     // 링크 생성 후 이동
     window.location.href = `/multi-payment?sellerId=${sellerId}&productId=${productId}`;
   };

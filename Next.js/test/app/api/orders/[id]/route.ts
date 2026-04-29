@@ -26,26 +26,56 @@ export async function GET(
       },
     });
 
-    if (!order) {
-      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    if (order) {
+      // 보안 검사: 자신의 주문인지 확인
+      if (Number(order.user_id) !== user.id) {
+        return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
+      }
+
+      // 주문에 속한 상품들 가져오기
+      const items = await prisma.order_items.findMany({
+        where: { order_id: order.id },
+      });
+
+      return NextResponse.json({
+        is_crypto: false,
+        order: {
+          ...order,
+          items,
+        },
+      });
     }
 
-    // 보안 검사: 자신의 주문인지 확인
-    if (Number(order.user_id) !== user.id) {
-      return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
+    // 일반 주문에 없으면 암호화폐 주문 조회
+    const cryptoOrder = await prisma.crypto_payment_orders.findUnique({
+      where: { id: Number(orderId) }
+    });
+
+    if (cryptoOrder) {
+      if (cryptoOrder.buyer_email !== email) {
+        return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
+      }
+
+      // 상품 정보 조회
+      let product = null;
+      if (cryptoOrder.product_id) {
+        product = await prisma.products.findUnique({
+          where: { id: cryptoOrder.product_id },
+          select: { name: true, price: true }
+        });
+      }
+
+      return NextResponse.json({
+        is_crypto: true,
+        order: {
+          ...cryptoOrder,
+          product,
+        }
+      });
     }
 
-    // 주문에 속한 상품들 가져오기
-    const items = await prisma.order_items.findMany({
-      where: { order_id: order.id },
-    });
-
-    return NextResponse.json({
-      order: {
-        ...order,
-        items,
-      },
-    });
+    // 둘 다 없으면 에러
+    return NextResponse.json({ error: "Order not found" }, { status: 404 });
   } catch (err: any) {
     console.error("Order Detail GET API Error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });

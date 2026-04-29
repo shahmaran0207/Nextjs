@@ -92,20 +92,23 @@ async function main() {
   const ganacheArgs = `--chain.chainId CHAIN_ID --server.port PORT --wallet.accounts "${PK},${BAL}"`;
 
   spawnService("Ganache-A", "npx", ["ganache",
-    "--chain.chainId", "1337",
-    "--server.port",  "8545",
+    "--chain.chainId",  "31337",  // EIP-155 서명용 chainId (MetaMask 등록 시 이 값 사용)
+    "--chain.networkId", "31337",  // eth_chainId RPC 응답값과 일치시킴
+    "--server.port",   "8545",
     "--wallet.accounts", `${PK},${BAL}`
   ], ROOT);
 
   spawnService("Ganache-B", "npx", ["ganache",
-    "--chain.chainId", "1338",
-    "--server.port",  "8546",
+    "--chain.chainId",  "31338",
+    "--chain.networkId", "31338",
+    "--server.port",   "8546",
     "--wallet.accounts", `${PK},${BAL}`
   ], ROOT);
 
   spawnService("Ganache-C", "npx", ["ganache",
-    "--chain.chainId", "1339",
-    "--server.port",  "8547",
+    "--chain.chainId",  "31339",
+    "--chain.networkId", "31339",
+    "--server.port",   "8547",
     "--wallet.accounts", `${PK},${BAL}`
   ], ROOT);
 

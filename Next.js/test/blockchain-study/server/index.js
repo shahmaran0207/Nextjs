@@ -53,7 +53,10 @@ app.use(express.json());
 // POST /api/order
 // Body: { amount, tokenSymbol, sellerWallet, productId, buyerEmail }
 app.post("/api/order", async (req, res) => {
-  const { amount, tokenSymbol, sellerWallet, productId, buyerEmail } = req.body;
+  const { 
+    amount, tokenSymbol, sellerWallet, productId, buyerEmail,
+    receiverName, receiverPhone, shippingAddress, shippingMessage
+  } = req.body;
   const orderId = `ORDER-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 
   try {
@@ -66,6 +69,10 @@ app.post("/api/order", async (req, res) => {
         seller_wallet: sellerWallet || null,
         product_id:    productId    || null,
         buyer_email:   buyerEmail   || null,   // 구매자 이메일 (주문내역 연동용)
+        receiver_name:    receiverName    || null,
+        receiver_phone:   receiverPhone   || null,
+        shipping_address: shippingAddress || null,
+        shipping_message: shippingMessage || null,
       },
     });
 
@@ -160,6 +167,24 @@ async function subscribeToChain(chainName, chainInfo) {
     console.log(`   금액:     ${amountEth} ETH`);
     console.log(`   TxHash:   ${txHash}`);
 
+    // 트랜잭션 영수증 조회 (뻔록번호, 실제 가스비, 성공 여부)
+    let receiptData = {};
+    try {
+      const receipt = await provider.getTransactionReceipt(txHash);
+      if (receipt) {
+        const gasCostWei = receipt.gasUsed * receipt.gasPrice;
+        receiptData = {
+          block_number:   receipt.blockNumber,
+          gas_used:       parseFloat(ethers.formatEther(gasCostWei)).toFixed(8),
+          gas_used_units: receipt.gasUsed.toString(),
+          tx_status:      receipt.status ?? 1,
+        };
+        console.log(`   영수증:    block=#${receipt.blockNumber}  gas=${receiptData.gas_used} ETH  status=${receipt.status}`);
+      }
+    } catch (receiptErr) {
+      console.warn(`   영수증 조회 실패: ${receiptErr.message}`);
+    }
+
     try {
       await prisma.crypto_payment_orders.upsert({
         where:  { order_id: orderId },
@@ -172,6 +197,7 @@ async function subscribeToChain(chainName, chainInfo) {
           amount:        amountEth,
           token_symbol:  "ETH",
           paid_at:       new Date(),
+          ...receiptData,
         },
         create: {
           order_id:      orderId,
@@ -183,6 +209,7 @@ async function subscribeToChain(chainName, chainInfo) {
           amount:        amountEth,
           token_symbol:  "ETH",
           paid_at:       new Date(),
+          ...receiptData,
         },
       });
       console.log(`   DB 업데이트 완료 → paid (ETH)`);
@@ -212,6 +239,24 @@ async function subscribeToChain(chainName, chainInfo) {
     console.log(`   금액:     ${amountFormatted} ${tokenSymbol}`);
     console.log(`   TxHash:   ${txHash}`);
 
+    // 트랜잭션 영수증 조회
+    let receiptData = {};
+    try {
+      const receipt = await provider.getTransactionReceipt(txHash);
+      if (receipt) {
+        const gasCostWei = receipt.gasUsed * receipt.gasPrice;
+        receiptData = {
+          block_number:   receipt.blockNumber,
+          gas_used:       parseFloat(ethers.formatEther(gasCostWei)).toFixed(8),
+          gas_used_units: receipt.gasUsed.toString(),
+          tx_status:      receipt.status ?? 1,
+        };
+        console.log(`   영수증:    block=#${receipt.blockNumber}  gas=${receiptData.gas_used} ETH  status=${receipt.status}`);
+      }
+    } catch (receiptErr) {
+      console.warn(`   영수증 조회 실패: ${receiptErr.message}`);
+    }
+
     try {
       await prisma.crypto_payment_orders.upsert({
         where:  { order_id: orderId },
@@ -224,6 +269,7 @@ async function subscribeToChain(chainName, chainInfo) {
           amount:        amountFormatted,
           token_symbol:  tokenSymbol,
           paid_at:       new Date(),
+          ...receiptData,
         },
         create: {
           order_id:      orderId,
@@ -235,6 +281,7 @@ async function subscribeToChain(chainName, chainInfo) {
           amount:        amountFormatted,
           token_symbol:  tokenSymbol,
           paid_at:       new Date(),
+          ...receiptData,
         },
       });
       console.log(`   DB 업데이트 완료 → paid (${tokenSymbol})`);

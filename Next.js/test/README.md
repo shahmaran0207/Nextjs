@@ -1699,4 +1699,133 @@ Ganache를 재시작하면 nonce가 0으로 초기화됩니다.
 
 /wallet-balance 지갑 잔액 조회
   └─ MetaMask 연결 or 주소 입력 → Chain A/B/C × ETH/USDC/DAI 동시 조회
+
+---
+
+### 14.12 UX 개선 — 잔액 자동 감지 & 가스비 예측
+
+#### 배경
+
+`/multi-payment` 페이지는 MetaMask 연결 버튼을 직접 눌러야만 `account` 상태가 세팅되는 구조였습니다.
+`/checkout` → `/multi-payment?sellerId=X&productId=Y` 처럼 다른 페이지에서 파라미터를 들고 넘어올 때
+이미 MetaMask가 연결된 상태임에도 잔액 조회 칸이 보이지 않는 문제가 있었습니다.
+
+#### 14.12.1 ✅ MetaMask 자동 계정 감지
+
+**파일**: `app/multi-payment/page.tsx`
+
+| 항목 | 이전 | 현재 |
+|---|---|---|
+| 계정 세팅 시점 | 연결 버튼 직접 클릭 | 페이지 진입 시 자동 감지 |
+| MetaMask API | `eth_requestAccounts` (팝업 강제) | `eth_accounts` (팝업 없이 조용히 조회) |
+| 계정 변경 반응 | 없음 | `accountsChanged` 이벤트 구독 → 즉시 반영 |
+
+```typescript
+// 페이지 마운트 시 이미 연결된 계정 자동 세팅 (팝업 없음)
+useEffect(() => {
+  if (!(window as any).ethereum) return;
+  (window as any).ethereum
+    .request({ method: 'eth_accounts' })
+    .then((accounts: string[]) => {
+      if (accounts.length > 0) setAccount(accounts[0]);
+    });
+
+  // MetaMask에서 계정 변경 시 즉시 반영
+  const handleAccountsChanged = (accounts: string[]) => {
+    setAccount(accounts.length > 0 ? accounts[0] : null);
+  };
+  (window as any).ethereum.on('accountsChanged', handleAccountsChanged);
+  return () => {
+    (window as any).ethereum.removeListener('accountsChanged', handleAccountsChanged);
+  };
+}, []);
 ```
+
+> **학습 포인트**: `eth_requestAccounts`는 팝업을 띄워 사용자 승인을 요구하지만,
+> `eth_accounts`는 이미 승인된 계정 목록을 조용히 반환합니다. 페이지 진입 자동 감지에는 후자가 적합합니다.
+
+#### 14.12.2 ✅ 잔액 조회 강제 & 초과 입력 결제 차단
+
+잔액을 확인하지 않은 상태에서 무한정 금액을 입력해도 결제가 진행되는 문제를 수정했습니다.
+
+**결제 버튼 비활성화 조건 (3단계)**
+
+| 조건 | 안내 메시지 | 버튼 |
+|---|---|---|
+| MetaMask 미연결 | — | 🔴 비활성 |
+| 연결됐지만 잔액 미조회 | 🔍 노란색 — "잔액 조회를 먼저 해주세요" | 🔴 비활성 |
+| 잔액 초과 입력 | ⚠️ 빨간색 — "잔액(X)을 초과합니다" | 🔴 비활성 |
+| 정상 (잔액 이하 입력) | — | 🟢 활성 |
+
+```typescript
+disabled={
+  !account ||
+  !amount ||
+  !selectedChain ||
+  !selectedToken ||
+  (sellerIdParam ? !sellerWallet : false) ||
+  // 잔액 미조회 시 차단 (account 연결됐으나 balance가 없는 경우)
+  (account !== null && balance === null && !balanceLoading) ||
+  // 잔액 초과 시 차단
+  (balance !== null && parseFloat(amount) > parseFloat(balance))
+}
+```
+
+---
+
+#### 14.12.3 ✅ 가스비 예측 (`estimateGas`)
+
+**파일**: `app/multi-payment/page.tsx`
+
+금액 입력 후 자동으로 예상 트랜잭션 수수료를 계산해 표시합니다.
+
+**동작 원리**
+
+```
+amount 입력
+  └─ 500ms 디바운스 후 자동 실행
+       ├─ gasPrice 조회 (EIP-1559 지원 체인: maxFeePerGas)
+       │                (로컬 Ganache 등: eth_gasPrice 레거시 fallback)
+       ├─ ETH 결제:   pay()        1회 estimateGas
+       └─ ERC-20 결제: approve() + payERC20() 합산 estimateGas
+  └─ 결과: "⛽ 예상 가스비 ≈ 0.00021000 ETH"
+```
+
+**핵심 코드**
+
+```typescript
+const estimateGasForPayment = async () => {
+  const provider = new ethers.BrowserProvider((window as any).ethereum);
+  const signer   = await provider.getSigner();
+
+  // EIP-1559 미지원 체인(Ganache) 대응: 레거시 gasPrice로 fallback
+  let gasPrice: bigint;
+  try {
+    const feeData = await provider.getFeeData();
+    gasPrice = feeData.maxFeePerGas ?? feeData.gasPrice ?? BigInt(0);
+  } catch {
+    const gasPriceHex = await (window as any).ethereum.request({ method: "eth_gasPrice" });
+    gasPrice = BigInt(gasPriceHex);
+  }
+
+  // ETH: pay() 단일 호출
+  // ERC-20: approve() + payERC20() 합산
+  const totalGas    = await contract.functionName.estimateGas(...args);
+  const gasCostWei  = totalGas * gasPrice;
+  const gasCostEth  = ethers.formatEther(gasCostWei);
+  setGasEstimate(parseFloat(gasCostEth).toFixed(8));
+};
+```
+
+**EIP-1559 vs 레거시 gasPrice 비교**
+
+| 항목 | EIP-1559 (이더리움 메인넷/테스트넷) | 레거시 (Ganache, 일부 구형 체인) |
+|---|---|---|
+| 수수료 구조 | `baseFee` + `priorityFee` (2개) | 단일 `gasPrice` |
+| API | `eth_maxFeePerGas`, `eth_maxPriorityFeePerGas` | `eth_gasPrice` |
+| ethers.js | `getFeeData().maxFeePerGas` | `getFeeData().gasPrice` |
+| 미지원 시 에러 | `eth_maxPriorityFeePerGas does not exist` | — |
+
+> **학습 포인트**: `estimateGas()`는 실제로 트랜잭션을 전송하지 않고 EVM을 시뮬레이션해
+> 필요한 가스 양(`gasUnits`)을 반환합니다. 여기에 현재 `gasPrice`를 곱하면 예상 수수료(ETH)가 나옵니다.
+> `gasUnits × gasPrice = 예상 수수료(wei)`.

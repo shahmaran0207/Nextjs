@@ -83,6 +83,7 @@ export default function WalletBalancePage() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [useMetaMask, setUseMetaMask] = useState(true); // 메타마스크 사용 여부
 
   // MetaMask 연결
   const connectMetaMask = async () => {
@@ -96,21 +97,140 @@ export default function WalletBalancePage() {
     }
   };
 
-  // 체인별 잔액 조회
-  const fetchChainBalances = useCallback(async (addr: string): Promise<ChainBalances[]> => {
-    return await Promise.all(
-      CHAINS.map(async (chain) => {
-        const result: ChainBalances = {
-          chainName: chain.name,
-          chainId:   chain.chainId,
-          color:     chain.color,
-          glow:      chain.glow,
-          tokens:    [],
-          loading:   false,
-          error:     null,
-        };
+  // 현재 연결된 체인 ID 확인
+  const getCurrentChainId = async (): Promise<number | null> => {
+    if (!(window as any).ethereum) return null;
+    
+    try {
+      const chainId = await (window as any).ethereum.request({ method: 'eth_chainId' });
+      return parseInt(chainId, 16);
+    } catch {
+      return null;
+    }
+  };
+
+  // 메타마스크 체인 전환
+  const switchToChain = async (chainId: number) => {
+    if (!(window as any).ethereum) return false;
+    
+    // 현재 체인이 이미 목표 체인인지 확인
+    const currentChainId = await getCurrentChainId();
+    if (currentChainId === chainId) {
+      return true; // 이미 해당 체인에 연결됨
+    }
+    
+    try {
+      await (window as any).ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: `0x${chainId.toString(16)}` }],
+      });
+      
+      // 전환 후 실제로 체인이 변경되었는지 확인
+      await new Promise(resolve => setTimeout(resolve, 500)); // 잠시 대기
+      const newChainId = await getCurrentChainId();
+      return newChainId === chainId;
+      
+    } catch (error: any) {
+      console.log(`체인 전환 에러 (${chainId}):`, error);
+      
+      // 체인이 추가되지 않은 경우 추가 시도
+      if (error.code === 4902) {
+        const chain = CHAINS.find(c => c.chainId === chainId);
+        if (!chain) return false;
+        
         try {
-          const provider = new ethers.JsonRpcProvider(chain.rpcUrl);
+          await (window as any).ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: `0x${chainId.toString(16)}`,
+              chainName: chain.name,
+              rpcUrls: [chain.rpcUrl],
+              nativeCurrency: {
+                name: 'Ethereum',
+                symbol: 'ETH',
+                decimals: 18,
+              },
+            }],
+          });
+          
+          // 추가 후 다시 전환 시도
+          await new Promise(resolve => setTimeout(resolve, 500));
+          const newChainId = await getCurrentChainId();
+          return newChainId === chainId;
+          
+        } catch (addError) {
+          console.log(`체인 추가 에러 (${chainId}):`, addError);
+          return false;
+        }
+      }
+      
+      // 사용자가 거부한 경우 (4001) 등
+      if (error.code === 4001) {
+        return false; // 사용자 거부
+      }
+      
+      return false;
+    }
+  };
+
+  // 체인별 잔액 조회 (메타마스크 사용)
+  const fetchChainBalances = useCallback(async (addr: string): Promise<ChainBalances[]> => {
+    const results: ChainBalances[] = [];
+    
+    for (const chain of CHAINS) {
+      const result: ChainBalances = {
+        chainName: chain.name,
+        chainId:   chain.chainId,
+        color:     chain.color,
+        glow:      chain.glow,
+        tokens:    [],
+        loading:   false,
+        error:     null,
+      };
+
+      try {
+        // 메타마스크 사용 옵션이 켜져있고 메타마스크가 있는 경우
+        if (useMetaMask && (window as any).ethereum) {
+          const currentChainId = await getCurrentChainId();
+          
+          // 현재 체인과 다른 경우에만 전환 시도
+          if (currentChainId !== chain.chainId) {
+            const switched = await switchToChain(chain.chainId);
+            if (!switched) {
+              // 체인 전환 실패 시 직접 RPC로 fallback
+              console.log(`체인 전환 실패, RPC로 fallback: ${chain.name}`);
+              const provider = new ethers.JsonRpcProvider(chain.rpcUrl);
+              const tokenBalances = await Promise.all(
+                chain.tokens.map(async (token) => {
+                  try {
+                    let raw: bigint;
+                    if (!token.address) {
+                      raw = await provider.getBalance(addr);
+                    } else {
+                      const contract = new ethers.Contract(token.address, ERC20_ABI, provider);
+                      raw = await contract.balanceOf(addr);
+                    }
+                    const formatted = parseFloat(ethers.formatUnits(raw, token.decimals));
+                    const balance = formatted.toLocaleString("en-US", {
+                      maximumFractionDigits: token.decimals === 6 ? 2 : 4,
+                    });
+                    return { symbol: token.symbol, balance, raw, decimals: token.decimals } as TokenBalance;
+                  } catch {
+                    return { symbol: token.symbol, balance: "—", raw: BigInt(0), decimals: token.decimals } as TokenBalance;
+                  }
+                })
+              );
+              result.tokens = tokenBalances;
+              results.push(result);
+              continue;
+            }
+            
+            // 전환 후 잠시 대기 (안정성을 위해)
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+          
+          // 메타마스크 provider 사용
+          const provider = new ethers.BrowserProvider((window as any).ethereum);
           const tokenBalances = await Promise.all(
             chain.tokens.map(async (token) => {
               try {
@@ -134,13 +254,40 @@ export default function WalletBalancePage() {
             })
           );
           result.tokens = tokenBalances;
-        } catch (e: any) {
-          result.error = "RPC 연결 실패";
+        } else {
+          // 직접 RPC 사용 (빠른 조회)
+          const provider = new ethers.JsonRpcProvider(chain.rpcUrl);
+          const tokenBalances = await Promise.all(
+            chain.tokens.map(async (token) => {
+              try {
+                let raw: bigint;
+                if (!token.address) {
+                  raw = await provider.getBalance(addr);
+                } else {
+                  const contract = new ethers.Contract(token.address, ERC20_ABI, provider);
+                  raw = await contract.balanceOf(addr);
+                }
+                const formatted = parseFloat(ethers.formatUnits(raw, token.decimals));
+                const balance = formatted.toLocaleString("en-US", {
+                  maximumFractionDigits: token.decimals === 6 ? 2 : 4,
+                });
+                return { symbol: token.symbol, balance, raw, decimals: token.decimals } as TokenBalance;
+              } catch {
+                return { symbol: token.symbol, balance: "—", raw: BigInt(0), decimals: token.decimals } as TokenBalance;
+              }
+            })
+          );
+          result.tokens = tokenBalances;
         }
-        return result;
-      })
-    );
-  }, []);
+      } catch (e: any) {
+        result.error = "조회 실패";
+      }
+      
+      results.push(result);
+    }
+    
+    return results;
+  }, [useMetaMask]);
 
   // 조회 실행
   const handleFetch = useCallback(async (addr?: string) => {
@@ -250,6 +397,15 @@ export default function WalletBalancePage() {
               <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "13px", color: "#94a3b8" }}>
                 <input
                   type="checkbox"
+                  checked={useMetaMask}
+                  onChange={e => setUseMetaMask(e.target.checked)}
+                  style={{ accentColor: "#6366f1", width: "15px", height: "15px" }}
+                />
+                🦊 MetaMask 체인 전환 사용 (컨펌 필요)
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "13px", color: "#94a3b8" }}>
+                <input
+                  type="checkbox"
                   checked={autoRefresh}
                   onChange={e => setAutoRefresh(e.target.checked)}
                   style={{ accentColor: "#6366f1", width: "15px", height: "15px" }}
@@ -354,6 +510,10 @@ export default function WalletBalancePage() {
               <div style={{ fontWeight: 600, color: "#64748b" }}>지갑 주소를 입력하거나 MetaMask를 연결하세요</div>
               <div style={{ fontSize: "13px", marginTop: "8px" }}>
                 Chain A / B / C 의 ETH · USDC · DAI 잔액을 한눈에 확인합니다
+              </div>
+              <div style={{ fontSize: "12px", marginTop: "12px", color: "#475569", lineHeight: "1.4" }}>
+                💡 <strong>MetaMask 체인 전환</strong>: 각 체인으로 전환하며 조회 (컨펌 필요)<br/>
+                ⚡ <strong>직접 RPC 조회</strong>: 빠른 조회 (컨펌 불필요)
               </div>
             </div>
           )}
