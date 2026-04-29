@@ -40,7 +40,26 @@ export function NotificationBell() {
     };
     fetchCount();
     const interval = setInterval(fetchCount, 5000);
-    return () => clearInterval(interval);
+
+    // 글로벌 웹소켓 수신 (어느 페이지에 있든 배송 시작 이벤트가 오면 즉시 종 알림 갱신)
+    let ws: WebSocket | null = null;
+    try {
+      ws = new WebSocket("ws://localhost:3001");
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'SHIPPING_UPDATED') {
+            // 이벤트 수신 즉시 언리드 카운트 새로고침!
+            fetchCount();
+          }
+        } catch (e) {}
+      };
+    } catch(e) {}
+
+    return () => {
+      clearInterval(interval);
+      ws?.close();
+    };
   }, []);
 
   // 드롭다운 열 때 알림 목록 불러오기

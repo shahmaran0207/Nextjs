@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
     const dbUser = await prisma.users.findUnique({
         where: { id: Number(payload.id) },
-        select: { name: true, naver_id: true, points: true },
+        select: { name: true, naver_id: true, points: true, wallet_address: true },
     });
 
     return new Response(
@@ -31,6 +31,7 @@ export async function GET(request: Request) {
             name: dbUser?.name ?? null,
             naver_id: dbUser?.naver_id ?? null,
             points: dbUser?.points ?? 0,
+            wallet_address: dbUser?.wallet_address ?? null,
         }),
         {
             headers: { "Content-Type": "application/json" },

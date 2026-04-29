@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import styles from './DeliveryTelemetryPanel.module.css';
 
 interface DeliveryStop {
@@ -20,6 +20,32 @@ export default function DeliveryTelemetryPanel({
   trackingNumber = 'UNKNOWN',
   shippingAddress = '목적지 미상',
 }: DeliveryTelemetryPanelProps) {
+
+  const releasedRef = useRef(false);
+
+  // 배송 완료(progress >= 1.0) 시 오라클 API 찌르기
+  useEffect(() => {
+    if (progress >= 1.0 && !releasedRef.current && trackingNumber && trackingNumber !== 'UNKNOWN') {
+      releasedRef.current = true;
+      
+      console.log(`[Oracle] 배송 완료 감지. 에스크로 자금 해제 요청 (${trackingNumber})...`);
+      
+      fetch('/api/crypto/release', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: trackingNumber })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          console.log(`✅ [Oracle] 스마트 컨트랙트 에스크로 대금 지급 완료! TxHash: ${data.txHash}`);
+        } else {
+          console.error(`❌ [Oracle] 에스크로 대금 지급 실패:`, data.error);
+        }
+      })
+      .catch(err => console.error("오라클 호출 오류:", err));
+    }
+  }, [progress, trackingNumber]);
 
   // 가상의 배송지 목록 (마지막이 실제 목적지)
   const stops: DeliveryStop[] = useMemo(() => [

@@ -149,11 +149,23 @@ export default function OrdersPage() {
         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
           <span style={{
             fontSize: "11px", fontWeight: 700, padding: "3px 8px", borderRadius: "20px",
-            background: order.status === "paid" ? "rgba(16,185,129,0.15)" : "rgba(99,102,241,0.15)",
-            color: order.status === "paid" ? "#10b981" : "#a5b4fc",
-            border: `1px solid ${order.status === "paid" ? "rgba(16,185,129,0.4)" : "rgba(99,102,241,0.4)"}`,
+            background: order.status === "pending" ? "rgba(99,102,241,0.15)" : 
+                        order.status === "paid" ? "rgba(16,185,129,0.15)" :
+                        order.status === "escrow_locked" ? "rgba(245,158,11,0.15)" :
+                        order.status === "released" ? "rgba(59,130,246,0.15)" : "rgba(255,255,255,0.1)",
+            color: order.status === "pending" ? "#a5b4fc" : 
+                   order.status === "paid" ? "#10b981" :
+                   order.status === "escrow_locked" ? "#f59e0b" :
+                   order.status === "released" ? "#3b82f6" : "#fff",
+            border: `1px solid ${order.status === "pending" ? "rgba(99,102,241,0.4)" : 
+                   order.status === "paid" ? "rgba(16,185,129,0.4)" :
+                   order.status === "escrow_locked" ? "rgba(245,158,11,0.4)" :
+                   order.status === "released" ? "rgba(59,130,246,0.4)" : "rgba(255,255,255,0.2)"}`,
           }}>
-            {order.status === "paid" ? "✅ 결제 완료" : "⏳ 처리 중"}
+            {order.status === "pending" ? "⏳ 결제 대기" :
+             order.status === "paid" ? "✅ 결제 완료" : 
+             order.status === "escrow_locked" ? "🔒 에스크로 보관 중" :
+             order.status === "released" ? "💸 정산 완료" : "알 수 없음"}
           </span>
           <span style={{ fontSize: "12px", color: "#64748b", fontFamily: "monospace" }}>{order.order_id}</span>
         </div>

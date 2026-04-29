@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuthGuard } from "@/app/hooks/useAuthGuard";
 import "../Shopping/shopping.css";
 import axios from "axios";
@@ -34,6 +34,7 @@ export default function CheckoutPage() {
   const [mapCoupons, setMapCoupons] = useState<any[]>([]); // 지도에서 획득한 쿠폰
   const [selectedCouponId, setSelectedCouponId] = useState<string | null>(null); // "db-{id}" | "map-{id}"
   const [couponDiscount, setCouponDiscount] = useState<number>(0);
+  const [addressSuccessMessage, setAddressSuccessMessage] = useState<string>("");
 
   // 배송지 폼 상태
   const [receiverName, setReceiverName] = useState(name || "");
@@ -45,6 +46,8 @@ export default function CheckoutPage() {
 
   // 우편번호 모달 상태
   const [isPostcodeOpen, setIsPostcodeOpen] = useState(false);
+  const [isPostcodeLoading, setIsPostcodeLoading] = useState(false);
+  const [postcodeKey, setPostcodeKey] = useState(0); // 컴포넌트 강제 재렌더링용
 
   useEffect(() => {
     const storedItems = sessionStorage.getItem("checkout_items");
@@ -148,24 +151,106 @@ export default function CheckoutPage() {
     setUsePoints(Math.min(availablePoints, totalPrice + shippingFee - couponDiscount));
   };
 
-  const handleCompletePostcode = (data: any) => {
-    let fullAddress = data.address;
-    let extraAddress = '';
+  const handleCompletePostcode = useCallback((data: any) => {
+    try {
+      console.log("DaumPostcode 완료 이벤트:", data);
+      
+      // 데이터 유효성 검사 - 더 엄격하게
+      if (!data) {
+        console.error("데이터가 없습니다");
+        return;
+      }
 
-    if (data.addressType === 'R') {
-      if (data.bname !== '') {
-        extraAddress += data.bname;
+      // 주소 데이터가 완전한지 확인
+      const hasValidAddress = data.address || data.roadAddress || data.jibunAddress;
+      const hasZonecode = data.zonecode;
+      
+      if (!hasValidAddress || !hasZonecode) {
+        console.log("불완전한 데이터, 계속 진행:", data);
+        return; // 불완전한 데이터면 아무것도 하지 않음 (사용자가 계속 선택할 수 있도록)
       }
-      if (data.buildingName !== '') {
-        extraAddress += (extraAddress !== '' ? `, ${data.buildingName}` : data.buildingName);
+
+      // 완전한 주소 데이터가 있을 때만 처리
+      console.log("완전한 주소 데이터 감지, 처리 시작");
+
+      // 도로명 주소 우선, 없으면 지번 주소 사용
+      let fullAddress = data.roadAddress || data.jibunAddress || data.address || "";
+      let extraAddress = '';
+
+      // 도로명 주소인 경우 추가 정보 처리
+      if (data.addressType === 'R') {
+        if (data.bname && data.bname !== '') {
+          extraAddress += data.bname;
+        }
+        if (data.buildingName && data.buildingName !== '') {
+          extraAddress += (extraAddress !== '' ? `, ${data.buildingName}` : data.buildingName);
+        }
+        if (extraAddress !== '') {
+          fullAddress += ` (${extraAddress})`;
+        }
       }
-      fullAddress += (extraAddress !== '' ? ` (${extraAddress})` : '');
+
+      console.log("처리된 주소 정보:", {
+        zonecode: data.zonecode,
+        address: fullAddress,
+        addressType: data.addressType
+      });
+
+      // 즉시 상태 업데이트
+      setZipcode(data.zonecode || "");
+      setAddress(fullAddress);
+      
+      // 성공 메시지 표시
+      setAddressSuccessMessage("✅ 주소가 성공적으로 입력되었습니다!");
+      
+      // 강제로 모달 닫기 - 즉시 실행
+      setIsPostcodeOpen(false);
+      setIsPostcodeLoading(false);
+      setPostcodeKey(prev => prev + 1); // 컴포넌트 강제 재렌더링
+      
+      // DOM에서 완전히 제거하기 위한 추가 처리
+      setTimeout(() => {
+        const postcodeWrapper = document.querySelector('.postcode-wrapper');
+        if (postcodeWrapper) {
+          postcodeWrapper.remove();
+        }
+      }, 50);
+      
+      // 성공 메시지 자동 제거
+      setTimeout(() => setAddressSuccessMessage(""), 3000);
+      
+      // 상세주소 입력 필드에 포커스
+      setTimeout(() => {
+        const detailInput = document.querySelector('input[placeholder="상세 주소를 입력해주세요"]') as HTMLInputElement;
+        if (detailInput) {
+          detailInput.focus();
+          detailInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+      
+    } catch (err) {
+      console.error("주소 처리 중 오류:", err);
+      alert("주소 처리 중 오류가 발생했습니다. 다시 시도해주세요.");
+      setIsPostcodeOpen(false);
+      setIsPostcodeLoading(false);
     }
+  }, []);
 
-    setZipcode(data.zonecode);
-    setAddress(fullAddress);
+  const handleOpenPostcode = useCallback(() => {
+    setIsPostcodeLoading(true);
+    setPostcodeKey(prev => prev + 1); // 새로운 컴포넌트 인스턴스 생성
+    setIsPostcodeOpen(true);
+    // 로딩 상태를 잠시 후 해제 (Daum 우편번호 서비스 로딩 시간 고려)
+    setTimeout(() => {
+      setIsPostcodeLoading(false);
+    }, 1000);
+  }, []);
+
+  const handleClosePostcode = useCallback(() => {
     setIsPostcodeOpen(false);
-  };
+    setIsPostcodeLoading(false);
+    setPostcodeKey(prev => prev + 1); // 컴포넌트 완전 초기화
+  }, []);
 
   // 암호화폐 결제 처리
   const handleCryptoPayment = () => {
@@ -371,6 +456,13 @@ export default function CheckoutPage() {
               </div>
               <div className="flex-col gap-6px">
                 <label className="text-13 text-muted">주소 <span className="text-red">*</span></label>
+                <div style={{ fontSize: '12px', color: '#545874', marginBottom: '8px' }}>
+                  💡 <strong>주소 검색 방법:</strong> 
+                  <br />1. "우편번호 찾기" 버튼 클릭
+                  <br />2. 검색창에 "부산 해운대구" 등 <span style={{ color: '#38bdf8' }}>구체적인 지역명</span> 입력 
+                  <br />3. <span style={{ color: '#ef4444', fontWeight: 'bold' }}>엔터를 누르지 말고</span> 나타나는 주소 목록에서 <span style={{ color: '#10b981', fontWeight: 'bold' }}>정확한 주소를 클릭</span>하세요
+                  <br />4. 주소가 자동으로 입력되면 상세주소를 추가로 입력하세요
+                </div>
                 <div className="flex-row gap-8px">
                   <input
                     type="text"
@@ -381,22 +473,68 @@ export default function CheckoutPage() {
                   />
                   <button
                     type="button"
-                    onClick={() => setIsPostcodeOpen(true)}
+                    onClick={handleOpenPostcode}
                     className="btn-outline-secondary"
+                    disabled={isPostcodeLoading}
                   >
-                    우편번호 찾기
+                    {isPostcodeLoading ? "로딩중..." : "우편번호 찾기"}
                   </button>
                 </div>
                 {isPostcodeOpen && (
                   <div className="postcode-wrapper">
                     <button
                       type="button"
-                      onClick={() => setIsPostcodeOpen(false)}
+                      onClick={handleClosePostcode}
                       className="postcode-close-btn"
                     >
                       닫기 ✕
                     </button>
-                    <DaumPostcodeEmbed onComplete={handleCompletePostcode} className="h-400" />
+                    {isPostcodeLoading ? (
+                      <div style={{ 
+                        height: '400px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        background: '#1a1d27'
+                      }}>
+                        <div style={{ textAlign: 'center', color: '#8b90a7' }}>
+                          <div className="spinner" style={{ margin: '0 auto 12px' }}></div>
+                          <div>주소 검색 서비스를 불러오는 중...</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <DaumPostcodeEmbed 
+                        key={`postcode-${postcodeKey}`}
+                        onComplete={handleCompletePostcode}
+                        onClose={handleClosePostcode}
+                        autoClose={true}
+                        defaultQuery=""
+                        animation={false}
+                        useBannerLink={false}
+                        hideMapBtn={true}
+                        hideEngBtn={true}
+                        alwaysShowEngAddr={false}
+                        style={{ 
+                          width: '100%', 
+                          height: '400px',
+                          border: 'none'
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
+                {addressSuccessMessage && (
+                  <div style={{
+                    marginTop: '8px',
+                    padding: '8px 12px',
+                    background: 'rgba(16,185,129,0.1)',
+                    border: '1px solid rgba(16,185,129,0.3)',
+                    borderRadius: '6px',
+                    color: '#10b981',
+                    fontSize: '13px',
+                    fontWeight: '600'
+                  }}>
+                    {addressSuccessMessage}
                   </div>
                 )}
                 <input
@@ -405,6 +543,10 @@ export default function CheckoutPage() {
                   readOnly
                   className="search-input mt-4px"
                   placeholder="기본 주소"
+                  style={{
+                    borderColor: address ? '#10b981' : '#2e3247',
+                    background: address ? 'rgba(16,185,129,0.05)' : 'rgba(10, 14, 26, 0.6)'
+                  }}
                 />
                 <input
                   type="text"
@@ -412,6 +554,9 @@ export default function CheckoutPage() {
                   onChange={e => setAddressDetail(e.target.value)}
                   className="search-input mt-4px"
                   placeholder="상세 주소를 입력해주세요"
+                  style={{
+                    borderColor: addressDetail ? '#10b981' : '#2e3247'
+                  }}
                 />
               </div>
 

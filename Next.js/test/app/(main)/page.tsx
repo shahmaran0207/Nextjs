@@ -68,10 +68,19 @@ export default function Page() {
           });
           if (response.ok) {
             const data = await response.json();
+            const newNavItems = [...baseNavItems];
+
             // 네이버 ID가 없으면 네이버 계정 연동 메뉴 추가
             if (!data.naver_id) {
-              setNavItems([...baseNavItems, naverLinkItem]);
+              newNavItems.push({ href: "/settings", label: "네이버 계정 연동", icon: "🍀", desc: "NAVER" });
             }
+
+            // 지갑 주소가 없으면 Web3 지갑 연동 메뉴 추가
+            if (!data.wallet_address) {
+              newNavItems.push({ href: "/settings/web3", label: "MetaMask 지갑 연동", icon: "🦊", desc: "WEB3" });
+            }
+
+            setNavItems(newNavItems);
           }
         } catch (error) {
           console.error("사용자 정보 확인 실패:", error);

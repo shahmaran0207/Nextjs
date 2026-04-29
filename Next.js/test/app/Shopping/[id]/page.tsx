@@ -73,11 +73,6 @@ export default function ProductDetailPage() {
   const [hasBoughtThis, setHasBoughtThis] = useState(false);
   const [recommendMessage, setRecommendMessage] = useState<string | null>(null);
 
-  // Flash Mob (웹소켓) 상태
-  const [ws, setWs] = useState<WebSocket | null>(null);
-  const [participantCount, setParticipantCount] = useState(0);
-  const targetParticipants = 50;
-  const [flashMobSuccess, setFlashMobSuccess] = useState(false);
 
   // 리뷰 페이지네이션
   const [reviewPage, setReviewPage] = useState(1);
@@ -212,52 +207,7 @@ export default function ProductDetailPage() {
     if (id) checkCanReview();
   }, [email, id]);
 
-  useEffect(() => {
-    if (!id) return;
-    const socket = new WebSocket('ws://localhost:3000');
 
-    socket.onopen = () => {
-      console.log('[WS] Connected to Flash Mob Server');
-      socket.send(JSON.stringify({ type: 'join', productId: id }));
-      setWs(socket);
-    };
-
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'updateCount') {
-        setParticipantCount(data.count);
-      } else if (data.type === 'flashMobSuccess') {
-        setFlashMobSuccess(true);
-        triggerConfetti();
-        // 쿠폰 발급 알림은 1번만 띄우기 위해 약간 딜레이 (UI 렌더링 후)
-        setTimeout(() => alert('🎉 Flash Mob 목표 인원 달성!\n접속하신 모든 분들께 50% 특별 할인 쿠폰이 발급되었습니다!'), 500);
-      }
-    };
-
-    socket.onclose = () => {
-      console.log('[WS] Disconnected');
-    };
-
-    return () => {
-      socket.close();
-    };
-  }, [id]);
-
-  const triggerConfetti = () => {
-    import('canvas-confetti').then((module) => {
-      const confetti = module.default;
-      const duration = 3 * 1000;
-      const animationEnd = Date.now() + duration;
-      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1000 };
-
-      const interval: any = setInterval(function () {
-        const timeLeft = animationEnd - Date.now();
-        if (timeLeft <= 0) return clearInterval(interval);
-        const particleCount = 50 * (timeLeft / duration);
-        confetti(Object.assign({}, defaults, { particleCount, origin: { x: Math.random(), y: Math.random() - 0.2 } }));
-      }, 250);
-    });
-  };
 
   const checkOrderHistory = async () => {
     if (!email || !product) return;
@@ -623,25 +573,6 @@ export default function ProductDetailPage() {
                 {/* 결제 패널 */}
                 <div className="card-container shop-surface border-default product-side-panel" style={{ filter: isZenMode ? "grayscale(100%)" : "none", transition: "all 0.3s" }}>
 
-                  {/* 플래시몹 진행 상황 바 */}
-                  {!isZenMode && (
-                    <div className="flashmob-box">
-                      <div className="flex-justify-between mb-xs">
-                        <span className="text-14-bold flashmob-title">🔥 Flash Mob 공동구매</span>
-                        <span className="text-13-mono text-accent">{participantCount} / {targetParticipants} 명</span>
-                      </div>
-                      <div className="progress-track">
-                        <div className="progress-fill" style={{
-                          width: `${Math.min(100, (participantCount / targetParticipants) * 100)}%`
-                        }} />
-                      </div>
-                      <p className={`flashmob-msg ${flashMobSuccess ? 'flashmob-msg--success' : 'flashmob-msg--default'}`}>
-                        {flashMobSuccess
-                          ? "🎉 목표 인원 달성 완료! 지금 결제하시면 결제 금액의 50%가 포인트로 즉시 페이백됩니다!"
-                          : `💡 먼저 결제하셔도 손해 없습니다! ${targetParticipants}명 달성 시, 이미 결제하신 분들을 포함해 참여자 전원에게 결제 금액의 50%를 포인트로 환급(페이백) 해드립니다.`}
-                      </p>
-                    </div>
-                  )}
 
                   <h3 className="panel-title text-primary mt-sm">결제 정보</h3>
                   <div className="panel-content">

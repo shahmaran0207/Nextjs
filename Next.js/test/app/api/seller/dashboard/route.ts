@@ -16,7 +16,7 @@ export async function GET(req: Request) {
     // 판매자의 상품 조회
     const myProducts = await prisma.products.findMany({
       where: { seller_id: user.id },
-      select: { id: true, name: true }
+      select: { id: true, name: true, price: true }
     });
 
     const productIds = myProducts.map(p => Number(p.id));
@@ -35,6 +35,14 @@ export async function GET(req: Request) {
         product_id: { in: productIds },
         created_at: { gte: sixMonthsAgo },
         item_status: { not: "CANCELLED" }
+      }
+    });
+
+    const cryptoOrders = await prisma.crypto_payment_orders.findMany({
+      where: {
+        product_id: { in: productIds },
+        created_at: { gte: sixMonthsAgo },
+        status: { not: "pending" }
       }
     });
 
@@ -64,6 +72,23 @@ export async function GET(req: Request) {
         
         if (productData[monthStr][item.product_name] !== undefined) {
           productData[monthStr][item.product_name] += Number(item.quantity);
+        }
+      }
+    });
+
+    cryptoOrders.forEach(co => {
+      const d = new Date(co.created_at);
+      const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (monthlyData[monthStr]) {
+        const prod = myProducts.find(p => Number(p.id) === Number(co.product_id));
+        const price = prod ? Number(prod.price) : 0;
+        const prodName = prod?.name || "상품";
+        
+        monthlyData[monthStr].amount += price;
+        
+        if (productData[monthStr][prodName] !== undefined) {
+          productData[monthStr][prodName] += 1;
         }
       }
     });

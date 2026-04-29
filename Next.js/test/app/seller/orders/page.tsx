@@ -7,7 +7,7 @@ import "../../Shopping/shopping.css";
 import { PageHeader } from "@/component/PageHeader";
 
 interface SellerOrderItem {
-  id: number;
+  id: number | string;
   order_id: number;
   product_id: number;
   product_name: string;
@@ -33,14 +33,30 @@ export default function SellerOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 검색/필터 상태
+  const today = new Date();
+  const weekAgo = new Date();
+  weekAgo.setDate(today.getDate() - 7);
+  
+  const [searchKw, setSearchKw] = useState("");
+  const [startDate, setStartDate] = useState(weekAgo.toISOString().split("T")[0]);
+  const [endDate, setEndDate] = useState(today.toISOString().split("T")[0]);
+  const [statusFilter, setStatusFilter] = useState("");
+
   // 로컬 인풋 상태 (order_item_id -> 입력된 송장번호)
-  const [trackingInputs, setTrackingInputs] = useState<Record<number, string>>({});
+  const [trackingInputs, setTrackingInputs] = useState<Record<string | number, string>>({});
 
   const fetchOrders = async () => {
     if (!role) return;
     try {
       setLoading(true);
-      const res = await fetch("/api/seller/orders");
+      const query = new URLSearchParams();
+      if (searchKw) query.append("search", searchKw);
+      if (startDate) query.append("startDate", startDate);
+      if (endDate) query.append("endDate", endDate);
+      if (statusFilter) query.append("status", statusFilter);
+
+      const res = await fetch(`/api/seller/orders?${query.toString()}`);
       if (!res.ok) throw new Error("주문 내역을 불러오지 못했습니다.");
       const data = await res.json();
       setItems(data.items || []);
@@ -60,7 +76,7 @@ export default function SellerOrdersPage() {
     fetchOrders();
   }, [role, router]);
 
-  const handleTrackingSubmit = async (orderItemId: number) => {
+  const handleTrackingSubmit = async (orderItemId: number | string) => {
     const tracking_number = trackingInputs[orderItemId];
     if (!tracking_number || tracking_number.trim() === "") {
       alert("운송장 번호를 입력해주세요.");
@@ -81,18 +97,14 @@ export default function SellerOrdersPage() {
 
       alert("운송장 번호가 등록되어 배송중 처리되었습니다.");
 
-      // Update local state
-      setItems(prev => prev.map(item =>
-        item.id === orderItemId
-          ? { ...item, tracking_number, item_status: "SHIPPING" }
-          : item
-      ));
+      // 조건 그대로 데이터만 다시 조회
+      fetchOrders();
     } catch (err: any) {
       alert(err.message);
     }
   };
 
-  const handleReturnApprove = async (orderItemId: number) => {
+  const handleReturnApprove = async (orderItemId: number | string) => {
     if (!confirm("반품을 승인하고 환불 처리를 진행하시겠습니까? (재고가 복구됩니다)")) return;
     try {
       const res = await fetch("/api/seller/orders/return", {
@@ -145,6 +157,37 @@ export default function SellerOrdersPage() {
                 <div className="text-11 text-muted mt-2px">총 접수 건</div>
               </div>
             )}
+          </div>
+
+          {/* 검색 및 필터 패널 */}
+          <div className="card-container shop-surface border-default p-md mb-1rem flex-row gap-md items-end" style={{ flexWrap: "wrap" }}>
+            <div className="flex-col gap-xs flex-1" style={{ minWidth: "200px" }}>
+              <label className="text-12 text-muted">상품명 검색</label>
+              <input type="text" className="input-field" value={searchKw} onChange={e => setSearchKw(e.target.value)} placeholder="상품명을 입력하세요" onKeyDown={(e) => e.key === 'Enter' && fetchOrders()} />
+            </div>
+            <div className="flex-col gap-xs">
+              <label className="text-12 text-muted">주문일 (시작)</label>
+              <input type="date" className="input-field" value={startDate} onChange={e => setStartDate(e.target.value)} />
+            </div>
+            <div className="flex-col gap-xs">
+              <label className="text-12 text-muted">주문일 (종료)</label>
+              <input type="date" className="input-field" value={endDate} onChange={e => setEndDate(e.target.value)} />
+            </div>
+            <div className="flex-col gap-xs">
+              <label className="text-12 text-muted">주문 상태</label>
+              <select className="input-field" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                <option value="">전체 상태</option>
+                <option value="PAID">결제완료</option>
+                <option value="SHIPPING">배송중</option>
+                <option value="DELIVERED">배송완료</option>
+                <option value="RETURN_REQUEST">반품 요청</option>
+                <option value="RETURN_COMPLETED">반품 완료</option>
+                <option value="CANCELLED">취소됨</option>
+              </select>
+            </div>
+            <button className="btn-primary" style={{ padding: "0 24px", height: "40px" }} onClick={fetchOrders}>
+              조회
+            </button>
           </div>
 
           {loading && (

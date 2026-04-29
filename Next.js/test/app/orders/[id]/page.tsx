@@ -52,6 +52,7 @@ interface CryptoOrderDetail {
   gas_used: string | null;
   gas_used_units: string | null;
   tx_status: number | null;
+  tracking_number: string | null;
   product?: {
     name: string;
     price: number;
@@ -88,6 +89,30 @@ export default function OrderDetailPage() {
     if (email && id) fetchOrderDetail();
   }, [email, id]);
 
+  // 실시간 배송(운송장) 업데이트 웹소켓 리스너
+  useEffect(() => {
+    let ws: WebSocket | null = null;
+    if (order) {
+      ws = new WebSocket("ws://localhost:3001");
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'SHIPPING_UPDATED') {
+            const isMatch = isCrypto 
+              ? (order as CryptoOrderDetail).order_id === data.orderId 
+              : String(id) === data.orderId;
+              
+            if (isMatch) {
+              alert(`운송장 번호(${data.trackingNumber})가 등록되어 배송이 시작되었습니다!`);
+              window.location.reload();
+            }
+          }
+        } catch (err) {}
+      };
+    }
+    return () => ws?.close();
+  }, [order, id, isCrypto]);
+
   const updateOrderStatus = async (action: "CANCEL" | "CONFIRM" | "RETURN_REQUEST") => {
     const actionText = action === "CANCEL" ? "주문을 취소" : action === "RETURN_REQUEST" ? "반품 요청" : "구매를 확정";
     if (!confirm(`정말 이 ${actionText}하시겠습니까?`)) return;
@@ -114,6 +139,27 @@ export default function OrderDetailPage() {
         setOrder(data.order);
       } else {
         alert(data.error || "상태 변경에 실패했습니다.");
+      }
+    } catch (err) {
+      alert("오류가 발생했습니다.");
+    }
+  };
+
+  const releaseCryptoEscrow = async () => {
+    if (!confirm("상품을 수령하셨습니까? 구매 확정 시 판매자에게 에스크로 대금이 지급됩니다.")) return;
+    try {
+      const cryptoOrder = order as CryptoOrderDetail;
+      const res = await fetch("http://localhost:3001/api/crypto/release", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: cryptoOrder.order_id })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert(`구매가 확정되었습니다. (TxHash: ${data.txHash})`);
+        window.location.reload();
+      } else {
+        alert(data.error || "자금 해제에 실패했습니다.");
       }
     } catch (err) {
       alert("오류가 발생했습니다.");
@@ -166,16 +212,50 @@ export default function OrderDetailPage() {
                 </div>
                 <div className="text-right">
                   <div className="text-13-mono text-muted mb-1">현재 상태</div>
-                  <span className={`status-badge p-sm text-16 ${cryptoOrder.status === 'paid' ? 'active' : ''}`}
-                        style={{ 
-                          background: cryptoOrder.status === "paid" ? "rgba(16,185,129,0.15)" : "rgba(99,102,241,0.15)",
-                          color: cryptoOrder.status === "paid" ? "#10b981" : "#a5b4fc",
-                          border: `1px solid ${cryptoOrder.status === "paid" ? "rgba(16,185,129,0.4)" : "rgba(99,102,241,0.4)"}`
-                        }}>
-                    {cryptoOrder.status === 'paid' ? '✅ 결제 완료' : '⏳ 처리 중'}
-                  </span>
+                  {(() => {
+                    let text = '⏳ 처리 중';
+                    let bg = 'rgba(99,102,241,0.15)';
+                    let color = '#a5b4fc';
+                    let border = 'rgba(99,102,241,0.4)';
+
+                    if (cryptoOrder.status === 'paid') {
+                      text = '✅ 결제 완료';
+                      bg = 'rgba(16,185,129,0.15)';
+                      color = '#10b981';
+                      border = 'rgba(16,185,129,0.4)';
+                    } else if (cryptoOrder.status === 'escrow_locked') {
+                      text = '🔒 에스크로 보관 중';
+                      bg = 'rgba(245,158,11,0.15)';
+                      color = '#f59e0b';
+                      border = 'rgba(245,158,11,0.4)';
+                    } else if (cryptoOrder.status === 'released') {
+                      text = '💸 정산 완료';
+                      bg = 'rgba(59,130,246,0.15)';
+                      color = '#3b82f6';
+                      border = 'rgba(59,130,246,0.4)';
+                    }
+
+                    return (
+                      <span className={`status-badge p-sm text-16 ${cryptoOrder.status !== 'pending' ? 'active' : ''}`}
+                            style={{ background: bg, color, border: `1px solid ${border}` }}>
+                        {text}
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
+
+              {cryptoOrder.status === 'escrow_locked' && cryptoOrder.tracking_number ? (
+                <div className="flex-justify-end gap-xs border-top-default pt-md mt-sm">
+                  <button onClick={releaseCryptoEscrow} className="btn-success">
+                    상품 수령 (구매 확정)
+                  </button>
+                </div>
+              ) : cryptoOrder.status === 'escrow_locked' && !cryptoOrder.tracking_number ? (
+                <div className="flex-justify-end gap-xs border-top-default pt-md mt-sm">
+                  <div className="text-13 text-muted">판매자의 발송(운송장 등록)을 기다리고 있습니다.</div>
+                </div>
+              ) : null}
               
               <div className="border-top-default pt-md mt-sm flex-col gap-sm">
                 <div className="flex-row-center">
@@ -291,6 +371,12 @@ export default function OrderDetailPage() {
                   <div className="text-13 text-muted w-200 flex-none">배송 요청사항</div>
                   <div className="text-14 text-primary">{cryptoOrder.shipping_message || "-"}</div>
                 </div>
+                {cryptoOrder.tracking_number && (
+                  <div className="flex-row-center">
+                    <div className="text-13 text-muted w-200 flex-none">운송장 번호</div>
+                    <div className="text-14-bold text-accent">{cryptoOrder.tracking_number}</div>
+                  </div>
+                )}
               </div>
             </div>
 

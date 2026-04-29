@@ -1,5 +1,5 @@
 {
-  "deployedAt": "2026-04-29T01:27:22.700Z",
+  "deployedAt": "2026-04-29T05:52:26.883Z",
   "paymentReceiverAbi": [
     {
       "inputs": [],
@@ -9,6 +9,12 @@
     {
       "anonymous": false,
       "inputs": [
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "orderId",
+          "type": "string"
+        },
         {
           "indexed": true,
           "internalType": "address",
@@ -20,12 +26,6 @@
           "internalType": "address",
           "name": "recipient",
           "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "string",
-          "name": "orderId",
-          "type": "string"
         },
         {
           "indexed": false,
@@ -40,24 +40,12 @@
           "type": "uint256"
         }
       ],
-      "name": "ERC20PaymentReceived",
+      "name": "FundsLocked",
       "type": "event"
     },
     {
       "anonymous": false,
       "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "payer",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
         {
           "indexed": false,
           "internalType": "string",
@@ -69,10 +57,55 @@
           "internalType": "address",
           "name": "recipient",
           "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
         }
       ],
-      "name": "PaymentReceived",
+      "name": "FundsReleased",
       "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "name": "escrows",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "payer",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "recipient",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "tokenAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "enum PaymentReceiver.EscrowStatus",
+          "name": "status",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
     },
     {
       "inputs": [],
@@ -108,7 +141,7 @@
           "type": "string"
         },
         {
-          "internalType": "address payable",
+          "internalType": "address",
           "name": "recipient",
           "type": "address"
         }
@@ -126,7 +159,7 @@
           "type": "string"
         },
         {
-          "internalType": "address payable",
+          "internalType": "address",
           "name": "recipient",
           "type": "address"
         },
@@ -142,6 +175,19 @@
         }
       ],
       "name": "payERC20",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "orderId",
+          "type": "string"
+        }
+      ],
+      "name": "releaseFunds",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

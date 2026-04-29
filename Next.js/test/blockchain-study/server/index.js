@@ -28,6 +28,8 @@ const cors       = require("cors");
 const { ethers } = require("ethers");
 const fs         = require("fs");
 const path       = require("path");
+const bodyParser = require("body-parser");
+const WebSocket = require("ws");
 
 const { PrismaClient } = require("../../app/generated/prisma");
 const prisma = new PrismaClient();
@@ -46,6 +48,7 @@ const PORT = 3001;
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(bodyParser.json());
 
 // ── REST API ─────────────────────────────────────────────────────
 
@@ -105,8 +108,6 @@ app.get("/api/order/:orderId", async (req, res) => {
       chainName:   order.chain_name,
       payer:       order.payer,
       txHash:      order.tx_hash,
-      paidAt:      order.paid_at,
-      createdAt:   order.created_at,
     });
   } catch (err) {
     console.error("주문 조회 실패:", err.message);
@@ -114,15 +115,16 @@ app.get("/api/order/:orderId", async (req, res) => {
   }
 });
 
-// 체인 + 토큰 설정 제공 (프론트엔드가 이 API로 주소를 받아감)
+// 체인 설정 정보 제공 (프론트엔드 연동용)
 // GET /api/crypto/chains
 app.get("/api/crypto/chains", (req, res) => {
-  const chains = Object.entries(deployed.chains).map(([name, info]) => ({
-    name,
-    chainId:         info.chainId,
-    rpcUrl:          info.rpcUrl,
-    paymentReceiver: info.paymentReceiver,
-    tokens: Object.values(info.tokens),
+  // 배포된 체인 정보 반환
+  const chains = Object.entries(deployed.chains).map(([name, c]) => ({
+    name: name,
+    chainId: c.chainId,
+    rpcUrl: c.rpcUrl,
+    paymentReceiver: c.paymentReceiver,
+    tokens: c.tokens,
   }));
   res.json({ chains });
 });
@@ -131,6 +133,59 @@ app.get("/api/crypto/chains", (req, res) => {
 // GET /api/health
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, port: PORT, chains: Object.keys(deployed.chains) });
+});
+// 자금 해제 (Release) API (오라클 역할)
+// POST /api/crypto/release
+// Body: { orderId }
+app.post("/api/crypto/release", async (req, res) => {
+  const { orderId } = req.body;
+  if (!orderId) return res.status(400).json({ error: "orderId required" });
+
+  try {
+    const order = await prisma.crypto_payment_orders.findUnique({
+      where: { order_id: orderId }
+    });
+
+    if (!order) return res.status(404).json({ error: "주문 없음" });
+    if (order.status !== "escrow_locked") {
+      return res.status(400).json({ error: `현재 상태(${order.status})에서는 자금을 해제할 수 없습니다.` });
+    }
+
+    const chainName = order.chain_name;
+    const chainInfo = deployed.chains[chainName];
+    if (!chainInfo) return res.status(500).json({ error: "체인 정보 찾을 수 없음" });
+
+    // 관리자(Owner) 지갑 연동
+    const provider = new ethers.JsonRpcProvider(chainInfo.rpcUrl);
+    // [경고] 로컬 테스트 환경이므로 하드코딩된 개인키를 사용합니다. 실무에서는 절대 안 됩니다!
+    const ADMIN_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+    const adminWallet = new ethers.Wallet(ADMIN_KEY, provider);
+
+    const contract = new ethers.Contract(
+      chainInfo.paymentReceiver,
+      deployed.paymentReceiverAbi,
+      adminWallet // 읽기/쓰기가 모두 가능하도록 signer 연결
+    );
+
+    console.log(`\n🔓 [오라클] 자금 해제 트랜잭션 전송 시작 (${orderId})`);
+    
+    // 스마트 컨트랙트의 releaseFunds 호출 (가스비 발생)
+    const tx = await contract.releaseFunds(orderId);
+    console.log(`   트랜잭션 해시: ${tx.hash}`);
+    await tx.wait(); // 블록 확정 대기
+    console.log(`   트랜잭션 확정 완료!`);
+
+    // DB 상태 업데이트
+    await prisma.crypto_payment_orders.update({
+      where: { order_id: orderId },
+      data: { status: "released" }
+    });
+
+    res.json({ success: true, txHash: tx.hash });
+  } catch (err) {
+    console.error("자금 해제 실패:", err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── 블록체인 이벤트 구독 ─────────────────────────────────────────
@@ -154,88 +209,28 @@ async function subscribeToChain(chainName, chainInfo) {
     provider
   );
 
-  // ── ETH 결제 이벤트 ─────────────────────────────────────────
-  contract.on("PaymentReceived", async (payer, amount, orderId, recipient, event) => {
-    const amountEth = ethers.formatEther(amount);
-    const txHash    = event.log.transactionHash;
-
-    console.log(`\n💰 ETH 결제 감지!`);
-    console.log(`   체인:     ${chainName}`);
-    console.log(`   주문:     ${orderId}`);
-    console.log(`   결제자:   ${payer}`);
-    console.log(`   판매자:   ${recipient}`);
-    console.log(`   금액:     ${amountEth} ETH`);
-    console.log(`   TxHash:   ${txHash}`);
-
-    // 트랜잭션 영수증 조회 (뻔록번호, 실제 가스비, 성공 여부)
-    let receiptData = {};
-    try {
-      const receipt = await provider.getTransactionReceipt(txHash);
-      if (receipt) {
-        const gasCostWei = receipt.gasUsed * receipt.gasPrice;
-        receiptData = {
-          block_number:   receipt.blockNumber,
-          gas_used:       parseFloat(ethers.formatEther(gasCostWei)).toFixed(8),
-          gas_used_units: receipt.gasUsed.toString(),
-          tx_status:      receipt.status ?? 1,
-        };
-        console.log(`   영수증:    block=#${receipt.blockNumber}  gas=${receiptData.gas_used} ETH  status=${receipt.status}`);
-      }
-    } catch (receiptErr) {
-      console.warn(`   영수증 조회 실패: ${receiptErr.message}`);
-    }
-
-    try {
-      await prisma.crypto_payment_orders.upsert({
-        where:  { order_id: orderId },
-        update: {
-          status:        "paid",
-          chain_name:    chainName,
-          payer,
-          seller_wallet: recipient,
-          tx_hash:       txHash,
-          amount:        amountEth,
-          token_symbol:  "ETH",
-          paid_at:       new Date(),
-          ...receiptData,
-        },
-        create: {
-          order_id:      orderId,
-          status:        "paid",
-          chain_name:    chainName,
-          payer,
-          seller_wallet: recipient,
-          tx_hash:       txHash,
-          amount:        amountEth,
-          token_symbol:  "ETH",
-          paid_at:       new Date(),
-          ...receiptData,
-        },
-      });
-      console.log(`   DB 업데이트 완료 → paid (ETH)`);
-    } catch (err) {
-      console.error(`   DB 업데이트 실패: ${err.message}`);
-    }
-  });
-
-  // ── ERC-20 결제 이벤트 ────────────────────────────────────────
-  contract.on("ERC20PaymentReceived", async (payer, recipient, orderId, tokenAddress, amount, event) => {
+  // ── 에스크로 자금 잠금(FundsLocked) 이벤트 ─────────────────────
+  contract.on("FundsLocked", async (orderId, payer, recipient, tokenAddress, amount, event) => {
     const txHash = event.log.transactionHash;
 
-    // 토큰 주소로 심볼 역조회
-    const tokenInfo = Object.values(chainInfo.tokens).find(
-      t => t.address && t.address.toLowerCase() === tokenAddress.toLowerCase()
-    );
-    const tokenSymbol   = tokenInfo?.symbol   ?? "UNKNOWN";
-    const tokenDecimals = tokenInfo?.decimals ?? 18;
-    const amountFormatted = ethers.formatUnits(amount, tokenDecimals);
+    let tokenSymbol = "ETH";
+    let amountFormatted = ethers.formatEther(amount);
 
-    console.log(`\n🪙 ERC-20 결제 감지!`);
+    if (tokenAddress !== ethers.ZeroAddress) {
+      const tokenInfo = Object.values(chainInfo.tokens).find(
+        t => t.address && t.address.toLowerCase() === tokenAddress.toLowerCase()
+      );
+      tokenSymbol = tokenInfo?.symbol ?? "UNKNOWN";
+      const tokenDecimals = tokenInfo?.decimals ?? 18;
+      amountFormatted = ethers.formatUnits(amount, tokenDecimals);
+    }
+
+    console.log(`\n🔒 에스크로 자금 잠금(Lock) 감지!`);
     console.log(`   체인:     ${chainName}`);
     console.log(`   주문:     ${orderId}`);
     console.log(`   결제자:   ${payer}`);
     console.log(`   판매자:   ${recipient}`);
-    console.log(`   토큰:     ${tokenSymbol} (${tokenAddress})`);
+    console.log(`   토큰:     ${tokenSymbol} (${tokenAddress === ethers.ZeroAddress ? 'Native' : tokenAddress})`);
     console.log(`   금액:     ${amountFormatted} ${tokenSymbol}`);
     console.log(`   TxHash:   ${txHash}`);
 
@@ -261,7 +256,7 @@ async function subscribeToChain(chainName, chainInfo) {
       await prisma.crypto_payment_orders.upsert({
         where:  { order_id: orderId },
         update: {
-          status:        "paid",
+          status:        "escrow_locked", // 에스크로 보관 상태로 변경
           chain_name:    chainName,
           payer,
           seller_wallet: recipient,
@@ -273,7 +268,7 @@ async function subscribeToChain(chainName, chainInfo) {
         },
         create: {
           order_id:      orderId,
-          status:        "paid",
+          status:        "escrow_locked", // 에스크로 보관 상태로 생성
           chain_name:    chainName,
           payer,
           seller_wallet: recipient,
@@ -284,7 +279,29 @@ async function subscribeToChain(chainName, chainInfo) {
           ...receiptData,
         },
       });
-      console.log(`   DB 업데이트 완료 → paid (${tokenSymbol})`);
+      console.log(`   DB 업데이트 완료 → escrow_locked (${tokenSymbol})`);
+
+      // 판매자 알림 추가
+      try {
+        const orderData = await prisma.crypto_payment_orders.findUnique({ where: { order_id: orderId } });
+        if (orderData && orderData.product_id) {
+          const product = await prisma.products.findUnique({ where: { id: Number(orderData.product_id) } });
+          if (product && product.seller_id) {
+            await prisma.notifications.create({
+              data: {
+                user_id: Number(product.seller_id),
+                title: "새로운 주문이 들어왔습니다! 💰",
+                message: `[${product.name}] 상품이 ${tokenSymbol} 코인으로 결제/에스크로 보관되었습니다. (주문: ${orderId})`,
+                link: "/seller/orders",
+                is_read: false
+              }
+            });
+            console.log(`   판매자 알림 전송 완료 (seller_id: ${product.seller_id})`);
+          }
+        }
+      } catch (notifyErr) {
+        console.error(`   판매자 알림 실패: ${notifyErr.message}`);
+      }
     } catch (err) {
       console.error(`   DB 업데이트 실패: ${err.message}`);
     }
@@ -313,14 +330,36 @@ async function main() {
   );
 
   // REST 서버 시작
-  app.listen(PORT, () => {
-    console.log("\n" + "=".repeat(60));
+  const server = app.listen(PORT, () => {
+    console.log(`\n💳 [PayServer] 결제 수신 서버 시작 (포트: ${PORT})`);
+    console.log("=".repeat(60));
     console.log(`✅ 결제 서버: http://localhost:${PORT}`);
     console.log(`   POST /api/order           주문 생성`);
     console.log(`   GET  /api/order/:id       주문 조회`);
     console.log(`   GET  /api/crypto/chains   체인/토큰 설정`);
     console.log(`   GET  /api/health          서버 상태`);
     console.log("=".repeat(60));
+  });
+
+  // WebSocket Server for Real-time Notifications
+  const wss = new WebSocket.Server({ server });
+  wss.on('connection', (ws) => {
+    console.log('[PayServer] WebSocket 클라이언트 연결됨');
+    ws.on('close', () => console.log('[PayServer] WebSocket 클라이언트 연결 해제'));
+  });
+
+  // REST API to trigger WebSocket broadcast
+  app.post("/api/notify-shipping", (req, res) => {
+    const { orderId, trackingNumber } = req.body;
+    if (orderId && trackingNumber) {
+      wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({ type: 'SHIPPING_UPDATED', orderId: String(orderId), trackingNumber }));
+        }
+      });
+      console.log(`[PayServer] 운송장 업데이트 웹소켓 브로드캐스트 (주문: ${orderId})`);
+    }
+    res.json({ success: true });
   });
 
   process.on("SIGINT", async () => {

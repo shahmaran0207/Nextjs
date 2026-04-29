@@ -1,29 +1,29 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ethers }              from "ethers";
-import { useRouter }           from "next/navigation";
-import styles                  from "./page.module.css";
-import { PageHeader }          from "@/component/PageHeader";
-import { useAuthGuard }        from "../hooks/useAuthGuard";
-import { useSearchParams }     from "next/navigation";
+import { ethers } from "ethers";
+import { useRouter } from "next/navigation";
+import styles from "./page.module.css";
+import { PageHeader } from "@/component/PageHeader";
+import { useAuthGuard } from "../hooks/useAuthGuard";
+import { useSearchParams } from "next/navigation";
 
 // ── 결제 서버 주소 ────────────────────────────────────────────────
 const PAYMENT_SERVER = "http://localhost:3001";
 
 // ── 타입 ─────────────────────────────────────────────────────────
 interface TokenInfo {
-  symbol:   string;
+  symbol: string;
   decimals: number;
-  address:  string | null; // null = ETH native
+  address: string | null; // null = ETH native
 }
 
 interface ChainInfo {
-  name:            string;
-  chainId:         number;
-  rpcUrl:          string;
+  name: string;
+  chainId: number;
+  rpcUrl: string;
   paymentReceiver: string;
-  tokens:          TokenInfo[];
+  tokens: TokenInfo[];
 }
 
 // 결제 진행 단계
@@ -48,25 +48,25 @@ const ERC20_ABI = [
 ];
 
 export default function MultiPaymentPage() {
-  const searchParams   = useSearchParams();
-  const sellerIdParam  = searchParams.get("sellerId");
+  const searchParams = useSearchParams();
+  const sellerIdParam = searchParams.get("sellerId");
   const productIdParam = searchParams.get("productId");
-  const router         = useRouter();
+  const router = useRouter();
 
   const { email } = useAuthGuard();
 
   // ── 체인/토큰 설정 (서버에서 로드) ────────────────────────────
-  const [chains, setChains]           = useState<ChainInfo[]>([]);
+  const [chains, setChains] = useState<ChainInfo[]>([]);
   const [configLoading, setConfigLoading] = useState(true);
   const [configError, setConfigError] = useState<string | null>(null);
 
   // ── 사용자 선택 ────────────────────────────────────────────────
   const [selectedChain, setSelectedChain] = useState<ChainInfo | null>(null);
   const [selectedToken, setSelectedToken] = useState<TokenInfo | null>(null);
-  const [amount, setAmount]               = useState("");
+  const [amount, setAmount] = useState("");
 
   // ── MetaMask 연결 ──────────────────────────────────────────────
-  const [account, setAccount]     = useState<string | null>(null);
+  const [account, setAccount] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
 
   // 페이지 진입 시 이미 연결된 MetaMask 계정 자동 감지 (팝업 없이 조용히 조회)
@@ -77,7 +77,7 @@ export default function MultiPaymentPage() {
       .then((accounts: string[]) => {
         if (accounts.length > 0) setAccount(accounts[0]);
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // 계정 변경 이벤트 구독
     const handleAccountsChanged = (accounts: string[]) => {
@@ -90,13 +90,13 @@ export default function MultiPaymentPage() {
   }, []);
 
   // ── 토큰 잔액 ──────────────────────────────────────────────────
-  const [balance, setBalance]               = useState<string | null>(null);
+  const [balance, setBalance] = useState<string | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
-  const [balanceError, setBalanceError]     = useState<string | null>(null);
+  const [balanceError, setBalanceError] = useState<string | null>(null);
 
   // ── 체인 전환 허용 상태 관리 (세션 스토리지) ──────────────────
   const getChainApprovalKey = (chainId: number) => `chain_approved_${chainId}`;
-  const getTokenBalanceKey = (chainId: number, tokenSymbol: string, account: string) => 
+  const getTokenBalanceKey = (chainId: number, tokenSymbol: string, account: string) =>
     `token_balance_${chainId}_${tokenSymbol}_${account}`;
   const isChainApproved = (chainId: number): boolean => {
     if (typeof window === 'undefined') return false;
@@ -112,14 +112,14 @@ export default function MultiPaymentPage() {
     if (typeof window === 'undefined') return null;
     const cached = sessionStorage.getItem(getTokenBalanceKey(chainId, tokenSymbol, account));
     if (!cached) return null;
-    
+
     try {
       const { balance, timestamp } = JSON.parse(cached);
       // 5분 이내의 캐시만 유효
       if (Date.now() - timestamp < 5 * 60 * 1000) {
         return balance;
       }
-    } catch {}
+    } catch { }
     return null;
   };
 
@@ -143,32 +143,59 @@ export default function MultiPaymentPage() {
   };
 
   // ── 판매자 지갑 ────────────────────────────────────────────────
-  const [sellerWallet, setSellerWallet]   = useState<string | null>(null);
+  const [sellerWallet, setSellerWallet] = useState<string | null>(null);
   const [sellerLoading, setSellerLoading] = useState(false);
-  const [sellerError, setSellerError]     = useState<string | null>(null);
+  const [sellerError, setSellerError] = useState<string | null>(null);
 
   // ── 가스비 예측 ────────────────────────────────────────────────
   const [gasEstimate, setGasEstimate] = useState<string | null>(null);
-  const [gasLoading, setGasLoading]   = useState(false);
-  const [gasError, setGasError]       = useState<string | null>(null);
+  const [gasLoading, setGasLoading] = useState(false);
+  const [gasError, setGasError] = useState<string | null>(null);
+  // ── 블록 높이 (실시간) ──────────────────────────────────────────
+  const isMetaMaskInstalled = typeof window !== "undefined" && !!(window as any).ethereum;
+  const [currentBlock, setCurrentBlock] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!account || !isMetaMaskInstalled || !selectedChain) return;
+
+    let isMounted = true;
+
+    const fetchBlock = async () => {
+      try {
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        const blockNum = await provider.getBlockNumber();
+        if (isMounted) setCurrentBlock(blockNum);
+      } catch (e) {
+        // 체인 전환 중이거나 연결 안 된 상태일 때는 무시
+      }
+    };
+
+    fetchBlock(); // 즉시 1회 실행
+    const interval = setInterval(fetchBlock, 3000); // 3초마다 갱신 (로컬 체인은 빠르므로)
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [account, selectedChain?.chainId, isMetaMaskInstalled]);
 
   // ── 트랜잭션 영수증 ────────────────────────────────────────────
   const [txReceipt, setTxReceipt] = useState<{
-    blockNumber:  number;
-    gasUsed:      string;   // formatEther로 변환된 ETH 단위
+    blockNumber: number;
+    gasUsed: string;   // formatEther로 변환된 ETH 단위
     gasUsedUnits: string;   // 실제 gasUsed units
-    timestamp:    string;   // 한국시간 형식
-    status:       number;   // 1=성공, 0=실패
+    timestamp: string;   // 한국시간 형식
+    status: number;   // 1=성공, 0=실패
   } | null>(null);
   const [receiptLoading, setReceiptLoading] = useState(false);
 
   // ── 결제 상태 ──────────────────────────────────────────────────
   const [payStep, setPayStep] = useState<PayStep>(0);
   const [orderId, setOrderId] = useState<string | null>(null);
-  const [txHash, setTxHash]   = useState<string | null>(null);
-  const [error, setError]     = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const isMetaMaskInstalled = typeof window !== "undefined" && !!(window as any).ethereum;
+
 
   // ── 가스비 자동 추정 (amount·chain·token·account 변경 시) ───
   useEffect(() => {
@@ -182,7 +209,7 @@ export default function MultiPaymentPage() {
     // 500ms 디바운스 — 타이핑마다 호출 방지
     const timer = setTimeout(() => estimateGasForPayment(), 500);
     return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [amount, selectedChain, selectedToken, account, sellerWallet]);
 
   const estimateGasForPayment = async () => {
@@ -193,7 +220,7 @@ export default function MultiPaymentPage() {
 
     try {
       const provider = new ethers.BrowserProvider((window as any).ethereum);
-      const signer   = await provider.getSigner();
+      const signer = await provider.getSigner();
 
       // ── gasPrice 결정 ─────────────────────────────────────────
       // getFeeData()는 내부에서 eth_maxPriorityFeePerGas + eth_gasPrice를 동시 호출해
@@ -201,7 +228,7 @@ export default function MultiPaymentPage() {
       // → 로컬 체인에서는 eth_gasPrice만 직접 조회하고,
       //   공개 네트워크(Sepolia 등)에서도 eth_gasPrice는 항상 지원하므로 이 방법이 더 안전.
       const gasPriceHex = await (window as any).ethereum.request({ method: "eth_gasPrice" });
-      const gasPrice    = BigInt(gasPriceHex);
+      const gasPrice = BigInt(gasPriceHex);
 
       let totalGas: bigint;
 
@@ -220,9 +247,9 @@ export default function MultiPaymentPage() {
         // payERC20.estimateGas는 allowance 없어 revert → 실행 불가
         // approve gas는 금액에 무관하게 거의 동일 (~46,000 gas)
         // payERC20 overhead는 transferFrom(~65,000) + emit(~3,000) ≈ 70,000 gas
-        const amountUnits   = ethers.parseUnits(amount, selectedToken.decimals);
+        const amountUnits = ethers.parseUnits(amount, selectedToken.decimals);
         const tokenContract = new ethers.Contract(selectedToken.address, ERC20_ABI, signer);
-        const approveGas    = await tokenContract.approve.estimateGas(
+        const approveGas = await tokenContract.approve.estimateGas(
           selectedChain.paymentReceiver, amountUnits
         );
         const payERC20Overhead = BigInt(70_000); // transferFrom + event emit 고정 추정값
@@ -264,11 +291,11 @@ export default function MultiPaymentPage() {
         : "알 수 없음";
 
       setTxReceipt({
-        blockNumber:  receipt.blockNumber,
-        gasUsed:      parseFloat(gasCostEth).toFixed(8),
+        blockNumber: receipt.blockNumber,
+        gasUsed: parseFloat(gasCostEth).toFixed(8),
         gasUsedUnits: receipt.gasUsed.toString(),
         timestamp,
-        status:       receipt.status ?? 1,
+        status: receipt.status ?? 1,
       });
     } catch (e) {
       console.warn("영수증 조회 실패:", e);
@@ -333,19 +360,19 @@ export default function MultiPaymentPage() {
     if (!account || !selectedToken || !selectedChain) return;
     setBalanceLoading(true);
     setBalanceError(null);
-    
+
     try {
       // ── 현재 체인 확인 ────────────────────────────────────────
       const currentChainIdHex = await (window as any).ethereum.request({ method: "eth_chainId" });
       const currentChainId = parseInt(currentChainIdHex, 16);
-      
+
       console.log(`현재 체인: ${currentChainId}, 목표 체인: ${selectedChain.chainId}`);
-      
+
       // ── 체인 전환이 필요한 경우 ──────────────────────────────
       if (currentChainId !== selectedChain.chainId) {
         // 이미 승인된 체인인지 확인
         const alreadyApproved = isChainApproved(selectedChain.chainId);
-        
+
         if (!alreadyApproved) {
           // 첫 번째 체인 전환 시에만 사용자에게 알림
           const shouldProceed = confirm(
@@ -357,33 +384,33 @@ export default function MultiPaymentPage() {
             return;
           }
         }
-        
+
         try {
           await switchToChain(selectedChain);
-          
+
           // 체인 전환 후 실제 체인 ID 확인
           const newChainIdHex = await (window as any).ethereum.request({ method: "eth_chainId" });
           const newChainId = parseInt(newChainIdHex, 16);
-          
+
           console.log(`체인 전환 완료: ${currentChainId} → ${newChainId} (목표: ${selectedChain.chainId})`);
-          
+
           // 실제 연결된 체인 ID가 목표와 다르면 에러 던지기 (강력한 제약)
           if (newChainId !== selectedChain.chainId) {
             throw new Error(`연결된 체인 ID(${newChainId})가 목표 체인 ID(${selectedChain.chainId})와 다릅니다. MetaMask 네트워크 설정을 확인해주세요.`);
           }
-          
+
           // 체인 전환 성공 시 승인 상태 저장
           setChainApproved(selectedChain.chainId);
         } catch (switchError: any) {
           console.error(`체인 전환 실패 (${selectedChain.name}):`, switchError);
-          
+
           // Chain A(1337)의 경우 특별 처리 - 직접 RPC로 조회 시도
           if (selectedChain.chainId === 1337) {
             console.log('Chain A 체인 전환 실패, 직접 RPC로 조회 시도');
             try {
               const directProvider = new ethers.JsonRpcProvider(selectedChain.rpcUrl);
               let balanceValue: string;
-              
+
               if (!selectedToken.address) {
                 const bal = await directProvider.getBalance(account);
                 balanceValue = ethers.formatEther(bal);
@@ -392,7 +419,7 @@ export default function MultiPaymentPage() {
                 const bal = await contract.balanceOf(account);
                 balanceValue = ethers.formatUnits(bal, selectedToken.decimals);
               }
-              
+
               setBalance(balanceValue);
               setCachedBalance(selectedChain.chainId, selectedToken.symbol, account, balanceValue);
               setBalanceError("⚠️ 체인 전환 실패로 직접 RPC 조회됨 (결제 시 수동 체인 전환 필요)");
@@ -411,7 +438,7 @@ export default function MultiPaymentPage() {
       const provider = new ethers.BrowserProvider((window as any).ethereum);
 
       let balanceValue: string;
-      
+
       if (!selectedToken.address) {
         // ETH Native
         const bal = await provider.getBalance(account);
@@ -422,16 +449,16 @@ export default function MultiPaymentPage() {
         const bal = await contract.balanceOf(account);
         balanceValue = ethers.formatUnits(bal, selectedToken.decimals);
       }
-      
+
       setBalance(balanceValue);
-      
+
       // 잔액 캐시 저장
       setCachedBalance(selectedChain.chainId, selectedToken.symbol, account, balanceValue);
-      
+
     } catch (e: any) {
       setBalance(null);
       console.error('잔액 조회 에러:', e);
-      
+
       if (e?.code === 4001) {
         // 사용자가 MetaMask 팝업을 직접 거부한 경우
         setBalanceError("MetaMask 체인 전환을 허용해야 잔액을 조회할 수 있습니다.");
@@ -484,7 +511,7 @@ export default function MultiPaymentPage() {
   const switchToChain = async (chain: ChainInfo) => {
     const targetChainId = chain.chainId;
     const chainIdHex = "0x" + targetChainId.toString(16);
-    
+
     console.log(`체인 전환 시작: ${chain.name} (${targetChainId}, ${chainIdHex})`);
 
     try {
@@ -496,11 +523,11 @@ export default function MultiPaymentPage() {
       console.log(`체인 전환 성공: ${chain.name}`);
     } catch (switchErr: any) {
       console.log(`체인 전환 시도 실패 (${chain.name}):`, switchErr);
-      
+
       // 체인이 존재하지 않는 경우 (4902 에러)
       if (switchErr?.code === 4902 || switchErr?.message?.includes("Unrecognized chain ID")) {
         console.log(`체인 추가 시도: ${chain.name}`);
-        
+
         try {
           // 체인 추가 시도
           await (window as any).ethereum.request({
@@ -509,31 +536,31 @@ export default function MultiPaymentPage() {
               chainId: chainIdHex,
               chainName: chain.name,
               rpcUrls: [chain.rpcUrl],
-              nativeCurrency: { 
-                name: "Ethereum", 
-                symbol: "ETH", 
-                decimals: 18 
+              nativeCurrency: {
+                name: "Ethereum",
+                symbol: "ETH",
+                decimals: 18
               }
             }],
           });
           console.log(`체인 추가 성공: ${chain.name}`);
-          
+
           // 체인 추가 후 다시 전환 시도
           await (window as any).ethereum.request({
             method: "wallet_switchEthereumChain",
             params: [{ chainId: chainIdHex }],
           });
           console.log(`체인 추가 후 전환 성공: ${chain.name}`);
-          
+
         } catch (addErr: any) {
           console.log(`체인 추가 실패 (${chain.name}):`, addErr);
-          
+
           const msg = addErr?.message ?? "";
-          
+
           // 같은 RPC 엔드포인트를 사용하는 기존 네트워크가 있는 경우
           if (msg.includes("same RPC endpoint") || msg.includes("already exists")) {
             console.log(`RPC 엔드포인트 충돌 감지: ${chain.name}`);
-            
+
             // 에러 메시지에서 기존 체인 ID 추출
             const chainMatch = msg.match(/chain (0x[0-9a-fA-F]+)/i);
             if (chainMatch) {
@@ -545,14 +572,14 @@ export default function MultiPaymentPage() {
               if (existingChainId !== targetChainId) {
                 throw new Error(`MetaMask에 예전 체인 ID(${existingChainId})로 저장된 네트워크가 있습니다. MetaMask 확장프로그램 > 설정 > 네트워크 메뉴로 가셔서 기존 로컬 네트워크(Chain A/B/C 등)를 모두 삭제한 후 다시 시도해주세요!`);
               }
-              
+
               try {
                 await (window as any).ethereum.request({
                   method: "wallet_switchEthereumChain",
                   params: [{ chainId: existingChainIdHex }],
                 });
                 console.log(`기존 체인으로 전환 성공: ${existingChainIdHex}`);
-                
+
                 return; // 성공
               } catch (existingErr) {
                 console.log(`기존 체인 전환도 실패:`, existingErr);
@@ -604,7 +631,7 @@ export default function MultiPaymentPage() {
         if (storedShipping) {
           shippingInfo = JSON.parse(storedShipping);
         }
-      } catch (e) {}
+      } catch (e) { }
 
       // 1단계: 주문 생성
       setPayStep(1);
@@ -613,10 +640,10 @@ export default function MultiPaymentPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount,
-          tokenSymbol:  selectedToken.symbol,
+          tokenSymbol: selectedToken.symbol,
           sellerWallet,
-          productId:    productIdParam ? Number(productIdParam) : undefined,
-          buyerEmail:   email ?? undefined,  // 구매자 이메일 전달
+          productId: productIdParam ? Number(productIdParam) : undefined,
+          buyerEmail: email ?? undefined,  // 구매자 이메일 전달
           ...shippingInfo,
         }),
       });
@@ -629,7 +656,7 @@ export default function MultiPaymentPage() {
       await switchToChain(selectedChain);
 
       const provider = new ethers.BrowserProvider((window as any).ethereum);
-      const signer   = await provider.getSigner();
+      const signer = await provider.getSigner();
 
       if (!selectedToken.address) {
         // ── ETH 결제 ────────────────────────────────────────────
@@ -651,7 +678,7 @@ export default function MultiPaymentPage() {
       } else {
         // ── ERC-20 결제 ─────────────────────────────────────────
         const tokenContract = new ethers.Contract(selectedToken.address, ERC20_ABI, signer);
-        const amountUnits   = ethers.parseUnits(amount, selectedToken.decimals);
+        const amountUnits = ethers.parseUnits(amount, selectedToken.decimals);
 
         // 3단계: allowance 확인 후 approve
         setPayStep(3);
@@ -729,6 +756,31 @@ export default function MultiPaymentPage() {
         navLinks={[{ href: "/", label: "메인 페이지" }]}
       />
 
+      {/* ── 실시간 네트워크 상태 바 ───────────────────────────── */}
+      {currentBlock !== null && (
+        <div style={{
+          textAlign: "center",
+          marginBottom: "1rem",
+          fontSize: "0.9rem",
+          color: "#94a3b8",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: "8px"
+        }}>
+          <span style={{
+            display: "inline-block",
+            width: "8px",
+            height: "8px",
+            backgroundColor: "#22c55e",
+            borderRadius: "50%",
+            boxShadow: "0 0 8px #22c55e",
+            animation: "pulse 2s infinite"
+          }}></span>
+          {selectedChain?.name} 네트워크 접속 중 • 현재 블록: <strong>#{currentBlock}</strong>
+        </div>
+      )}
+
       <div className={styles.container}>
 
         {/* ── 설정 로딩 / 에러 ─────────────────────────────── */}
@@ -765,8 +817,8 @@ export default function MultiPaymentPage() {
                 <button
                   onClick={clearAllCache}
                   style={{
-                    background: "none", border: "1px solid rgba(255,255,255,0.1)", 
-                    color: "#94a3b8", fontSize: "10px", padding: "4px 8px", 
+                    background: "none", border: "1px solid rgba(255,255,255,0.1)",
+                    color: "#94a3b8", fontSize: "10px", padding: "4px 8px",
                     borderRadius: "4px", cursor: "pointer", marginLeft: "8px"
                   }}
                   title="체인 승인 및 잔액 캐시 초기화"
@@ -803,9 +855,9 @@ export default function MultiPaymentPage() {
                   className={`${styles.chainBtn} ${selectedChain?.chainId === chain.chainId ? styles.chainBtnActive : ""}`}
                   onClick={() => {
                     setSelectedChain(chain);
-                    setSelectedToken(chain.tokens[0]);
+                    setSelectedToken(Object.values(chain.tokens)[0] as any);
                     // 캐시된 잔액이 있으면 유지, 없으면 null
-                    const cachedBalance = getCachedBalance(chain.chainId, chain.tokens[0].symbol, account || '');
+                    const cachedBalance = getCachedBalance(chain.chainId, (Object.values(chain.tokens)[0] as any).symbol, account || '');
                     setBalance(cachedBalance);
                     setPayStep(0);
                     setError(null);
@@ -822,7 +874,7 @@ export default function MultiPaymentPage() {
               <>
                 <div className={styles.sectionLabel}>② 토큰 선택</div>
                 <div className={styles.tokenGrid}>
-                  {selectedChain.tokens.map(token => (
+                  {Object.values(selectedChain.tokens).map((token: any) => (
                     <button
                       key={token.symbol}
                       className={`${styles.tokenBtn} ${selectedToken?.symbol === token.symbol ? styles.tokenBtnActive : ""}`}
@@ -935,7 +987,7 @@ export default function MultiPaymentPage() {
 
             {/* ── 잔액 관련 경고 ───────────────────────────────────── */}
             {(() => {
-              const notFetched  = account !== null && balance === null && !balanceLoading;
+              const notFetched = account !== null && balance === null && !balanceLoading;
               const isOverBalance =
                 balance !== null &&
                 amount !== "" &&

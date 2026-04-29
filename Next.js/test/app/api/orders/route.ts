@@ -151,7 +151,7 @@ export async function POST(req: Request) {
       return order;
     });
 
-    // 주문 접수 알림 (트랜잭션 밖에서 발송 - 실패해도 주문은 성공)
+    // 주문 접수 알림 (구매자) (트랜잭션 밖에서 발송 - 실패해도 주문은 성공)
     await createNotification(
       user.id,
       "주문이 접수되었습니다 📦",
@@ -159,63 +159,20 @@ export async function POST(req: Request) {
       `/orders/${result.id}`
     );
 
-    // [플래시몹 로직 연동] 결제된 상품들의 플래시몹 카운트를 올리고 50명 달성 시 페이백 지급
-    try {
-      const redisClient = createClient({ url: "redis://localhost:6379" });
-      await redisClient.connect();
-
-      for (const item of items) {
-        const productId = String(item.product_id);
-        const redisKey = `flashmob:${productId}`;
-        const newCount = await redisClient.incr(redisKey);
-        
-        const TARGET_COUNT = 50; // 목표 인원 50명
-
-        // 목표 인원 달성 순간 (딱 50이 되었을 때 1회만 실행)
-        if (newCount === TARGET_COUNT) {
-          // 해당 상품을 구매했던 모든 과거 주문 기록을 가져옵니다.
-          const pastOrderItems = await prisma.order_items.findMany({
-            where: { product_id: item.product_id },
-            include: { order: true } // 주문 정보(user_id 포함)를 가져오기 위해 include
-          });
-
-          // 각 사용자별로 페이백 금액 계산
-          for (const pastItem of pastOrderItems) {
-            if (!pastItem.order || !pastItem.order.user_id) continue;
-            
-            const paybackAmount = Math.floor(pastItem.total_price * 0.5); // 50% 페이백
-            const targetUserId = pastItem.order.user_id;
-
-            // 포인트 지급
-            await prisma.users.update({
-              where: { id: targetUserId },
-              data: { points: { increment: paybackAmount } }
-            });
-
-            // 포인트 로그 생성
-            await prisma.point_logs.create({
-              data: {
-                user_id: targetUserId,
-                amount: paybackAmount,
-                description: `🔥 플래시몹 달성 페이백! (${item.product_name})`
-              }
-            });
-
-            // 알림 전송
-            await createNotification(
-              targetUserId,
-              "🎉 플래시몹 공동구매 목표 달성!",
-              `축하합니다! 구매하셨던 [${item.product_name}] 상품이 ${TARGET_COUNT}명을 달성하여 결제 금액의 절반(${paybackAmount.toLocaleString()}P)이 페이백되었습니다!`,
-              `/Shopping/${item.product_id}`
-            );
-          }
-        }
+    // 판매자에게 주문 발생 알림
+    for (const item of items) {
+      const product = ownProducts.find((p: any) => Number(p.id) === Number(item.product_id));
+      if (product && product.seller_id) {
+        await createNotification(
+          Number(product.seller_id),
+          "새로운 주문이 들어왔습니다! 💰",
+          `[${item.product_name}] 상품이 ${item.quantity}개 결제되었습니다. (주문번호: ${merchant_uid})`,
+          `/seller/orders`
+        );
       }
-      await redisClient.quit();
-    } catch (redisErr) {
-      console.error("Flashmob Payback Error:", redisErr);
-      // Redis 에러가 나도 메인 결제 응답은 성공으로 처리해야 함
     }
+
+
 
     return NextResponse.json({ success: true, order: result });
   } catch (err: any) {

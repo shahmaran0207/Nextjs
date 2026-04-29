@@ -681,6 +681,9 @@ model crypto_payment_orders {
   receiver_phone   String?  @db.VarChar(50)
   shipping_address String?  @db.Text
   shipping_message String?  @db.Text
+  
+  tracking_number  String?  @db.VarChar(100)
+  // 운송장 번호 (판매자가 입력)
 
   // ── 트랜잭션 영수증 (블록체인 공개 데이터) ─────────────────────
   // 이벤트 감지 시 결제 서버(server/index.js)가 getTransactionReceipt()로 조회 후 저장

@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import postStyle from "../hook/postStyle";
+import { ethers } from "ethers";
 
 // ✅ useSearchParams를 사용하는 부분만 별도 컴포넌트로 분리
 function LoginInner() {
@@ -75,6 +76,53 @@ function LoginInner() {
         } catch (error) {
             console.error("[NAVER LOGIN ERROR]", error);
             setError("네이버 로그인에 실패했습니다");
+        }
+    }
+
+    // ── Web3 (SIWE) 로그인 핸들러 ──
+    async function handleWeb3Login() {
+        try {
+            setError("");
+            if (typeof window === "undefined" || !(window as any).ethereum) {
+                setError("MetaMask가 설치되어 있지 않습니다.");
+                return;
+            }
+
+            const provider = new ethers.BrowserProvider((window as any).ethereum);
+            
+            // 1. 지갑 연결 (계정 가져오기)
+            const accounts = await provider.send("eth_requestAccounts", []);
+            const account = accounts[0];
+
+            // 2. 서명할 메시지 준비 (Nonce 등 보안 요소를 넣는 것이 좋지만, 교육용으로 간단하게 작성)
+            const message = `TwinSystem 로그인\n\n지갑 주소: ${account}\n시간: ${new Date().toISOString()}`;
+
+            // 3. 메타마스크에 팝업을 띄워 서명(Sign) 요청
+            const signer = await provider.getSigner();
+            const signature = await signer.signMessage(message);
+
+            console.log("서명된 메시지:", signature);
+
+            // 4. 이 서명과 메시지를 백엔드로 보내서 진짜 주인이 맞는지 검증하고 토큰을 발급받습니다.
+            const res = await fetch("/api/auth/web3-login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ account, message, signature }),
+            });
+
+            const data = await res.json();
+
+            if (data.accessToken) {
+                // 검증 성공! 일반 로그인과 동일하게 처리
+                localStorage.setItem("token", data.accessToken);
+                router.push("/");
+            } else {
+                setError("Web3 로그인 실패: " + (data.err ?? "알 수 없는 오류"));
+            }
+
+        } catch (error: any) {
+            console.error("[WEB3 LOGIN ERROR]", error);
+            setError("Web3 로그인 중 오류가 발생했습니다: " + (error.message || ""));
         }
     }
 
@@ -192,6 +240,17 @@ function LoginInner() {
                             </div>
                         </>
                     )}
+
+                    {/* Web3 로그인 버튼 */}
+                    <button type="button" onClick={handleWeb3Login}
+                        className="relative w-full h-12 bg-[#f6851b] hover:bg-[#e2761b] active:scale-[0.98] text-white text-sm font-semibold rounded-lg transition-all overflow-hidden flex items-center justify-center gap-2 shadow-lg mb-6"
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                            <path d="M3 5v14a2 2 0 0 0 2 2h16v-5H5a2 2 0 0 0 0 4" />
+                        </svg>
+                        <span>MetaMask로 로그인 (Web3)</span>
+                    </button>
 
                     <p className="text-center text-sm text-slate-400">
                         시스템에 등록되지 않았나요?{" "}

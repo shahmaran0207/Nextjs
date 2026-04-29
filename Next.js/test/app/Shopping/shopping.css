@@ -863,8 +863,34 @@ select.input-field option {
 .mt-8px { margin-top: 8px; }
 .mt-4px { margin-top: 4px; }
 .text-16-bold { font-size: 16px; font-weight: 700; }
-.postcode-wrapper { border: 1px solid #3a3f5c; margin-top: 8px; position: relative; }
-.postcode-close-btn { position: absolute; right: 0; top: 0; z-index: 1; padding: 4px 8px; background: none; border: none; color: white; cursor: pointer; }
+.postcode-wrapper { 
+  border: 1px solid #3a3f5c; 
+  margin-top: 8px; 
+  position: relative; 
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1a1d27;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.postcode-close-btn { 
+  position: absolute; 
+  right: 8px; 
+  top: 8px; 
+  z-index: 10; 
+  padding: 6px 12px; 
+  background: rgba(239,68,68,0.9); 
+  border: none; 
+  color: white; 
+  cursor: pointer; 
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.postcode-close-btn:hover {
+  background: rgba(239,68,68,1);
+  transform: scale(1.05);
+}
 .h-400 { height: 400px; }
 .border-top-default { border-top: 1px solid #2e3247; }
 
