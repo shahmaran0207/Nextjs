@@ -1,7 +1,7 @@
 {
   "network": "Chain A (localhost:8545)",
   "chainId": 31337,
-  "deployedAt": "2026-04-30T08:17:53.884Z",
+  "deployedAt": "2026-04-30T08:41:12.824Z",
   "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
   "beneficiary": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
   "LandNFT": {

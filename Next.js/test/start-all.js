@@ -219,6 +219,8 @@ async function main() {
     await deployScript("deploy-oracle.js"); // Oracle: Chainlink Mock 가격 피드
     await deployScript("deploy-erc1155.js"); // ERC-1155: 게임 아이템 멀티 토큰
     await deployScript("deploy-proxy.js");  // Proxy Pattern: 업그레이더블 컨트랙트
+    await deployScript("deploy-multisig.js"); // MultiSig: 다중 서명 지갑
+    await deployScript("deploy-vesting.js"); // Token Vesting: 토큰 잠금 해제
     console.log(`${C.green}  ✅ 모든 컨트랙트 배포 완료${C.reset}`);
   } catch (e) {
     console.error(`${C.red}  ❌ 배포 실패: ${e.message}${C.reset}`);

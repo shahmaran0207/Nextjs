@@ -1,8 +1,34 @@
 {
-  "deployedAt": "2026-04-30T08:41:11.675Z",
-  "paymentReceiverAbi": [
+  "vestingAddress": "0x4A679253410272dd5232B3Ff7cF5dbB88f295319",
+  "vestingAbi": [
     {
-      "inputs": [],
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_token",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_beneficiary",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_start",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_cliffDuration",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_duration",
+          "type": "uint256"
+        }
+      ],
       "stateMutability": "nonpayable",
       "type": "constructor"
     },
@@ -11,26 +37,8 @@
       "inputs": [
         {
           "indexed": false,
-          "internalType": "string",
-          "name": "orderId",
-          "type": "string"
-        },
-        {
-          "indexed": true,
           "internalType": "address",
-          "name": "payer",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "recipient",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "tokenAddress",
+          "name": "beneficiary",
           "type": "address"
         },
         {
@@ -40,76 +48,12 @@
           "type": "uint256"
         }
       ],
-      "name": "FundsLocked",
+      "name": "TokensReleased",
       "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "string",
-          "name": "orderId",
-          "type": "string"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "recipient",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "FundsReleased",
-      "type": "event"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "",
-          "type": "string"
-        }
-      ],
-      "name": "escrows",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "payer",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "recipient",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "tokenAddress",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "enum PaymentReceiver.EscrowStatus",
-          "name": "status",
-          "type": "uint8"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
     },
     {
       "inputs": [],
-      "name": "getOwner",
+      "name": "beneficiary",
       "outputs": [
         {
           "internalType": "address",
@@ -122,10 +66,82 @@
     },
     {
       "inputs": [],
-      "name": "owner",
+      "name": "cliff",
       "outputs": [
         {
-          "internalType": "address",
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "duration",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "releasableAmount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "release",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "released",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "start",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "token",
+      "outputs": [
+        {
+          "internalType": "contract IERC20",
           "name": "",
           "type": "address"
         }
@@ -134,84 +150,23 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "orderId",
-          "type": "string"
-        },
-        {
-          "internalType": "address",
-          "name": "recipient",
-          "type": "address"
-        }
-      ],
-      "name": "pay",
-      "outputs": [],
-      "stateMutability": "payable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "orderId",
-          "type": "string"
-        },
-        {
-          "internalType": "address",
-          "name": "recipient",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "tokenAddress",
-          "type": "address"
-        },
+      "inputs": [],
+      "name": "vestedAmount",
+      "outputs": [
         {
           "internalType": "uint256",
-          "name": "amount",
+          "name": "",
           "type": "uint256"
         }
       ],
-      "name": "payERC20",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "orderId",
-          "type": "string"
-        }
-      ],
-      "name": "releaseFunds",
-      "outputs": [],
-      "stateMutability": "nonpayable",
+      "stateMutability": "view",
       "type": "function"
     }
   ],
-  "erc20Abi": [
+  "tokenAddress": "0xa85233C63b9Ee964Add6F2cffe00Fd84eb32338f",
+  "tokenAbi": [
     {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "_name",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "_symbol",
-          "type": "string"
-        },
-        {
-          "internalType": "uint8",
-          "name": "_decimals",
-          "type": "uint8"
-        }
-      ],
+      "inputs": [],
       "stateMutability": "nonpayable",
       "type": "constructor"
     },
@@ -246,6 +201,25 @@
         {
           "indexed": true,
           "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
           "name": "from",
           "type": "address"
         },
@@ -266,15 +240,28 @@
       "type": "event"
     },
     {
+      "inputs": [],
+      "name": "MAX_SUPPLY",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "address",
-          "name": "",
+          "name": "owner",
           "type": "address"
         },
         {
           "internalType": "address",
-          "name": "",
+          "name": "spender",
           "type": "address"
         }
       ],
@@ -317,7 +304,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "",
+          "name": "account",
           "type": "address"
         }
       ],
@@ -343,6 +330,61 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "spender",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "subtractedValue",
+          "type": "uint256"
+        }
+      ],
+      "name": "decreaseAllowance",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "faucet",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "spender",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "addedValue",
+          "type": "uint256"
+        }
+      ],
+      "name": "increaseAllowance",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -387,6 +429,13 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -467,74 +516,24 @@
       ],
       "stateMutability": "nonpayable",
       "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
     }
   ],
-  "chains": {
-    "Chain A": {
-      "chainId": 31337,
-      "rpcUrl": "http://127.0.0.1:8545",
-      "paymentReceiver": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-      "tokens": {
-        "ETH": {
-          "symbol": "ETH",
-          "decimals": 18,
-          "address": null
-        },
-        "USDC": {
-          "symbol": "USDC",
-          "decimals": 6,
-          "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3"
-        },
-        "DAI": {
-          "symbol": "DAI",
-          "decimals": 18,
-          "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
-        }
-      }
-    },
-    "Chain B": {
-      "chainId": 31338,
-      "rpcUrl": "http://127.0.0.1:8546",
-      "paymentReceiver": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-      "tokens": {
-        "ETH": {
-          "symbol": "ETH",
-          "decimals": 18,
-          "address": null
-        },
-        "USDC": {
-          "symbol": "USDC",
-          "decimals": 6,
-          "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3"
-        },
-        "DAI": {
-          "symbol": "DAI",
-          "decimals": 18,
-          "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
-        }
-      }
-    },
-    "Chain C": {
-      "chainId": 31339,
-      "rpcUrl": "http://127.0.0.1:8547",
-      "paymentReceiver": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-      "tokens": {
-        "ETH": {
-          "symbol": "ETH",
-          "decimals": 18,
-          "address": null
-        },
-        "USDC": {
-          "symbol": "USDC",
-          "decimals": 6,
-          "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3"
-        },
-        "DAI": {
-          "symbol": "DAI",
-          "decimals": 18,
-          "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
-        }
-      }
-    }
-  }
+  "beneficiary": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+  "startTimestamp": 1777538487,
+  "cliffDuration": 60,
+  "totalDuration": 300,
+  "lockAmount": "500000000000000000000000"
 }
