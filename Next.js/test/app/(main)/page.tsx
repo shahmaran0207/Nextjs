@@ -40,6 +40,7 @@ const baseNavItems = [
   { href: "/proxy", label: "Proxy Pattern", icon: "🔄", desc: "업그레이더블 컨트랙트" },
   { href: "/multisig", label: "MultiSig Wallet", icon: "🔐", desc: "다중 서명 금고" },
   { href: "/vesting", label: "Token Vesting", icon: "⏳", desc: "토큰 잠금 해제(락업)" },
+  { href: "/lending", label: "Lending Protocol", icon: "🏦", desc: "디파이 대출 및 강제 청산" },
 
 ];
 
