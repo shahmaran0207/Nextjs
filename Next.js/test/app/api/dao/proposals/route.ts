@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@/generated/prisma";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-const prisma = new PrismaClient();
 
 // ── GET: DB에 저장된 제안 목록 조회 ──────────────────────────────
 export async function GET() {
@@ -12,7 +11,12 @@ export async function GET() {
       where: { status: { not: "expired" } },
       orderBy: { created_at: "desc" },
     });
-    return NextResponse.json(proposals);
+    // BigInt(deadline_timestamp)는 JSON 직렬화 불가 → Number로 변환
+    const serialized = proposals.map((p: typeof proposals[number]) => ({
+      ...p,
+      deadline_timestamp: p.deadline_timestamp !== null ? Number(p.deadline_timestamp) : null,
+    }));
+    return NextResponse.json(serialized);
   } catch (err) {
     console.error("DAO 제안 조회 실패:", err);
     return NextResponse.json({ error: "제안 목록을 불러올 수 없습니다." }, { status: 500 });

@@ -11,7 +11,8 @@
  */
 
 const { ethers }    = require("ethers");
-const { PrismaClient } = require("@prisma/client");
+// blockchain-study에는 @prisma/client가 없으므로 루트 generated 경로를 직접 사용
+const { PrismaClient } = require("../../app/generated/prisma");
 const fs   = require("fs");
 const path = require("path");
 
@@ -85,12 +86,23 @@ async function main() {
       }
 
       // propose() 트랜잭션
-      const tx      = await contract.propose(p.description);
-      const receipt = await tx.wait(1);
+      const tx = await contract.propose(p.description);
+      await tx.wait(1);
 
       // 새 proposal_id 조회 (tx 후 proposalCount가 1 증가)
-      const newCount   = Number(await contract.proposalCount());
+      const newCount    = Number(await contract.proposalCount());
       const newProposal = await contract.getProposal(newCount);
+
+      // Ganache 재시작 → 블록체인 상태 초기화이므로 이전 오프체인 투표 삭제
+      // (같은 proposal_id가 재발급되므로 이전 투표 기록이 중복 오류를 유발)
+      if (p.contract_proposal_id) {
+        const deleted = await prisma.offchain_votes.deleteMany({
+          where: { proposal_id: p.contract_proposal_id },
+        });
+        if (deleted.count > 0) {
+          console.log(`  🗑️  이전 오프체인 투표 ${deleted.count}개 초기화 (proposal #${p.contract_proposal_id})`);
+        }
+      }
 
       // DB 업데이트
       await prisma.dao_proposals.update({

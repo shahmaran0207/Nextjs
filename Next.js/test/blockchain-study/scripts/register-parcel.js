@@ -17,7 +17,8 @@
  */
 
 const { ethers } = require("ethers");
-const { PrismaClient } = require("@prisma/client");
+// blockchain-study에는 @prisma/client가 없으므로 루트 generated 경로를 직접 사용
+const { PrismaClient } = require("../../app/generated/prisma");
 const fs = require("fs");
 const path = require("path");
 

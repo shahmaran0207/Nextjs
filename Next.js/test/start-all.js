@@ -227,8 +227,20 @@ async function main() {
     console.log(`${C.yellow}  ⚠️ 구획 등록 건너뜀: ${e.message}${C.reset}`);
   }
 
-  // ── Step 3.7: DB 제안 → LandDAO 컨트랙트 자동 재등록 ──────────────
-  // Ganache 재시작마다 제안이 사라지므로 DB의 dao_proposals를 다시 등록
+  // ── Step 3.7: DB NFT 소유권 → LandNFT 컨트랙트 복원 ──────────────
+  // ※ 제안 재등록보다 먼저 실행해야 함
+  //   LandDAO.propose()는 NFT 보유자만 호출 가능하므로
+  //   NFT 복원이 완료된 후에 제안을 재등록해야 revert 방지
+  console.log(`${C.yellow}  🏠 DB NFT 소유권 → 컨트랙트 복원 중...${C.reset}`);
+  try {
+    await deployScript("restore-nft-ownership.js");
+    console.log(`${C.green}  ✅ NFT 소유권 복원 완료${C.reset}`);
+  } catch (e) {
+    console.log(`${C.yellow}  ⚠️ NFT 복원 건너뜀: ${e.message}${C.reset}`);
+  }
+
+  // ── Step 3.8: DB 제안 → LandDAO 컨트랙트 자동 재등록 ──────────────
+  // NFT 복원 완료 후 실행 (propose()는 NFT 보유자만 호출 가능)
   console.log(`${C.yellow}  📋 DB 제안 → DAO 컨트랙트 재등록 중...${C.reset}`);
   try {
     await deployScript("register-dao-proposals.js");

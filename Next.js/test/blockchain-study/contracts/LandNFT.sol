@@ -136,6 +136,45 @@ contract LandNFT {
         beneficiary = _beneficiary;
     }
 
+    /**
+     * @notice 재시작 후 DB 소유권을 컨트랙트에 복원 (관리자 전용, 개발 환경 전용)
+     * @param dbParcelId  DB의 land_parcels.id
+     * @param _name       구역 이름
+     * @param priceWei    판매 가격 (wei)
+     * @param buyer       원래 구매자 주소 (DB의 owner_wallet)
+     *
+     * ETH 전송 없이 sold 상태와 NFT 소유권을 직접 복원합니다.
+     * Ganache 재시작 시 DB와 컨트랙트 상태를 동기화하기 위해 사용됩니다.
+     */
+    function adminRestorePurchase(
+        uint256 dbParcelId,
+        string calldata _name,
+        uint256 priceWei,
+        address buyer
+    ) external onlyOwner {
+        require(!parcels[dbParcelId].registered, "LandNFT: already registered");
+        require(buyer != address(0), "LandNFT: zero buyer address");
+
+        // 구역을 이미 판매된 상태로 등록
+        parcels[dbParcelId] = Parcel({
+            dbParcelId: dbParcelId,
+            name:       _name,
+            price:      priceWei,
+            registered: true,
+            sold:       true
+        });
+
+        // NFT 발행 (원래 구매자 주소로)
+        uint256 tokenId = ++_totalMinted;
+        parcelToToken[dbParcelId] = tokenId;
+        tokenToParcel[tokenId]    = dbParcelId;
+        _mint(buyer, tokenId);
+
+        emit ParcelRegistered(dbParcelId, _name, priceWei);
+        emit LandPurchased(dbParcelId, tokenId, buyer, priceWei);
+    }
+
+
     // ── 구매 함수 ─────────────────────────────────────────────────────
 
     /**

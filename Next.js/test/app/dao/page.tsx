@@ -10,11 +10,21 @@ interface Proposal {
   id: number;
   proposer: string;
   description: string;
-  votesFor: number;
-  votesAgainst: number;
+  votesFor: number;         // 온체인 찬성
+  votesAgainst: number;     // 온체인 반대
+  offchainFor: number;      // 오프체인 찬성
+  offchainAgainst: number;  // 오프체인 반대
+  hasVotedOffchain: boolean; // 현재 유저 오프체인 투표 여부
   deadline: number;
   executed: boolean;
   passed: boolean;
+}
+
+interface VoteStat {
+  offchainFor: number;
+  offchainAgainst: number;
+  hasVoted: boolean;
+  votedSupport: boolean | null;
 }
 
 export default function DaoDashboard() {
@@ -28,6 +38,8 @@ export default function DaoDashboard() {
   
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  // 오프체인 투표 통계 캐시 (fetchProposals 내에서 갱신)
+  const [voteStats, setVoteStats] = useState<Record<string, VoteStat>>({});
 
   // 1. 메타마스크 연결 및 컨트랙트 초기화
   useEffect(() => {
@@ -101,19 +113,31 @@ export default function DaoDashboard() {
     try {
       const count = await daoContract.proposalCount();
       const countNum = Number(count);
+
+      // 오프체인 투표 통계 조회 (현재 유저 기준)
+      const statsUrl = account
+        ? `/api/dao/vote-stats?voter=${account.toLowerCase()}`
+        : "/api/dao/vote-stats";
+      const statsRes = await fetch(statsUrl);
+      const stats: Record<string, VoteStat> = statsRes.ok ? await statsRes.json() : {};
+      setVoteStats(stats);
       
       const pList: Proposal[] = [];
       for (let i = countNum; i >= 1; i--) {
-        const p = await daoContract.getProposal(i);
+        const p    = await daoContract.getProposal(i);
+        const stat = stats[String(i)];
         pList.push({
-          id: i,
-          proposer: p.proposer,
-          description: p.description,
-          votesFor: Number(p.votesFor),
-          votesAgainst: Number(p.votesAgainst),
-          deadline: Number(p.deadline),
-          executed: p.executed,
-          passed: p.passed
+          id:               i,
+          proposer:         p.proposer,
+          description:      p.description,
+          votesFor:         Number(p.votesFor),
+          votesAgainst:     Number(p.votesAgainst),
+          offchainFor:      stat?.offchainFor     ?? 0,
+          offchainAgainst:  stat?.offchainAgainst ?? 0,
+          hasVotedOffchain: stat?.hasVoted        ?? false,
+          deadline:         Number(p.deadline),
+          executed:         p.executed,
+          passed:           p.passed,
         });
       }
       setProposals(pList);
@@ -136,6 +160,27 @@ export default function DaoDashboard() {
       const tx = await contractWithSigner.propose(newDesc);
       await tx.wait(); // 블록 채굴 대기
       
+      // 컨트랙트에서 새로 생성된 제안 번호와 deadline 조회
+      const count      = await daoContract.proposalCount();
+      const proposalId = Number(count);
+      let deadlineTs: number | null = null;
+      try {
+        const p  = await daoContract.getProposal(proposalId);
+        deadlineTs = Number(p.deadline);
+      } catch (_) {}
+
+      // DB에도 저장 (Ganache 재시작 후 복원용)
+      await fetch("/api/dao/proposals", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description:         newDesc,
+          proposerAddress:     await signer.getAddress(),
+          contractProposalId:  proposalId,
+          deadlineTimestamp:   deadlineTs,
+        }),
+      });
+
       setNewDesc("");
       fetchProposals();
       alert("제안이 성공적으로 등록되었습니다!");
@@ -146,6 +191,7 @@ export default function DaoDashboard() {
       setActionLoading(false);
     }
   };
+
 
   // 4. 투표하기
   const handleVote = async (proposalId: number, support: boolean) => {
@@ -201,7 +247,9 @@ export default function DaoDashboard() {
       if (!res.ok) throw new Error(data.error || "오프체인 투표 실패");
 
       alert("무료(오프체인) 투표가 성공적으로 완료되었습니다!");
-      // TODO: 오프체인 투표수 합산해서 보여주는 로직 추가
+      // 투표수 및 '투표 완료' 상태 즉시 반영
+      await fetchProposals();
+
     } catch (err: any) {
       console.error(err);
       if (err.code === "ACTION_REJECTED") {
@@ -289,11 +337,16 @@ export default function DaoDashboard() {
               ) : (
                 <div className={styles.proposalsList}>
                   {proposals.map(p => {
-                    const now = Math.floor(Date.now() / 1000);
-                    const isClosed = now > p.deadline;
-                    const totalVotes = p.votesFor + p.votesAgainst;
-                    const forPercent = totalVotes > 0 ? (p.votesFor / totalVotes) * 100 : 0;
-                    const againstPercent = totalVotes > 0 ? (p.votesAgainst / totalVotes) * 100 : 0;
+                    const now          = Math.floor(Date.now() / 1000);
+                    const isClosed     = now > p.deadline;
+                    // 온체인 + 오프체인 합산
+                    const totalFor     = p.votesFor     + p.offchainFor;
+                    const totalAgainst = p.votesAgainst + p.offchainAgainst;
+                    const totalVotes   = totalFor + totalAgainst;
+                    const forPercent     = totalVotes > 0 ? (totalFor     / totalVotes) * 100 : 0;
+                    const againstPercent = totalVotes > 0 ? (totalAgainst / totalVotes) * 100 : 0;
+                    // 이미 투표했는지 (온체인 or 오프체인)
+                    const alreadyVoted = p.hasVotedOffchain;
                     
                     return (
                       <div key={p.id} className={styles.proposalCard}>
@@ -307,6 +360,10 @@ export default function DaoDashboard() {
                             <span className={`${styles.proposalStatus} ${styles.statusActive}`} style={{ color: "#f59e0b", borderColor: "#f59e0b", background: "rgba(245,158,11,0.1)" }}>
                               투표 종료 (결과 대기)
                             </span>
+                          ) : alreadyVoted ? (
+                            <span className={`${styles.proposalStatus} ${styles.statusActive}`} style={{ color: "#a78bfa", borderColor: "#a78bfa", background: "rgba(167,139,250,0.1)" }}>
+                              ✔ 투표 완료
+                            </span>
                           ) : (
                             <span className={`${styles.proposalStatus} ${styles.statusActive}`}>
                               투표 진행중
@@ -318,8 +375,14 @@ export default function DaoDashboard() {
                         
                         <div className={styles.voteBarContainer}>
                           <div className={styles.voteLabels}>
-                            <span className={styles.labelFor}>찬성 {p.votesFor}표</span>
-                            <span className={styles.labelAgainst}>반대 {p.votesAgainst}표</span>
+                            <span className={styles.labelFor}>
+                              찬성 {totalFor}표
+                              {p.offchainFor > 0 && <span style={{ fontSize: '11px', opacity: 0.7 }}> (온체인 {p.votesFor} + 오프체인 {p.offchainFor})</span>}
+                            </span>
+                            <span className={styles.labelAgainst}>
+                              반대 {totalAgainst}표
+                              {p.offchainAgainst > 0 && <span style={{ fontSize: '11px', opacity: 0.7 }}> (온체인 {p.votesAgainst} + 오프체인 {p.offchainAgainst})</span>}
+                            </span>
                           </div>
                           <div className={styles.voteBar}>
                             <div className={styles.voteBarFor} style={{ width: `${forPercent}%` }}></div>
@@ -347,13 +410,21 @@ export default function DaoDashboard() {
                                 
                                 <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.05)', margin: '5px 0' }}></div>
                                 
-                                {/* 새로운 무료 오프체인 서명 투표 */}
-                                <button className={`${styles.voteBtn}`} style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.3)' }} disabled={actionLoading} onClick={() => handleVoteOffchain(p.id, true)}>
-                                  <CheckCircle size={16} /> 오프체인 찬성 서명 (무료)
-                                </button>
-                                <button className={`${styles.voteBtn}`} style={{ background: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e', borderColor: 'rgba(244, 63, 94, 0.3)' }} disabled={actionLoading} onClick={() => handleVoteOffchain(p.id, false)}>
-                                  <XCircle size={16} /> 오프체인 반대 서명 (무료)
-                                </button>
+                                {/* 무료 오프체인 서명 투표 — 이미 투표했으면 비활성화 */}
+                                {alreadyVoted ? (
+                                  <div style={{ width: '100%', textAlign: 'center', padding: '8px', color: '#a78bfa', fontSize: '13px', border: '1px solid rgba(167,139,250,0.3)', borderRadius: '8px', background: 'rgba(167,139,250,0.08)' }}>
+                                    ✔ 오프체인 투표 완료 (1인 1회)
+                                  </div>
+                                ) : (
+                                  <>
+                                    <button className={`${styles.voteBtn}`} style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.3)' }} disabled={actionLoading} onClick={() => handleVoteOffchain(p.id, true)}>
+                                      <CheckCircle size={16} /> 오프체인 찬성 서명 (무료)
+                                    </button>
+                                    <button className={`${styles.voteBtn}`} style={{ background: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e', borderColor: 'rgba(244, 63, 94, 0.3)' }} disabled={actionLoading} onClick={() => handleVoteOffchain(p.id, false)}>
+                                      <XCircle size={16} /> 오프체인 반대 서명 (무료)
+                                    </button>
+                                  </>
+                                )}
                               </>
                             ) : (
                               <button className={styles.executeBtn} disabled={actionLoading} onClick={() => handleExecute(p.id)}>
@@ -366,6 +437,7 @@ export default function DaoDashboard() {
                       </div>
                     );
                   })}
+
                 </div>
               )}
             </div>

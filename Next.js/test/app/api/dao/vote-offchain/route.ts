@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
     const nftInfo = getLandNFTInfo();
     const nftContract = new ethers.Contract(nftInfo.address, nftInfo.abi, provider);
-    
+
     const balance = await nftContract.balanceOf(recoveredAddress);
     const weight = Number(balance);
 
@@ -43,14 +43,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "투표권(LandNFT)이 없습니다." }, { status: 403 });
     }
 
-    // 4. 모든 검증을 통과했으므로 Prisma DB에 오프체인 투표 결과 저장
+    // 4. 중복 투표 체크 (명시적 조회 → 친절한 에러 메시지)
+    const existing = await prisma.offchain_votes.findUnique({
+      where: {
+        proposal_id_voter: {
+          proposal_id: proposalId,
+          voter:        recoveredAddress.toLowerCase(),
+        }
+      }
+    });
+    if (existing) {
+      return NextResponse.json(
+        { error: "이미 이 안건에 투표하셨습니다. (찬성·반대 모두 1회만 가능)" },
+        { status: 400 }
+      );
+    }
+
+    // 5. 모든 검증 통과 → DB에 오프체인 투표 저장
     const vote = await prisma.offchain_votes.create({
       data: {
         proposal_id: proposalId,
-        voter: recoveredAddress.toLowerCase(),
-        support: support,
-        weight: weight,
-        signature: signature,
+        voter:       recoveredAddress.toLowerCase(),
+        support:     support,
+        weight:      weight,
+        signature:   signature,
       }
     });
 
@@ -58,7 +74,7 @@ export async function POST(req: Request) {
 
   } catch (err: any) {
     console.error("[Off-chain Vote Error]", err);
-    // 동일 안건 중복 투표 방지 (Prisma Unique Constraint Violation 에러 캐치)
+    // 레이스 컨디션 등으로 unique 제약 위반 시 fallback
     if (err.code === 'P2002') {
       return NextResponse.json({ error: "이미 이 안건에 투표하셨습니다." }, { status: 400 });
     }
