@@ -30,10 +30,14 @@ const baseNavItems = [
   { href: "/Shopping", label: "상품", icon: "🎁", desc: "상품 페이지" },
   { href: "/mypage", label: "마이페이지", icon: "👤", desc: "나의 쇼핑 활동" },
   { href: "/todo", label: "TODO", icon: "📋", desc: "todo list" },
+  { href: "/oracle", label: "Oracle", icon: "⛓️", desc: "blockchain-oralce" },
+  { href: "/nft-market", label: "NFT-MARKET", icon: "🏬", desc: " nft-market" },
   {
     href: "/multi-payment", label: "멀티코인 결제", icon: "🪙",
     desc: "멀티코인 블록체인 결제 학습"
   },
+  { href: "/erc1155", label: "ERC-1155", icon: "🎒", desc: "멀티 토큰(게임 아이템) 학습" },
+  { href: "/proxy", label: "Proxy Pattern", icon: "🔄", desc: "업그레이더블 컨트랙트" },
 
 ];
 

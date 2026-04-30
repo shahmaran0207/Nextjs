@@ -1,0 +1,292 @@
+.pageWrapper {
+  min-height: 100vh;
+  background: #0f172a;
+  color: #f8fafc;
+  font-family: 'Inter', sans-serif;
+}
+
+.mainContent {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+.centerBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 40vh;
+  text-align: center;
+  background: rgba(255,255,255,0.02);
+  border: 1px dashed rgba(255,255,255,0.1);
+  border-radius: 20px;
+}
+
+.connectBtn {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 999px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* 대시보드 레이아웃 */
+.dashboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+}
+@media (max-width: 800px) {
+  .dashboard { grid-template-columns: 1fr; }
+}
+
+/* 좌측 패널 (구조) */
+.architecturePanel {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.architecturePanel h3 {
+  margin-top: 0;
+  color: #cbd5e1;
+  font-size: 1.1rem;
+}
+
+.proxyBox {
+  width: 100%;
+  background: rgba(56, 189, 248, 0.1);
+  border: 2px solid #38bdf8;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 10px;
+}
+.boxHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: bold;
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+.address {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  background: rgba(0,0,0,0.3);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  word-break: break-all;
+}
+.proxyStorage {
+  background: rgba(0,0,0,0.4);
+  padding: 16px;
+  border-radius: 8px;
+}
+.highlight {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: #fcd34d;
+}
+.note {
+  font-size: 0.75rem;
+  color: #fbbf24;
+  margin: 8px 0 0;
+}
+
+.arrowDown {
+  margin: 16px 0;
+  color: #94a3b8;
+  font-weight: bold;
+  font-size: 0.9rem;
+  background: rgba(255,255,255,0.05);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.logicBox {
+  width: 100%;
+  border: 2px solid #64748b;
+  border-radius: 12px;
+  padding: 20px;
+  background: rgba(255,255,255,0.02);
+  transition: all 0.3s ease;
+}
+.v1Active {
+  border-color: #64748b;
+}
+.v2Active {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.features {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.badge {
+  background: rgba(255,255,255,0.1);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+}
+.badgeNew {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  box-shadow: 0 0 10px rgba(16,185,129,0.5);
+}
+
+.upgradeBtn {
+  margin-top: 24px;
+  width: 100%;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  border: none;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 1.05rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: transform 0.2s;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+}
+.upgradeBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+.upgradeBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.successMsg {
+  margin-top: 24px;
+  width: 100%;
+  background: rgba(16,185,129,0.1);
+  border: 1px solid #10b981;
+  color: #10b981;
+  padding: 16px;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* 우측 패널 (조작) */
+.controlPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 12px;
+}
+.panelHeader h3 { margin: 0; color: #cbd5e1; }
+.refreshBtn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.actionCard {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 20px;
+  border-radius: 12px;
+  transition: opacity 0.3s;
+}
+.disabledCard {
+  opacity: 0.4;
+  pointer-events: none;
+}
+/* disabled 상태라도 클릭해서 에러를 보게 하려면 pointer-events를 주석처리할 수도 있음. 
+   여기서는 유저가 직접 '실패'를 경험하게 하기 위해 주석처리합니다. */
+.disabledCard {
+  pointer-events: auto; 
+}
+
+.actionCard h4 {
+  margin: 0 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.versionTag {
+  font-size: 0.7rem;
+  background: #334155;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.v2Tag {
+  background: #059669;
+}
+.actionCard p {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin-bottom: 16px;
+}
+.warningText {
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.inputRow {
+  display: flex;
+  gap: 10px;
+}
+.inputRow input {
+  flex: 1;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: white;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+}
+.inputRow input:focus { border-color: #3b82f6; }
+.inputRow button {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 0 20px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.inputRow button:hover { background: #2563eb; }
+
+.specialBtn {
+  background: #10b981 !important;
+}
+.specialBtn:hover { background: #059669 !important; }

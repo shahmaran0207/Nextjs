@@ -210,6 +210,15 @@ async function main() {
     await deployScript("deploy-multichain.js");
     await deployScript("deploy-land-nft.js");
     await deployScript("deploy-dao.js");
+    await deployScript("deploy-mynft.js");
+    await deployScript("deploy-marketplace.js");
+    await deployScript("deploy-defi.js"); // Phase 1: DeFi 토큰 
+    await deployScript("deploy-staking.js"); // Phase 2: Staking 금고
+    await deployScript("deploy-tokenA.js"); // DEX Phase 1: 두 번째 교환 토큰
+    await deployScript("deploy-amm.js");    // DEX Phase 2: AMM 풀 (x×y=k)
+    await deployScript("deploy-oracle.js"); // Oracle: Chainlink Mock 가격 피드
+    await deployScript("deploy-erc1155.js"); // ERC-1155: 게임 아이템 멀티 토큰
+    await deployScript("deploy-proxy.js");  // Proxy Pattern: 업그레이더블 컨트랙트
     console.log(`${C.green}  ✅ 모든 컨트랙트 배포 완료${C.reset}`);
   } catch (e) {
     console.error(`${C.red}  ❌ 배포 실패: ${e.message}${C.reset}`);

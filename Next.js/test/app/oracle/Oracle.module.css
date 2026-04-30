@@ -1,0 +1,398 @@
+/* ===== Chainlink Oracle Dashboard ===== */
+
+.pageWrapper {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0f1e 0%, #0d1b2a 50%, #0a0f1e 100%);
+  color: #e2e8f0;
+  font-family: 'Inter', sans-serif;
+}
+
+.mainContent {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+/* ── 지갑 행 ── */
+.walletRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+  justify-content: flex-end;
+}
+
+.walletBadge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(16,185,129,0.15);
+  border: 1px solid rgba(16,185,129,0.4);
+  color: #34d399;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.connectBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.connectBtn:hover { opacity: 0.85; }
+
+.refreshBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #94a3b8;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.refreshBtn:hover { background: rgba(255,255,255,0.1); }
+
+/* ── 오라클 흐름 다이어그램 ── */
+.flowDiagram {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 20px 24px;
+  margin-bottom: 28px;
+  position: relative;
+  flex-wrap: wrap;
+}
+
+.flowNode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  min-width: 80px;
+}
+
+.flowNodeActive {
+  background: rgba(99,102,241,0.15);
+  border-color: rgba(99,102,241,0.4);
+}
+
+.flowIcon { font-size: 1.5rem; }
+
+.flowLabel {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.flowArrow {
+  font-size: 1.2rem;
+  color: #6366f1;
+  font-weight: 700;
+}
+
+.mockBadge {
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(245,158,11,0.15);
+  border: 1px solid rgba(245,158,11,0.4);
+  color: #f59e0b;
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── 2열 그리드 ── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 20px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  .grid { grid-template-columns: 1fr; }
+}
+
+/* ── 카드 ── */
+.card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 28px;
+  backdrop-filter: blur(10px);
+}
+
+.cardTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0 0 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.cardDesc {
+  font-size: 0.83rem;
+  color: #94a3b8;
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+
+/* ── 가격 표시 ── */
+.priceDisplay {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.priceSymbol {
+  font-size: 2rem;
+  color: #94a3b8;
+  padding-bottom: 6px;
+}
+
+.priceValue {
+  font-size: 3.5rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.priceUp { color: #34d399; }
+.priceDown { color: #f87171; }
+
+.priceChange {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding-bottom: 8px;
+}
+
+.up { color: #34d399; }
+.down { color: #f87171; }
+
+/* ── Raw 정보 ── */
+.rawInfo {
+  background: rgba(0,0,0,0.2);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.rawRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 0.82rem;
+}
+.rawRow:last-child { border-bottom: none; }
+.rawRow span { color: #64748b; }
+.rawRow code {
+  color: #a78bfa;
+  font-family: monospace;
+  font-size: 0.8rem;
+}
+
+/* ── 출처 정보 ── */
+.sourceInfo {
+  background: rgba(99,102,241,0.06);
+  border: 1px solid rgba(99,102,241,0.15);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+.sourceInfo p {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin: 4px 0;
+  line-height: 1.6;
+}
+.sourceInfo strong { color: #818cf8; }
+.sourceInfo code {
+  background: rgba(255,255,255,0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.76rem;
+  color: #f59e0b;
+}
+
+/* ── 프리셋 버튼 ── */
+.presetRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.presetBtn {
+  background: rgba(99,102,241,0.15);
+  border: 1px solid rgba(99,102,241,0.3);
+  color: #818cf8;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.presetBtn:hover { background: rgba(99,102,241,0.3); }
+
+/* ── 입력 ── */
+.inputGroup {
+  margin-bottom: 16px;
+}
+
+.inputGroup label {
+  display: block;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.inputWrapper:focus-within { border-color: rgba(99,102,241,0.5); }
+
+.inputPrefix {
+  padding: 0 14px;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  border-right: 1px solid rgba(255,255,255,0.08);
+}
+
+.priceInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 12px 16px;
+  color: #f1f5f9;
+  font-size: 1rem;
+  font-weight: 600;
+  outline: none;
+}
+
+/* ── 변환 박스 ── */
+.conversionBox {
+  background: rgba(245,158,11,0.07);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+.conversionBox p {
+  font-size: 0.78rem;
+  color: #92400e;
+  margin: 0 0 6px;
+}
+.conversionBox code {
+  display: block;
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #f59e0b;
+  margin-bottom: 4px;
+}
+.conversionNote {
+  font-size: 0.75rem;
+  color: #78716c;
+}
+
+/* ── 업데이트 버튼 ── */
+.updateBtn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #7c3aed, #6366f1);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.updateBtn:hover:not(:disabled) { opacity: 0.85; transform: translateY(-1px); }
+.updateBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── 히스토리 ── */
+.historyCard {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 28px;
+}
+
+.historyTable {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.historyHeader {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  padding: 8px 16px;
+  font-size: 0.75rem;
+  color: #475569;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.historyRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.15s;
+}
+.historyRow:hover { background: rgba(255,255,255,0.02); }
+.historyRow:last-child { border-bottom: none; }
+
+.historyTime { font-size: 0.82rem; color: #64748b; }
+.historyPrice { font-size: 0.9rem; font-weight: 700; color: #e2e8f0; }
+.historyChange { font-size: 0.82rem; font-weight: 600; }
+
+/* ── 스피너 ── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner { animation: spin 1s linear infinite; }

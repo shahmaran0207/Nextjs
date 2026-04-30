@@ -26,13 +26,21 @@ const contractsDir = path.join(__dirname, "..", "contracts");
  * solc가 이 함수를 호출해서 ERC20.sol 내용을 가져감.
  */
 function findImports(importPath) {
+  // 1순위: contracts 디렉토리 내 상대 경로
   try {
     const fullPath = path.join(contractsDir, importPath);
     return { contents: fs.readFileSync(fullPath, "utf8") };
-  } catch (e) {
-    return { error: "File not found: " + importPath };
-  }
+  } catch (_) {}
+
+  // 2순위: blockchain-study/node_modules (예: @openzeppelin)
+  try {
+    const fullPath = path.join(__dirname, "..", "node_modules", importPath);
+    return { contents: fs.readFileSync(fullPath, "utf8") };
+  } catch (_) {}
+
+  return { error: "File not found: " + importPath };
 }
+
 
 /**
  * 특정 .sol 파일을 컴파일해서 { abi, bytecode }를 반환하는 함수.

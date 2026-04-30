@@ -194,6 +194,30 @@ export default function MyPage() {
                 </div>
               </Link>
 
+              {/* 블록체인 지갑 이자수령 */}
+              <Link href="/defi" className="text-decoration-none">
+                <div className="card-container shop-surface border-default menu-card">
+                  <div className="flex-row-between mb-sm">
+                    <div style={{ fontSize: "32px" }}>🏦</div>
+                    <div className="text-24-bold text-accent">-</div>
+                  </div>
+                  <h3 className="text-16-bold text-primary margin-0">DeFi 스테이킹</h3>
+                  <p className="text-13 text-secondary mt-6px margin-0">무료 코인(Faucet)을 받고 스테이킹(예치)을 체험해 보세요.</p>
+                </div>
+              </Link>
+
+              {/* 유동성 풀 */}
+              <Link href="/dex" className="text-decoration-none">
+                <div className="card-container shop-surface border-default menu-card">
+                  <div className="flex-row-between mb-sm">
+                    <div style={{ fontSize: "32px" }}>🌊</div>
+                    <div className="text-24-bold text-accent">-</div>
+                  </div>
+                  <h3 className="text-16-bold text-primary margin-0">유동성 풀</h3>
+                  <p className="text-13 text-secondary mt-6px margin-0">DEX — SimpleAMM</p>
+                </div>
+              </Link>
+
               {/* 블록체인 지갑 잔액조회 카드 */}
               <Link href="/wallet-balance" className="text-decoration-none">
                 <div className="card-container shop-surface border-default menu-card">

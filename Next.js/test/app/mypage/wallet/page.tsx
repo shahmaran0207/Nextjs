@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import styles from "./Wallet.module.css";
 import { Package, Heart, Star, Award, Map, Truck, Lock, ArrowLeft, Wallet } from "lucide-react";
-import Link from "next/link";
 import { PageHeader } from "@/component/PageHeader";
 import { ethers } from "ethers";
 

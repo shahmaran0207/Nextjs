@@ -1,0 +1,394 @@
+/* ===== DEX Dashboard ===== */
+
+.pageWrapper {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0f1e 0%, #0d1b2a 50%, #0a0f1e 100%);
+  color: #e2e8f0;
+  font-family: 'Inter', sans-serif;
+}
+
+.mainContent {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+/* ── 지갑 행 ── */
+.walletRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+  justify-content: flex-end;
+}
+
+.walletBadge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.connectBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.connectBtn:hover { opacity: 0.85; }
+
+.refreshBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #94a3b8;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.refreshBtn:hover { background: rgba(255,255,255,0.1); }
+
+/* ── 2열 그리드 ── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .grid { grid-template-columns: 1fr; }
+}
+
+/* ── 카드 ── */
+.card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 28px;
+  backdrop-filter: blur(10px);
+}
+
+.cardTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0 0 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+/* ── 풀 현황 ── */
+.poolStats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  background: rgba(99,102,241,0.08);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.poolToken {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.tokenSymbol {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.tokenAmount {
+  font-size: 1.6rem;
+  font-weight: 800;
+  background: linear-gradient(to right, #6366f1, #a78bfa);
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.tokenLabel {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.poolDivider {
+  font-size: 1.8rem;
+  color: #475569;
+  font-weight: 300;
+}
+
+.kValue {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 20px;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f59e0b;
+}
+
+.kLabel {
+  font-size: 0.72rem;
+  color: #92400e;
+  font-weight: 400;
+}
+
+.priceRow {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.priceBox {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.priceLabel {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.priceValue {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #34d399;
+}
+
+.priceCurrency {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* ── 내 잔액 ── */
+.balanceSection h3 {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+
+.balanceRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.balanceRow span:first-child {
+  font-weight: 700;
+  color: #a78bfa;
+  width: 40px;
+}
+
+.balanceRow span:nth-child(2) {
+  flex: 1;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.faucetMini {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(99,102,241,0.2);
+  border: 1px solid rgba(99,102,241,0.4);
+  color: #818cf8;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.faucetMini:hover { background: rgba(99,102,241,0.35); }
+.faucetMini:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── 스왑 카드 ── */
+.swapDirection {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 14px;
+}
+
+.swapToken {
+  font-size: 1.4rem;
+  font-weight: 800;
+  background: linear-gradient(to right, #f59e0b, #ef4444);
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.swapArrowBtn {
+  background: rgba(245,158,11,0.15);
+  border: 1px solid rgba(245,158,11,0.3);
+  color: #f59e0b;
+  padding: 8px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.3s;
+  display: flex;
+  align-items: center;
+}
+.swapArrowBtn:hover { transform: rotate(180deg); }
+
+.inputGroup {
+  margin-bottom: 16px;
+}
+
+.inputGroup label {
+  display: block;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.inputWrapper {
+  display: flex;
+  gap: 8px;
+}
+
+.amountInput {
+  flex: 1;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: #f1f5f9;
+  font-size: 1rem;
+  font-weight: 600;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.amountInput:focus { border-color: rgba(99,102,241,0.5); }
+
+.maxBtn {
+  background: rgba(99,102,241,0.2);
+  border: 1px solid rgba(99,102,241,0.4);
+  color: #818cf8;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.maxBtn:hover { background: rgba(99,102,241,0.35); }
+
+.outputBox {
+  background: rgba(52,211,153,0.08);
+  border: 1px solid rgba(52,211,153,0.2);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.outputLabel {
+  font-size: 0.75rem;
+  color: #6ee7b7;
+}
+
+.outputAmount {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #34d399;
+}
+
+.outputNote {
+  font-size: 0.7rem;
+  color: #4b5563;
+}
+
+.swapBtn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.swapBtn:hover:not(:disabled) { opacity: 0.85; transform: translateY(-1px); }
+.swapBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.formula {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.formula p {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin: 0 0 8px;
+}
+
+.formula code {
+  display: block;
+  font-size: 0.82rem;
+  color: #f59e0b;
+  font-family: monospace;
+  line-height: 1.8;
+}
+
+/* ── 스피너 ── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  animation: spin 1s linear infinite;
+}

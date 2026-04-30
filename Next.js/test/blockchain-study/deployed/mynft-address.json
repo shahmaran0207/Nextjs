@@ -1,18 +1,19 @@
 {
-  "network": "Chain A (localhost:8545)",
-  "chainId": 31337,
-  "deployedAt": "2026-04-30T08:17:53.884Z",
-  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-  "beneficiary": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
-  "LandNFT": {
-    "address": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+  "rpcUrl": "http://127.0.0.1:8545",
+  "MyNFT": {
+    "address": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
     "abi": [
       {
         "inputs": [
           {
-            "internalType": "address payable",
-            "name": "_beneficiary",
-            "type": "address"
+            "internalType": "uint256",
+            "name": "_mintPrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "_maxSupply",
+            "type": "uint256"
           }
         ],
         "stateMutability": "nonpayable",
@@ -24,7 +25,7 @@
           {
             "indexed": true,
             "internalType": "address",
-            "name": "tokenOwner",
+            "name": "owner",
             "type": "address"
           },
           {
@@ -49,7 +50,7 @@
           {
             "indexed": true,
             "internalType": "address",
-            "name": "tokenOwner",
+            "name": "owner",
             "type": "address"
           },
           {
@@ -74,29 +75,23 @@
           {
             "indexed": true,
             "internalType": "uint256",
-            "name": "dbParcelId",
-            "type": "uint256"
-          },
-          {
-            "indexed": true,
-            "internalType": "uint256",
             "name": "tokenId",
             "type": "uint256"
           },
           {
             "indexed": true,
             "internalType": "address",
-            "name": "buyer",
+            "name": "owner",
             "type": "address"
           },
           {
             "indexed": false,
-            "internalType": "uint256",
-            "name": "pricePaid",
-            "type": "uint256"
+            "internalType": "string",
+            "name": "name",
+            "type": "string"
           }
         ],
-        "name": "LandPurchased",
+        "name": "NFTMinted",
         "type": "event"
       },
       {
@@ -104,24 +99,18 @@
         "inputs": [
           {
             "indexed": true,
-            "internalType": "uint256",
-            "name": "dbParcelId",
-            "type": "uint256"
+            "internalType": "address",
+            "name": "previousOwner",
+            "type": "address"
           },
           {
-            "indexed": false,
-            "internalType": "string",
-            "name": "name",
-            "type": "string"
-          },
-          {
-            "indexed": false,
-            "internalType": "uint256",
-            "name": "price",
-            "type": "uint256"
+            "indexed": true,
+            "internalType": "address",
+            "name": "newOwner",
+            "type": "address"
           }
         ],
-        "name": "ParcelRegistered",
+        "name": "OwnershipTransferred",
         "type": "event"
       },
       {
@@ -152,34 +141,6 @@
       {
         "inputs": [
           {
-            "internalType": "uint256",
-            "name": "dbParcelId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "string",
-            "name": "_name",
-            "type": "string"
-          },
-          {
-            "internalType": "uint256",
-            "name": "priceWei",
-            "type": "uint256"
-          },
-          {
-            "internalType": "address",
-            "name": "buyer",
-            "type": "address"
-          }
-        ],
-        "name": "adminRestorePurchase",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
             "internalType": "address",
             "name": "to",
             "type": "address"
@@ -199,7 +160,7 @@
         "inputs": [
           {
             "internalType": "address",
-            "name": "_owner",
+            "name": "owner",
             "type": "address"
           }
         ],
@@ -209,19 +170,6 @@
             "internalType": "uint256",
             "name": "",
             "type": "uint256"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "beneficiary",
-        "outputs": [
-          {
-            "internalType": "address payable",
-            "name": "",
-            "type": "address"
           }
         ],
         "stateMutability": "view",
@@ -250,31 +198,16 @@
         "inputs": [
           {
             "internalType": "uint256",
-            "name": "dbParcelId",
+            "name": "tokenId",
             "type": "uint256"
           }
         ],
-        "name": "getParcel",
+        "name": "getTokenName",
         "outputs": [
           {
             "internalType": "string",
-            "name": "parcelName",
+            "name": "",
             "type": "string"
-          },
-          {
-            "internalType": "uint256",
-            "name": "price",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bool",
-            "name": "registered",
-            "type": "bool"
-          },
-          {
-            "internalType": "bool",
-            "name": "sold",
-            "type": "bool"
           }
         ],
         "stateMutability": "view",
@@ -284,7 +217,7 @@
         "inputs": [
           {
             "internalType": "address",
-            "name": "_owner",
+            "name": "owner",
             "type": "address"
           },
           {
@@ -299,6 +232,51 @@
             "internalType": "bool",
             "name": "",
             "type": "bool"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "maxSupply",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "string",
+            "name": "name",
+            "type": "string"
+          }
+        ],
+        "name": "mint",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "payable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "mintPrice",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
           }
         ],
         "stateMutability": "view",
@@ -350,95 +328,8 @@
         "type": "function"
       },
       {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "",
-            "type": "uint256"
-          }
-        ],
-        "name": "parcelToToken",
-        "outputs": [
-          {
-            "internalType": "uint256",
-            "name": "",
-            "type": "uint256"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "",
-            "type": "uint256"
-          }
-        ],
-        "name": "parcels",
-        "outputs": [
-          {
-            "internalType": "uint256",
-            "name": "dbParcelId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "string",
-            "name": "name",
-            "type": "string"
-          },
-          {
-            "internalType": "uint256",
-            "name": "price",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bool",
-            "name": "registered",
-            "type": "bool"
-          },
-          {
-            "internalType": "bool",
-            "name": "sold",
-            "type": "bool"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "dbParcelId",
-            "type": "uint256"
-          }
-        ],
-        "name": "purchase",
-        "outputs": [],
-        "stateMutability": "payable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "dbParcelId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "string",
-            "name": "_name",
-            "type": "string"
-          },
-          {
-            "internalType": "uint256",
-            "name": "priceEther",
-            "type": "uint256"
-          }
-        ],
-        "name": "registerParcel",
+        "inputs": [],
+        "name": "renounceOwnership",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -470,6 +361,34 @@
         "inputs": [
           {
             "internalType": "address",
+            "name": "from",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "to",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bytes",
+            "name": "data",
+            "type": "bytes"
+          }
+        ],
+        "name": "safeTransferFrom",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
             "name": "operator",
             "type": "address"
           },
@@ -487,30 +406,12 @@
       {
         "inputs": [
           {
-            "internalType": "address payable",
-            "name": "_beneficiary",
-            "type": "address"
-          }
-        ],
-        "name": "setBeneficiary",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          {
             "internalType": "uint256",
-            "name": "dbParcelId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "newPrice",
+            "name": "_price",
             "type": "uint256"
           }
         ],
-        "name": "setPrice",
+        "name": "setMintPrice",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -531,7 +432,7 @@
             "type": "bool"
           }
         ],
-        "stateMutability": "pure",
+        "stateMutability": "view",
         "type": "function"
       },
       {
@@ -551,16 +452,16 @@
         "inputs": [
           {
             "internalType": "uint256",
-            "name": "",
+            "name": "tokenId",
             "type": "uint256"
           }
         ],
-        "name": "tokenToParcel",
+        "name": "tokenURI",
         "outputs": [
           {
-            "internalType": "uint256",
+            "internalType": "string",
             "name": "",
-            "type": "uint256"
+            "type": "string"
           }
         ],
         "stateMutability": "view",
@@ -598,6 +499,26 @@
           }
         ],
         "name": "transferFrom",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "newOwner",
+            "type": "address"
+          }
+        ],
+        "name": "transferOwnership",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "withdraw",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
