@@ -38,7 +38,8 @@ export function createPathLayer(
   handleLinkSelect: (lkId: string, busanLinkData: any) => void,
   busanLinkData: any,
   selectableLinkIds: Set<string>,
-  onHistoryClick?: (lkId: string, speed: number | null, screenX: number, screenY: number) => void
+  onHistoryClick?: (lkId: string, speed: number | null, screenX: number, screenY: number) => void,
+  disabled?: boolean   // 랜드 모드 ON이면 true → pickable: false로 링크 클릭 차단
 ) {
 
   // Set을 배열로 변환하여 updateTriggers가 제대로 작동하도록
@@ -101,7 +102,7 @@ export function createPathLayer(
     widthUnits: 'pixels',
     widthMinPixels: 2,
     widthMaxPixels: 12,
-    pickable: true,
+    pickable: !disabled,   // 랜드 모드(disabled=true)이면 클릭 비활성화
     visible: true,
     opacity: 0.7,
     billboard: false,

@@ -8,10 +8,12 @@ const { spawn, execSync } = require("child_process");
 const net = require("net");
 const path = require("path");
 
-const ROOT = __dirname;
-const BC   = path.join(ROOT, "blockchain-study");
-const PK   = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
-const BAL  = "1000000000000000000000";
+const ROOT    = __dirname;
+const BC      = path.join(ROOT, "blockchain-study");
+const PK      = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+const BAL     = "1000000000000000000000";
+// npx 오버헤드 없이 로컬 설치된 ganache.cmd 직접 사용
+const GANACHE = path.join(BC, "node_modules", ".bin", "ganache.cmd");
 
 // ──────────────────────────────────────────────────────────────
 // 컬러 출력 헬퍼
@@ -45,9 +47,31 @@ function log(label, msg) {
 }
 
 // ──────────────────────────────────────────────────────────────
+// 포트 점유 프로세스 강제 종료 (Windows netstat + taskkill)
+// ──────────────────────────────────────────────────────────────
+function killPort(port) {
+  try {
+    const out = execSync(`netstat -ano | findstr :${port}`, { encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] });
+    const pids = new Set();
+    out.split("\n").forEach(line => {
+      // LISTENING 또는 ESTABLISHED 상태의 로컬 포트 매칭
+      const m = line.match(/(?:LISTENING|ESTABLISHED)\s+(\d+)/);
+      if (m) pids.add(m[1]);
+    });
+    pids.forEach(pid => {
+      if (pid === "0") return;
+      try { execSync(`taskkill /PID ${pid} /F`, { stdio: "ignore" }); } catch (_) {}
+    });
+    if (pids.size > 0) console.log(`  ${C.gray}포트 ${port} 정리 완료 (PID: ${[...pids].join(", ")})${C.reset}`);
+  } catch (_) {
+    // findstr이 아무것도 찾지 못하면 exit 1 → 정상(포트 비어있음)
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
 // 포트 열릴 때까지 대기
 // ──────────────────────────────────────────────────────────────
-function waitForPort(port, maxMs = 15000) {
+function waitForPort(port, maxMs = 30000) {
   return new Promise((resolve, reject) => {
     const start = Date.now();
     const tryConnect = () => {
@@ -80,6 +104,47 @@ function spawnService(label, cmd, args, cwd) {
 }
 
 // ──────────────────────────────────────────────────────────────
+// 테스트 계정 잔액 자동 충전 (evm_setAccountBalance)
+// Ganache 재시작 후 MetaMask 캐시 여부와 무관하게 잔액 보장
+// ──────────────────────────────────────────────────────────────
+async function topUpBalances() {
+  const http = require("http");
+  // 충전할 계정 목록 (배포자 + MetaMask 자주 쓰는 테스트 계정)
+  const ACCOUNTS = [
+    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // Account #0 (배포자)
+    "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", // Account #1
+    "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC", // Account #2
+  ];
+  // 1000 ETH in hex wei (1000 * 10^18 = 0x3635C9ADC5DEA00000)
+  const AMOUNT_HEX = "0x3635C9ADC5DEA00000";
+  const CHAINS = [
+    { label: "Chain A", port: 8545 },
+    { label: "Chain B", port: 8546 },
+    { label: "Chain C", port: 8547 },
+  ];
+
+  const rpcCall = (port, method, params) => new Promise((resolve) => {
+    const body = JSON.stringify({ jsonrpc: "2.0", id: 1, method, params });
+    const req = http.request(
+      { hostname: "127.0.0.1", port, path: "/", method: "POST",
+        headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) } },
+      (res) => { res.on("data", () => {}); res.on("end", resolve); }
+    );
+    req.on("error", resolve); // 실패해도 계속 진행
+    req.write(body);
+    req.end();
+  });
+
+  console.log(`${C.gray}  💰 테스트 계정 잔액 충전 중...${C.reset}`);
+  for (const chain of CHAINS) {
+    for (const addr of ACCOUNTS) {
+      await rpcCall(chain.port, "evm_setAccountBalance", [addr, AMOUNT_HEX]);
+    }
+    console.log(`  ${C.gray}✔ ${chain.label} (포트 ${chain.port}) 계정 충전 완료${C.reset}`);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
 // 메인 시작 루틴
 // ──────────────────────────────────────────────────────────────
 async function main() {
@@ -87,30 +152,31 @@ async function main() {
   console.log("  멀티코인 결제 시스템 — 통합 시작 (터미널 1개)");
   console.log(`${"=".repeat(60)}${C.reset}\n`);
 
-  // ── Step 1: Ganache 3개 병렬 시작 ──────────────────────────
+  // ── Step 0: 잔여 프로세스 정리 (재실행 시 EADDRINUSE 방지) ──────
+  console.log(`${C.gray}[0/4] 이전 프로세스 정리 중...${C.reset}`);
+  [8545, 8546, 8547, 3001, 3000].forEach(killPort);
+  // TIME_WAIT 소켓이 해제될 시간 확보
+  await new Promise(r => setTimeout(r, 1500));
+
+  // ── Step 1: Ganache 3개 순차 시작 (npx 없이 로컬 바이너리 직접 실행) ──
   console.log(`${C.yellow}[1/4] Ganache 3개 시작...${C.reset}`);
-  const ganacheArgs = `--chain.chainId CHAIN_ID --server.port PORT --wallet.accounts "${PK},${BAL}"`;
 
-  spawnService("Ganache-A", "npx", ["ganache",
-    "--chain.chainId",  "31337",  // EIP-155 서명용 chainId (MetaMask 등록 시 이 값 사용)
-    "--chain.networkId", "31337",  // eth_chainId RPC 응답값과 일치시킴
-    "--server.port",   "8545",
-    "--wallet.accounts", `${PK},${BAL}`
-  ], ROOT);
+  // Ganache 공통 실행 함수
+  const startGanache = (label, chainId, port) => {
+    spawnService(label, GANACHE, [
+      "--chain.chainId",   String(chainId),
+      "--chain.networkId", String(chainId),
+      "--server.port",     String(port),
+      "--wallet.accounts", `${PK},${BAL}`
+    ], ROOT);
+  };
 
-  spawnService("Ganache-B", "npx", ["ganache",
-    "--chain.chainId",  "31338",
-    "--chain.networkId", "31338",
-    "--server.port",   "8546",
-    "--wallet.accounts", `${PK},${BAL}`
-  ], ROOT);
-
-  spawnService("Ganache-C", "npx", ["ganache",
-    "--chain.chainId",  "31339",
-    "--chain.networkId", "31339",
-    "--server.port",   "8547",
-    "--wallet.accounts", `${PK},${BAL}`
-  ], ROOT);
+  // 동시에 세 인스턴스를 띄우면 npx 캐시 경쟁으로 실패하므로 1초 간격으로 stagger
+  startGanache("Ganache-A", 31337, 8545);
+  await new Promise(r => setTimeout(r, 1000));
+  startGanache("Ganache-B", 31338, 8546);
+  await new Promise(r => setTimeout(r, 1000));
+  startGanache("Ganache-C", 31339, 8547);
 
   // ── Step 2: 포트 열릴 때까지 대기 ─────────────────────────
   console.log(`${C.yellow}[2/4] 포트 대기 중 (8545, 8546, 8547)...${C.reset}`);
@@ -128,20 +194,52 @@ async function main() {
 
   // ── Step 3: 스마트컨트랙트 배포 ────────────────────────────
   console.log(`\n${C.yellow}[3/4] 컨트랙트 배포 중...${C.reset}`);
+  
+  const deployScript = async (scriptName) => {
+    return new Promise((resolve, reject) => {
+      const proc = spawn("node", [`scripts/${scriptName}`], {
+        cwd: BC, shell: true, stdio: ["ignore", "pipe", "pipe"]
+      });
+      proc.stdout.on("data", d => log("Deploy", d.toString()));
+      proc.stderr.on("data", d => log("Deploy", d.toString()));
+      proc.on("exit", code => code === 0 ? resolve() : reject(new Error(`${scriptName} 배포 실패 (exit ${code})`)));
+    });
+  };
+
   try {
-    const deployProc = spawn("node", ["scripts/deploy-multichain.js"], {
-      cwd: BC, shell: true, stdio: ["ignore", "pipe", "pipe"]
-    });
-    deployProc.stdout.on("data", d => log("Deploy", d.toString()));
-    deployProc.stderr.on("data", d => log("Deploy", d.toString()));
-    await new Promise((resolve, reject) => {
-      deployProc.on("exit", code => code === 0 ? resolve() : reject(new Error(`배포 실패 (exit ${code})`)));
-    });
-    console.log(`${C.green}  ✅ 컨트랙트 배포 완료${C.reset}`);
+    await deployScript("deploy-multichain.js");
+    await deployScript("deploy-land-nft.js");
+    await deployScript("deploy-dao.js");
+    console.log(`${C.green}  ✅ 모든 컨트랙트 배포 완료${C.reset}`);
   } catch (e) {
     console.error(`${C.red}  ❌ 배포 실패: ${e.message}${C.reset}`);
     process.exit(1);
   }
+
+  // ── Step 3.6: DB 구획 → LandNFT 컨트랙트 자동 재등록 ──────────────
+  // Ganache 재시작마다 컨트랙트가 초기화되므로 DB의 land_parcels를 다시 등록
+  console.log(`${C.yellow}  📦 DB 구획 → 컨트랙트 재등록 중...${C.reset}`);
+  try {
+    await deployScript("register-parcel.js");
+    console.log(`${C.green}  ✅ 구획 등록 완료${C.reset}`);
+  } catch (e) {
+    // 등록할 구획이 없거나 실패해도 전체 시작은 계속 진행
+    console.log(`${C.yellow}  ⚠️ 구획 등록 건너뜀: ${e.message}${C.reset}`);
+  }
+
+  // ── Step 3.7: DB 제안 → LandDAO 컨트랙트 자동 재등록 ──────────────
+  // Ganache 재시작마다 제안이 사라지므로 DB의 dao_proposals를 다시 등록
+  console.log(`${C.yellow}  📋 DB 제안 → DAO 컨트랙트 재등록 중...${C.reset}`);
+  try {
+    await deployScript("register-dao-proposals.js");
+    console.log(`${C.green}  ✅ 제안 재등록 완료${C.reset}`);
+  } catch (e) {
+    console.log(`${C.yellow}  ⚠️ 제안 재등록 건너뜀: ${e.message}${C.reset}`);
+  }
+
+  // ── Step 3.5: 테스트 계정 잔액 충전 (MetaMask 캐시 무관하게 1000 ETH 보장) ──
+  // Ganache evm_setAccountBalance 로 nonce 없이 즉시 설정
+  await topUpBalances();
 
   // ── Step 4: 결제 서버 시작 ─────────────────────────────────
   console.log(`\n${C.yellow}[4/4] 결제 서버 시작...${C.reset}`);

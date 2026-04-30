@@ -638,8 +638,6 @@ model product_price_history {
   @@index([recorded_at])
 }
 
-// ── 크로스체인 결제 주문 테이블 ─────────────────────────────────────
-// /multi-payment 페이지에서 생성되는 블록체인 결제 주문 저장
 model crypto_payment_orders {
   id            Int      @id @default(autoincrement())
   order_id      String   @unique @db.VarChar(100)
@@ -705,4 +703,93 @@ model crypto_payment_orders {
   @@index([status])
   @@index([created_at])
   @@index([product_id])
+}
+
+// ── 가상 부동산 (Land NFT) ────────────────────────────────────────
+// 3D 디지털 트윈 지도 위에서 거래되는 가상 구역(Parcel) 정보
+model land_parcels {
+  id              Int      @id @default(autoincrement())
+
+  name            String   @db.VarChar(200)
+  // 구역 이름 (예: "해운대 A구역", "서면 역세권 001")
+
+  description     String?  @db.Text
+  // 구역 설명 (선택)
+
+  coordinates     Json
+  // GeoJSON Polygon 꼭짓점 배열: [[경도, 위도], [경도, 위도], ...]
+  // 예: [[129.16, 35.16], [129.17, 35.16], [129.17, 35.17], [129.16, 35.16]]
+  // ※ 마지막 좌표는 첫 번째 좌표와 동일해야 폴리곤이 닫힘
+
+  price_eth       String   @default("0.1") @db.VarChar(50)
+  // 판매 가격 (ETH 단위 문자열, 예: "0.1", "0.5")
+
+  status          String   @default("available") @db.VarChar(20)
+  // "available" = 구매 가능
+  // "owned"     = 이미 소유됨
+
+  // ── 소유권 정보 (구매 완료 후 기록) ──────────────────────────
+  owner_wallet    String?  @db.VarChar(100)
+  // 현재 소유자의 메타마스크 지갑 주소 (0x...)
+
+  owner_user_id   Int?
+  // 현재 소유자의 내부 users.id (지갑 주소와 연동된 경우)
+
+  // ── NFT 민팅 정보 (Step 2 이후 사용) ─────────────────────────
+  nft_token_id    Int?
+  // 블록체인에 민팅된 ERC-721 토큰 ID (민팅 전엔 null)
+
+  tx_hash         String?  @db.VarChar(100)
+  // 구매/민팅 트랜잭션 해시
+
+  // ── 등록자 정보 ──────────────────────────────────────────────
+  created_by      Int?
+  // 이 구역을 지도 위에 그려 등록한 users.id (관리자 or 판매자)
+
+  created_at      DateTime @default(now()) @db.Timestamp(6)
+  updated_at      DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+  @@index([status])
+  @@index([owner_user_id])
+  @@index([created_by])
+}
+
+model offchain_votes {
+  id            Int   @id @default (autoincrement())
+  proposal_id   Int       //투표한 제안 번호(블록체인의 제안번호와 매칭)
+  voter         String    //투표자의 지갑 주소
+  support       Boolean   //true(찬성), false(반대)
+  weight        Int       //투표 시점의 NFT  보유량 (투표권 수)
+  signature     String    //위조 방지용: 사용자가 메타마스크로 서명한 값
+  created_at    DateTime  @default(now())   //동일한 제안에 동일한 주소가 2번 투표하지 못하도록 제약조건 설정
+  @@unique([proposal_id, voter])
+}
+
+// ── DAO 제안 영속 저장 ─────────────────────────────────────────────
+// Ganache 재시작 시 컨트랙트가 초기화되므로 DB에 미러링해 영속성 보장
+model dao_proposals {
+  id                   Int      @id @default(autoincrement())
+
+  description          String   @db.Text
+  // 제안 내용
+
+  proposer_address     String   @db.VarChar(100)
+  // 제안자 지갑 주소 (0x...)
+
+  contract_proposal_id Int?
+  // 컨트랙트에 등록된 제안 번호 (propose() tx 완료 후 기록)
+  // 재시작 후 재등록 시 이 번호로 매칭
+
+  deadline_timestamp   BigInt?
+  // 컨트랙트의 투표 마감 시각 (Unix timestamp)
+  // 만료된 제안은 재등록 불필요
+
+  status               String   @default("active") @db.VarChar(20)
+  // "active" | "executed" | "expired"
+
+  created_at           DateTime @default(now()) @db.Timestamp(6)
+  updated_at           DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+  @@index([status])
+  @@index([proposer_address])
 }

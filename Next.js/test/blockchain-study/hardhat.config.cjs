@@ -9,6 +9,10 @@ module.exports = {
   networks: {
     hardhat: {
       chainId: 31337, // MetaMask에 등록할 때 필요한 체인 ID
+      accounts: {
+        count: 10,
+        accountsBalance: "100000000000000000000000" // 100,000 ETH (wei 단위)
+      }
     },
     localhost: {
       url: "http://127.0.0.1:8545", // Hardhat 로컬 노드 주소

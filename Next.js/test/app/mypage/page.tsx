@@ -158,6 +158,18 @@ export default function MyPage() {
                 </div>
               </Link>
 
+              {/* DAO 거버넌스 대시보드 카드 */}
+              <Link href="/dao" className="text-decoration-none">
+                <div className="card-container shop-surface border-default menu-card" style={{ borderColor: '#38bdf8', background: 'linear-gradient(145deg, rgba(30,41,59,1) 0%, rgba(56,189,248,0.1) 100%)' }}>
+                  <div className="flex-row-between mb-sm">
+                    <div style={{ fontSize: "32px" }}>⚖️</div>
+                    <div className="text-24-bold" style={{ color: '#38bdf8' }}>DAO</div>
+                  </div>
+                  <h3 className="text-16-bold text-primary margin-0">LandDAO 거버넌스</h3>
+                  <p className="text-13 text-secondary mt-6px margin-0">보유한 NFT로 시스템 정책 투표하기.</p>
+                </div>
+              </Link>
+
               {/* 나의 리뷰 카드 */}
               <Link href="/myreviews" className="text-decoration-none">
                 <div className="card-container shop-surface border-default menu-card">

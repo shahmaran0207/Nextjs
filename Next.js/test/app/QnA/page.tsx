@@ -25,7 +25,12 @@ export default function QnA() {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 const data = await res.json();
-                setQuestionList(data);
+                if (Array.isArray(data)) {
+                    setQuestionList(data);
+                } else {
+                    console.error("QnA API 데이터 형식 오류 (배열이 아님):", data);
+                    setQuestionList([]);
+                }
             } catch (err) {
                 console.error("QnA List 조회 에러:::::::::::", err);
             }

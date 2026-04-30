@@ -98,6 +98,22 @@
 |---|---|
 | **1. 가스비 실시간 예측** (`estimateGas`) | **EIP-1559와 수수료 구조**: 스마트 컨트랙트 실행 전 연산량을 추정하고, 가스 단가(`eth_gasPrice`)를 곱해 최종 수수료를 계산하는 원리입니다. 로컬 체인(Ganache)과 메인넷 간의 RPC 호환성 차이를 극복하는 Fallback 로직을 구현했습니다. |
 | **2. 영수증 통합** (`getTransactionReceipt`) | **블록체인의 불변성(Immutability)**: 결제 성공 시 반환되는 트랜잭션 해시를 통해 노드에 기록된 '영수증'을 꺼내옵니다. 사용자가 예측했던 가스비와 **실제로 소모된 가스비(`gasUsed`)**를 비교 분석하며, 주문 상세 페이지에 영구 기록된 블록 번호를 투명하게 노출합니다. |
+
+### 4.5 LandDAO 거버넌스 (온체인 vs 오프체인 투표 딜레마)
+
+스마트 컨트랙트를 통해 LandNFT 소유자들이 안건을 발의하고 투표하는 자율 운영 시스템(DAO)을 구현하며, 블록체인의 고질적인 문제인 **"블록체인 트릴레마(Blockchain Trilemma)"**와 수수료(Gas Fee) 절감 아키텍처를 깊이 있게 다루었습니다.
+
+#### 💡 투표 아키텍처 진화 단계와 타협안 (Web 2.5)
+
+| 방식 | 장점 | 단점 | 실무 적용 사례 |
+|---|---|---|---|
+| **1. 온체인 투표 (On-chain)** | 스마트 컨트랙트에 모든 데이터를 기록하므로 **위조 및 삭제가 100% 불가능(완전한 탈중앙화)** | 투표 1회당 높은 가스비(수수료)가 발생하여 유저 참여율이 극도로 저조함 | 막대한 자금이 움직이는 메이저 DeFi 거버넌스 프로토콜 |
+| **2. 퍼블릭 오프체인 (IPFS/L2)** | 가스비가 저렴하고, 데이터가 분산 저장되어 삭제(검열) 저항성을 가짐 | 인프라 구축 기간이 매우 길고, 데이터 조회 응답 속도(Latency)가 느림 | Snapshot.org 등 대규모 탈중앙 거버넌스 플랫폼 |
+| **3. Web 2.5 (중앙화 DB + 서명 검증)** | **가스비 0원!** 압도적인 UX 제공. 사용자의 프라이빗 키 서명(`verifyMessage`)을 통해서만 표가 인정되므로 **"가짜 표 위조"는 절대 불가함** | 중앙 DB 관리자가 **"존재하는 표를 몰래 삭제(누락)"하는 검열 행위는 막을 수 없으므로 회사의 신뢰도에 의존해야 함** | 현존하는 대부분의 NFT 커뮤니티 투표 및 일반적인 Web3 DApp 서비스 |
+
+본 프로젝트에서는 사용자 편의성을 극대화한 **3번 방식(Web 2.5 타협안)**을 채택했습니다. 
+* **프론트엔드**: Ethers.js의 `signer.signMessage()`를 통해 트랜잭션 전송 없이 무료로 디지털 서명을 생성합니다.
+* **백엔드**: `ethers.verifyMessage()`를 통해 서명을 복호화하여 조작 여부를 암호학적으로 검증하고, 스마트 컨트랙트의 `balanceOf`(조회 전용 함수, 가스비 무료)를 호출해 투표권(NFT) 유무를 확인한 뒤 Prisma DB에 안전하게 저장합니다.
 | **3. 실시간 블록 높이** (`getBlockNumber`) | **탈중앙화 네트워크 상태 검증(Liveness)**: 결제창 최상단에 **현재 접속 중인 네트워크의 최신 블록 번호**가 실시간으로 갱신(Polling)되며 깜빡입니다. 이는 현재 브라우저(MetaMask)가 연결된 노드(RPC)가 죽지 않고 정상적으로 블록을 생성하고 있는지를 시각적으로 확인하는 가장 확실한 'Health Check' 지표로 작용합니다. |
 
 #### 💡 블록체인 심화 개념 학습 (중간 단계 미션)
@@ -114,7 +130,346 @@
 | **1. 안전결제 스마트 컨트랙트** (`Escrow`) | **스마트 컨트랙트 상태 머신(State Machine)**: 단순 자금 이체를 넘어 코드를 '제3의 신뢰할 수 있는 금고(Trustless Escrow)'로 활용합니다. 결제 대금을 즉시 판매자에게 지급하지 않고 컨트랙트의 `address(this)`에 묶어둔 뒤, 주문의 상태(`EscrowStatus`)를 블록체인 스토리지에 영구적으로 기록하고 통제하는 방법을 학습했습니다. |
 | **2. 자금 해제 API 서버 연동** (`Oracle`) | **블록체인 오라클(Oracle)과 대납(Relayer)**: 스마트 컨트랙트는 외부(인터넷/현실 세계) 데이터에 접근할 수 없는 맹점(Oracle Problem)을 가집니다. 이를 해결하기 위해 백엔드 서버가 현실의 '배송 완료' 데이터를 감지하고, 서버의 개인키(Private Key)로 트랜잭션 가스비를 대납하며 컨트랙트를 찔러 자금을 해제(`releaseFunds`)해주는 Web2-Web3 오라클 징검다리 아키텍처를 완성했습니다. |
 
-### 4.5 반품 요청 및 투명한 반품 통계
+---
+
+#### 📚 스마트 컨트랙트 & Solidity 핵심 개념 정리
+
+##### 스마트 컨트랙트란?
+
+블록체인 위에서 실행되는 프로그램입니다. 일반 서버 코드와의 차이는 다음과 같습니다.
+
+| 구분 | 일반 서버 코드 | 스마트 컨트랙트 |
+|---|---|---|
+| 실행 환경 | 서버 (Node.js) | 블록체인 (EVM) |
+| 배포 후 수정 | 가능 | **불가능** |
+| 데이터 저장 | DB (PostgreSQL 등) | 블록체인 자체 |
+| 신뢰 기반 | 서버 운영자 신뢰 필요 | 코드가 곧 법, 누구도 변경 불가 |
+| 실행 비용 | 서버 운영비 | 가스비 (ETH) |
+
+##### `.sol` 파일의 정체
+
+`.sol` 파일은 **Solidity 언어로 작성된 스마트 컨트랙트 소스코드**입니다. 블록체인과 무관한 로컬 텍스트 파일입니다. 아래 과정을 거쳐야 비로소 스마트 컨트랙트가 됩니다.
+
+```text
+.sol 파일 (소스코드 작성)
+    ↓  solc 컴파일러
+바이트코드 + ABI (기계어 변환)
+    ↓  배포 트랜잭션 전송  ← 이 순간 스마트 컨트랙트가 됨
+블록체인에 영구 저장
+    ↓
+주소 발급 (0xAbCd...) — 이후 이 주소로 함수 호출 가능
+```
+
+##### Solidity 문법 핵심 (TypeScript 비교)
+
+**타입 시스템**
+
+```solidity
+uint256 count = 0;        // 부호 없는 정수 (0 이상). TypeScript의 number와 다르게 소수점 없음.
+address wallet = 0x1234;  // 지갑/컨트랙트 주소 전용 타입. 40자리 16진수.
+bool isActive = true;     // 불리언
+string memory name = "A"; // 문자열. memory 키워드 필수 (아래 참고).
+mapping(address => uint256) balances; // JS의 Map/Object. balances[주소] = 값.
+```
+
+**`storage` vs `memory`** — Solidity만의 고유 개념
+
+```solidity
+// storage: 블록체인에 영구 저장. 수정하면 실제 블록체인 데이터가 바뀜. (비쌈)
+Proposal storage p = proposals[id]; // 직접 참조. p.votes++ 하면 체인에 기록됨.
+
+// memory: 함수 실행 중에만 존재하는 임시 복사본. 함수 종료 시 사라짐. (쌈)
+string memory temp = "hello";
+```
+
+**함수 수식어** — TypeScript에 없는 개념
+
+```solidity
+function foo() public pure { }    // public: 누구나 호출 / pure: 상태 읽지도 바꾸지도 않음 (가스비 0)
+function bar() external view { }  // external: 외부에서만 / view: 읽기만 (가스비 0)
+function pay() external payable { } // payable: ETH를 함께 받을 수 있음
+```
+
+**전역 변수** — 블록체인 내장 정보
+
+```solidity
+msg.sender       // 이 함수를 호출한 지갑 주소
+msg.value        // 함께 전송된 ETH 양 (wei 단위)
+block.timestamp  // 현재 블록 생성 시각 (Unix 초 단위)
+```
+
+**`require`** — 조건 검증 및 트랜잭션 취소
+
+```solidity
+// TypeScript: if (!ok) throw new Error("오류");
+require(condition, "오류 메시지");
+// 조건이 false면 트랜잭션 전체 취소 + 가스비 일부 환불
+```
+
+**`modifier`** — 함수에 붙이는 조건 (TypeScript 데코레이터와 유사)
+
+```solidity
+modifier onlyOwner() {
+    require(msg.sender == owner, "관리자만 가능");
+    _; // 이 위치에 실제 함수 코드가 삽입됨
+}
+function setPrice(uint256 p) external onlyOwner { ... }
+```
+
+**이벤트 (Event)** — 블록체인 로그 기록
+
+```solidity
+event Transfer(address indexed from, address indexed to, uint256 amount);
+// indexed: 이 값으로 빠른 검색 가능
+
+emit Transfer(msg.sender, recipient, 100); // 로그에 기록. 상태는 바꾸지 않음.
+// 프론트엔드: contract.on("Transfer", callback) 으로 실시간 감지 가능.
+```
+
+##### 이 프로젝트의 스마트 컨트랙트 목록
+
+| 파일 | 역할 | 상태 |
+|---|---|---|
+| `GasToken.sol` | ERC-20 수수료 토큰 | 배포됨 |
+| `PayToken.sol` | ERC-20 결제 토큰 | 배포됨 |
+| `DualPayment.sol` | 이중 토큰 결제 (GAS + PAY 동시 처리) | 배포됨 |
+| `PaymentReceiver.sol` | ETH/ERC-20 에스크로 안전결제 | 배포됨 |
+| `LandNFT.sol` | 가상 부동산 ERC-721 NFT (랜드 구역 구매) | 배포됨 |
+| `LandDAO.sol` | LandNFT 소유자 투표 거버넌스 DAO | 작성 완료, 배포 예정 |
+
+##### Solidity 컨트랙트 구성 요소와 순서
+
+하나의 `.sol` 파일(컨트랙트)은 아래 순서로 구성됩니다.
+
+```solidity
+contract MyContract {
+
+    // ① 상태 변수 (State Variables)
+    // 블록체인에 영구 저장되는 데이터. TypeScript class 멤버 변수와 동일.
+    uint256 public count;
+    address public owner;
+    mapping(uint256 => string) public names;  // JS의 Map/Object
+
+
+    // ② 이벤트 선언 (Event Declaration)
+    // "이런 일이 발생했다"는 로그 형식 정의. 선언만으로는 아무것도 안 함.
+    // TypeScript의 interface 선언과 유사.
+    event CountChanged(uint256 newCount);
+    event OwnerChanged(address indexed oldOwner, address indexed newOwner);
+
+
+    // ③ 생성자 (Constructor)
+    // 컨트랙트 배포 시 딱 한 번만 실행됨. 이후 다시 호출 불가.
+    // TypeScript class의 constructor()와 동일.
+    constructor(address _owner) {
+        owner = _owner;
+    }
+
+
+    // ④ modifier (조건 장치)
+    // 함수 실행 전에 먼저 검사하는 조건 블록.
+    // _; 위치에 실제 함수 코드가 삽입됨.
+    modifier onlyOwner() {
+        require(msg.sender == owner, "관리자만 가능");
+        _;
+    }
+
+
+    // ⑤ 함수 (Function)
+    // 실제 로직 코드가 담긴 곳.
+    function increment() external onlyOwner {  // ← modifier 적용
+
+        // ⑥ require (조건 검증)
+        // 조건이 false면 트랜잭션 전체 취소 + 가스비 일부 환불.
+        // TypeScript의 if(!x) throw new Error() 와 동일.
+        require(count < 1000, "최대 카운트 초과");
+
+        count++;
+
+        // ⑦ emit (이벤트 발생)
+        // 선언해둔 이벤트를 실제로 블록체인 로그에 기록.
+        // 선언(event)은 형식 정의, emit은 실제 기록 실행.
+        emit CountChanged(count);
+    }
+
+    // view 함수: 상태를 읽기만 함 → 가스비 0
+    function getCount() external view returns (uint256) {
+        return count;
+    }
+}
+```
+
+각 구성 요소 한 줄 요약:
+
+| 구성 요소 | 역할 | TypeScript 비유 |
+|---|---|---|
+| 상태 변수 | 블록체인에 영구 저장되는 데이터 | `class` 멤버 변수 |
+| `event` 선언 | 블록체인 로그 형식 정의 | `interface` 선언 |
+| `constructor` | 배포 시 1회 실행 초기화 | `constructor()` |
+| `modifier` | 함수 실행 전 조건 검사 블록 | 데코레이터 `@` |
+| `function` | 실제 로직 | `function` |
+| `require` | 조건 검증, 실패 시 트랜잭션 취소 | `if(!x) throw Error` |
+| `emit` | 이벤트 실제 기록 실행 | `console.log` (영구 버전) |
+
+---
+
+##### ❓ 스마트 컨트랙트 & ABI 심화 Q&A
+
+**Q. `.sol` 파일 자체가 스마트 컨트랙트인가?**
+
+아닙니다. `.sol`은 Solidity로 작성한 **소스코드 파일**일 뿐입니다. 블록체인과 아직 무관한 로컬 텍스트 파일입니다. 컴파일 → 배포 과정을 거쳐 블록체인에 올라가는 순간 비로소 스마트 컨트랙트가 됩니다.
+
+```text
+.sol 파일 (그냥 텍스트)
+    → 컴파일 (solc)
+    → 바이트코드 생성
+    → 배포 트랜잭션 전송  ← 이 순간 스마트 컨트랙트가 됨
+    → 주소 발급 (0xAbCd...)
+```
+
+---
+
+**Q. ABI란 무엇이고 왜 필요한가?**
+
+블록체인에 올라간 바이트코드(`0x608060...`)는 기계어라 사람이나 외부 프로그램이 읽을 수 없습니다. ABI는 이 바이트코드를 어떻게 호출하는지 알려주는 **JSON 형태의 설명서**입니다.
+
+```
+바이트코드 = 잠긴 금고 (블록체인에 있음)
+ABI        = 금고 사용 설명서 (어떤 버튼을, 어떤 순서로)
+```
+
+ABI가 없으면 ethers.js가 `contract.purchase(1)`처럼 함수를 호출하는 코드를 만들 수 없습니다.
+
+---
+
+**Q. ABI가 블록체인에 안 올라간다면 ABI로 컨트랙트를 조작할 수 있지 않나?**
+
+불가능합니다. ABI는 **호출 방법**을 알려줄 뿐이고, 조작이란 **블록체인에 있는 바이트코드를 바꾸는 것**입니다. 이 둘은 전혀 다른 문제입니다.
+
+- ABI 없이 주소만 알아도 바이트코드를 변경하는 것은 절대 불가능합니다.
+- 잘못된 ABI로 잘못된 함수 서명을 보내면 EVM이 그냥 revert(거부)합니다.
+- 이더리움 메인넷에서는 Etherscan에 소스코드를 공개 검증하므로 ABI 자체도 누구나 볼 수 있습니다.
+
+스마트 컨트랙트의 신뢰는 **"누가 ABI를 갖고 있느냐"가 아니라 "바이트코드가 무엇을 하도록 만들어졌느냐"** 에 달려 있습니다.
+
+---
+
+**Q. ABI 파일 형태와 문법은?**
+
+ABI는 **JSON 배열**입니다. 독자적인 문법이 아니라 이더리움 표준 스펙으로 정해진 JSON 구조를 따릅니다. `.sol`을 컴파일하면 자동으로 생성되므로 개발자가 직접 작성할 필요가 없습니다.
+
+```json
+[
+  {
+    "type": "function",
+    "name": "purchase",
+    "inputs": [{ "name": "dbParcelId", "type": "uint256" }],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "event",
+    "name": "ParcelSold",
+    "inputs": [
+      { "name": "buyer", "type": "address", "indexed": true },
+      { "name": "parcelId", "type": "uint256", "indexed": false }
+    ]
+  }
+]
+```
+
+---
+
+**Q. `.sol` 컴파일 시 ABI와 바이트코드가 자동으로 생성되는가?**
+
+맞습니다. `.sol` 파일 하나를 컴파일하면 두 결과물이 동시에 자동 생성됩니다.
+
+```js
+const { abi, bytecode } = compile("LandDAO.sol", "LandDAO");
+// abi: JSON 배열 자동 생성 → 프론트엔드/서버가 저장해서 사용
+// bytecode: 16진수 문자열 자동 생성 → 블록체인에 배포 후 불필요
+```
+
+배포 후에는 ABI만 저장해두면 됩니다. 바이트코드는 이미 블록체인에 있으므로 보관할 필요가 없습니다.
+
+---
+
+**Q. 개발자의 역할은 `.sol` 파일 작성까지인가?**
+
+`.sol` 작성은 시작점입니다. 실제 역할은 다음과 같습니다.
+
+```
+① .sol 파일 작성      ← 핵심 비즈니스 로직 (가장 중요)
+② 컴파일 스크립트    ← compile.js (solc 설정)
+③ 배포 스크립트      ← deploy.js (네트워크, 인자, 순서)
+④ 배포 후 검증       ← Etherscan 소스코드 공개
+⑤ 프론트/서버 연동   ← ethers.js로 ABI + 주소 활용
+⑥ 테스트 코드 작성   ← 실제 서비스에서 필수 (배포 후 수정 불가이므로)
+```
+
+`.sol` 버그는 배포 후 절대 수정 불가합니다. 수십억 원이 걸린 실제 서비스에서는 배포 전 외부 전문가의 보안 감사(Audit)를 수십 번 받습니다.
+
+---
+
+**Q. Solidity는 TypeScript 문법을 따르는가?**
+
+아닙니다. Solidity는 독자적인 언어입니다. 겉모습이 비슷한 건 둘 다 C 계열 문법의 영향을 받았기 때문입니다.
+
+| 구분 | Solidity | TypeScript |
+|---|---|---|
+| 언어 종류 | 독립 언어 | JavaScript 슈퍼셋 |
+| 실행 환경 | EVM (블록체인) | Node.js / 브라우저 |
+| 전용 타입 | `uint256`, `address`, `payable` | `number`, `string` 등 |
+| 전용 문법 | `modifier`, `mapping`, `emit`, `require` | 없음 |
+
+Solidity 컨트랙트의 구성 순서는 **Solidity 언어만의 관례**입니다.
+
+```
+① 상태 변수   → 블록체인에 저장될 데이터
+② 이벤트 선언 → 로그 형식 정의 (event)
+③ 생성자      → 배포 시 1회 실행 (constructor)
+④ 조건 장치   → 함수에 붙이는 검사 블록 (modifier)
+⑤ 조건 검증   → 함수 내부 조건 확인 (require)
+⑥ 함수        → 실제 로직 (function + emit)
+```
+
+---
+
+**Q. 함수 안에는 `require`와 `emit`만 있는 것 같은데 굳이 함수가 필요한가? `modifier`에서 다 처리하면 안 되나?**
+
+함수의 가장 핵심적인 역할은 조건 검증(`require`)이나 이벤트 발생(`emit`)이 아니라 **상태 변경(State Change)** 입니다.
+
+```solidity
+function vote(uint256 id) external onlyOwner {
+    require(id > 0, "유효하지 않은 ID"); // 1. 검증 (이 함수만의 규칙)
+    
+    proposals[id].voteCount += 1;     // 2. 핵심 로직: 블록체인 상태 변경 (가장 중요!)
+    
+    emit Voted(id);                   // 3. 로그 기록
+}
+```
+
+만약 `proposals[id].voteCount += 1;` 이라는 상태 변경(데이터 쓰기)이 없다면 스마트 컨트랙트는 의미가 없습니다.
+
+**그럼 `modifier`와 `require`는 왜 나누어져 있나요?**
+* **`modifier`의 목적: "재사용성"**
+  * `onlyOwner`(관리자만 가능) 같은 조건은 여러 함수(가격 설정, 출금, 정지 등)에서 공통으로 쓰입니다. 이걸 매번 함수 안에 `require`로 적으면 중복되므로 `modifier`로 빼서 재사용합니다.
+* **`require`의 목적: "함수 고유의 규칙 검증"**
+  * "투표 ID가 1 이상이어야 한다", "잔액이 충분해야 한다" 같은 조건은 **그 함수에서만 필요한 고유한 규칙**입니다. 이걸 굳이 `modifier`로 만들면 오히려 코드가 파편화되어 읽기 어려워집니다.
+
+즉, **공통된 권한 검사 등은 `modifier`로 빼고, 함수 고유의 비즈니스 규칙은 함수 안에서 `require`로 검사한 뒤, 상태 변수를 조작하고 `emit`으로 마무리하는 것**이 Solidity의 정석입니다.
+
+---
+
+**Q. 그럼 함수 내에 `require`와 `emit`을 넣는 건 특정 조건에서만 상태를 변경하고 이벤트를 발생시키기 위해서인가요?**
+
+정확합니다! 함수 내부의 코드는 위에서 아래로 실행되는데, **"안전장치(require) → 실제 행동(상태 변경) → 보고(emit)"** 의 흐름을 갖추기 위해 함수 안에 함께 두는 것입니다.
+
+1. **안전장치 (`require`)**: 코드가 실행되기 직전에 "이 사람이 권한이 있나?", "잔액이 충분한가?"를 검증합니다. 통과하지 못하면 그 즉시 함수 실행이 취소(revert)되고, 상태 변경이나 이벤트 발생도 모두 무효화됩니다.
+2. **실제 행동 (상태 변경)**: 조건이 모두 통과되었을 때만 데이터가 바뀝니다. (예: 잔액 차감)
+3. **보고 (`emit`)**: 데이터 변경이 성공적으로 끝났음을 블록체인 외부에 알립니다. 만약 `require`를 통과하지 못했다면 `emit`도 실행되지 않으므로, **"실제로 일어난 일만 로그로 남기는 것"** 이 보장됩니다.
+
+
 
 배송 완료(`DELIVERED`) 주문의 **반품 요청** 버튼 클릭 시 사유 선택 모달이 열리며, DB에 `return_reason` + `return_requested_at`이 저장됩니다. 상품 상세 페이지의 "투명한 쇼핑 리포트"는 이 실제 DB 데이터를 집계해 반품률과 Top 사유를 표시합니다.
 
